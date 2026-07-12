@@ -49,19 +49,19 @@ end
 Codec.CELL_BYTES = 9
 Codec.VIRUS_BYTES = 9
 Codec.PELLET_BYTES = 8
-Codec.HEADER_BYTES = 7
+Codec.HEADER_BYTES = 10 -- t u32 + three u16 counts (u16 so a full-map send can exceed 255 of a type)
 
 --------------------------------------------------------------------- snapshot
 
 -- t is seconds since server start; cells/viruses/pellets are arrays of server
 -- entities (cells need id/slot/x/y/r, viruses id/x/y/r/kindId, pellets id/slot/x/y/r).
 function Codec.packSnapshot(t: number, cells, viruses, pellets): buffer
-	local b = buffer.create(7 + #cells * 9 + #viruses * 9 + #pellets * 8)
+	local b = buffer.create(10 + #cells * 9 + #viruses * 9 + #pellets * 8)
 	buffer.writeu32(b, 0, math.floor(t * 1000) % 4294967296)
-	buffer.writeu8(b, 4, #cells)
-	buffer.writeu8(b, 5, #viruses)
-	buffer.writeu8(b, 6, #pellets)
-	local o = 7
+	buffer.writeu16(b, 4, #cells)
+	buffer.writeu16(b, 6, #viruses)
+	buffer.writeu16(b, 8, #pellets)
+	local o = 10
 	for _, c in cells do
 		buffer.writeu16(b, o, c.id)
 		buffer.writeu8(b, o + 2, c.slot)
@@ -94,10 +94,10 @@ end
 -- entities across two snapshots in O(1).
 function Codec.unpackSnapshot(b: buffer)
 	local t = buffer.readu32(b, 0) / 1000
-	local nCells = buffer.readu8(b, 4)
-	local nViruses = buffer.readu8(b, 5)
-	local nPellets = buffer.readu8(b, 6)
-	local o = 7
+	local nCells = buffer.readu16(b, 4)
+	local nViruses = buffer.readu16(b, 6)
+	local nPellets = buffer.readu16(b, 8)
+	local o = 10
 	local cells, viruses, pellets = {}, {}, {}
 	for _ = 1, nCells do
 		cells[buffer.readu16(b, o)] = {

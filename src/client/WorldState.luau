@@ -108,6 +108,8 @@ end)
 -- PERF: `out` tables are reused across frames (update-in-place + remove stale
 -- ids) instead of reallocated - this runs per entity per frame, and fresh
 -- tables every frame would be constant GC churn.
+local MAX_JUMP2 = Config.MaxInterpJump * Config.MaxInterpJump
+
 local function sampleMap(m1, m2, alpha: number, out)
 	for id in out do
 		if not m2[id] then
@@ -122,9 +124,18 @@ local function sampleMap(m1, m2, alpha: number, out)
 		end
 		local e1 = m1 and m1[id]
 		if e1 then
-			t.x = e1.x + (e2.x - e1.x) * alpha
-			t.y = e1.y + (e2.y - e1.y) * alpha
-			t.r = e1.r + (e2.r - e1.r) * alpha
+			local dx, dy = e2.x - e1.x, e2.y - e1.y
+			if dx * dx + dy * dy > MAX_JUMP2 then
+				-- an implausibly large jump between two adjacent snapshots means
+				-- this id is NOT the same physical entity (id reuse) or it
+				-- teleported (respawn). Snap to the new value instead of
+				-- lerping, so no phantom streaks across the map.
+				t.x, t.y, t.r = e2.x, e2.y, e2.r
+			else
+				t.x = e1.x + dx * alpha
+				t.y = e1.y + dy * alpha
+				t.r = e1.r + (e2.r - e1.r) * alpha
+			end
 		else
 			t.x, t.y, t.r = e2.x, e2.y, e2.r
 		end

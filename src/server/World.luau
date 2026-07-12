@@ -36,12 +36,31 @@ local World = {
 	pendingOrbSpawns = {},
 }
 
-local nextDynIdCounter = 0
+-- SEPARATE id counters per entity type. Client stores cells/viruses/pellets in
+-- separate id-keyed maps, so their id spaces are independent - and keeping them
+-- separate matters: pellets churn fast (feeding), and a shared counter would
+-- wrap the 16-bit id space quickly, letting a fresh cell reuse a live cell's
+-- id. That reuse makes the interpolator lerp between two DIFFERENT cells - the
+-- "phantom cell streaks onto me then vanishes" bug. Per-type counters make cell
+-- id reuse require 65536 *cell* spawns, which effectively never happens.
+local nextCellIdCounter = 0
+local nextVirusIdCounter = 0
+local nextPelletIdCounter = 0
 local nextOrbIdCounter = 0
 
-local function nextDynId(): number
-	nextDynIdCounter = (nextDynIdCounter + 1) % 65536
-	return nextDynIdCounter
+local function nextCellId(): number
+	nextCellIdCounter = (nextCellIdCounter + 1) % 65536
+	return nextCellIdCounter
+end
+
+local function nextVirusId(): number
+	nextVirusIdCounter = (nextVirusIdCounter + 1) % 65536
+	return nextVirusIdCounter
+end
+
+local function nextPelletId(): number
+	nextPelletIdCounter = (nextPelletIdCounter + 1) % 65536
+	return nextPelletIdCounter
 end
 
 local function nextOrbId(): number
@@ -126,7 +145,7 @@ end
 function World.spawnCell(player, x: number, y: number, mass: number)
 	local info = World.players[player]
 	local cell = {
-		id = nextDynId(),
+		id = nextCellId(),
 		kind = "cell",
 		player = player,
 		slot = info.slot,
@@ -161,7 +180,7 @@ function World.spawnVirus(kind: string, x: number?, y: number?)
 		x, y = World.randomPos(120)
 	end
 	local virus = {
-		id = nextDynId(),
+		id = nextVirusId(),
 		kind = kind, -- "virus" | "exp"
 		kindId = kind == "exp" and 2 or 1,
 		x = x,
@@ -199,7 +218,7 @@ function World.spawnPellet(slot: number, x: number, y: number, vx: number, vy: n
 		end
 	end
 	local pellet = {
-		id = nextDynId(),
+		id = nextPelletId(),
 		kind = "pellet",
 		slot = slot,
 		x = math.clamp(x, 0, Config.MapWidth),

@@ -42,11 +42,16 @@ right services automatically (`default.project.json` defines the mapping).
    interpolating between the two snapshots that bracket the render time
    (`WorldState.luau`) — motion is perfectly smooth at any FPS, and lost
    packets just interpolate to the next snapshot.
-5. **Interest management + byte budget.** Unreliable events drop payloads over
-   ~900 bytes, so each client's snapshot packs only the *closest* entities
-   around their view (own cells first) until `SnapshotByteBudget` is spent
-   (`Snapshots.luau`). A corner player never receives — let alone renders —
-   the far side of the map.
+5. **Full-world snapshots (small map).** The map is small, so there is no
+   interest culling: the server builds ONE snapshot of every dynamic entity per
+   tick and `FireAllClients` it over a **reliable** RemoteEvent
+   (`Snapshots.luau`). Reliable delivery + a stable full entity set is what
+   keeps things flicker-free — an earlier interest/byte-budget scheme made
+   entities near the packing cutoff blink in and out. Bandwidth is bounded by
+   `MaxPellets` and the cell/virus counts; a much larger map would instead
+   chunk across unreliable packets. The interpolator also snaps (never lerps)
+   on implausibly large per-snapshot jumps (`MaxInterpJump`) so a reused id can
+   never streak a phantom entity across the map.
 6. **Orbs are deltas, not snapshots.** Orbs never move, so the high-rate channel
    never carries them: one reliable full sync on join (~5 KB), then tiny
    eat/respawn delta events. This is what keeps snapshots small enough for

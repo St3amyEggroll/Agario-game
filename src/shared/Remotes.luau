@@ -12,7 +12,12 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local DEFS: { [string]: string } = {
-	Snapshot = "UnreliableRemoteEvent", -- server -> client: packed world snapshot (buffer)
+	-- Snapshot is RELIABLE and carries the FULL world (no interest culling): the
+	-- map is small, so every client sees every entity. Reliable delivery means
+	-- no dropped packets, which is what eliminates the interest/budget flicker.
+	-- (For a much larger map / player count, the scale path would be chunked
+	-- UnreliableRemoteEvents + client linger instead.)
+	Snapshot = "RemoteEvent", -- server -> client: packed world snapshot (buffer)
 	Aim = "UnreliableRemoteEvent", -- client -> server: world-space aim target (x, y)
 	Action = "RemoteEvent", -- client -> server: split/feed/freeze/play/... commands
 	OrbSync = "RemoteEvent", -- server -> client: full orb table on join + eat/spawn deltas

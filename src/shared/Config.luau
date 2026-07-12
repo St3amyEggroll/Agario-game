@@ -13,8 +13,11 @@ local Config = {
 	------------------------------------------------------------------ Server timing
 	TickRate = 30, -- fixed simulation timestep (Hz). Decoupled from rendering & snapshots.
 	-- 30 Hz snapshots (one per tick): lower = less bandwidth but more input
-	-- delay, since InterpolationDelay must cover ~2 snapshot intervals
-	SnapshotRate = 30,
+	-- delay, since InterpolationDelay must cover ~2 snapshot intervals.
+	-- Snapshots are now reliable + full-world, so this rate directly drives
+	-- bandwidth (rate * total entities). 24 Hz is a good latency/bandwidth
+	-- balance on a small map.
+	SnapshotRate = 24,
 	LeaderboardRate = 1, -- leaderboard broadcasts per second (reliable)
 
 	------------------------------------------------------------------ Orbs (static food)
@@ -59,7 +62,7 @@ local Config = {
 	MultiSplitCooldown = 0.25,
 
 	------------------------------------------------------------------ Feed / ejected pellets
-	EjectMinMass = 36, -- cell must have at least this much mass to eject
+	EjectMinMass = 1, -- cell must have at least this much mass to eject (1 = W works at any size)
 	EjectCostsMass = false, -- if false, feeding/ejecting does NOT shrink your own cell (free pellets)
 	EjectMassLoss = 13, -- mass the cell loses per eject (only applied when EjectCostsMass)
 	EjectPelletMass = 10, -- mass the pellet actually carries (difference is "wasted", like agar)
@@ -67,7 +70,7 @@ local Config = {
 	PelletFriction = 3.2, -- exponential slowdown rate; pellets come to rest
 	PelletSelfEatDelay = 0.35, -- seconds before you can re-eat your own pellet
 	FeedCooldown = 0.06, -- server-side rate limit on feed actions
-	MaxPellets = 400, -- hard cap on live pellets (oldest are recycled)
+	MaxPellets = 180, -- hard cap on live pellets (oldest recycled); also bounds snapshot bandwidth
 
 	------------------------------------------------------------------ Viruses / Experimentals
 	VirusCount = 14,
@@ -83,31 +86,28 @@ local Config = {
 	ExperimentalOrbsPerFeed = 2, -- bonus orbs an Experimental spits out per pellet fed
 
 	------------------------------------------------------------------ Networking
-	SpatialCellSize = 400, -- uniform grid bucket size for the spatial hash
-	-- The interest radius must comfortably exceed what the most zoomed-out
-	-- client can SEE, or entities visibly pop in/out at the boundary while
-	-- you move (they enter/leave the server's send set on screen).
-	InterestBase = 2400, -- interest radius = base + (largest own cell radius) * per-radius
-	InterestPerRadius = 10,
-	InterestMax = 6000,
-	SpectatorInterest = 3200,
-	-- UnreliableRemoteEvents drop payloads over ~900 bytes, so snapshots are packed
-	-- against this byte budget (closest entities win; the rest are culled server-side).
-	SnapshotByteBudget = 850,
+	SpatialCellSize = 400, -- uniform grid bucket size for the spatial hash (server collision only)
 	AimSendRate = 60, -- client -> server aim updates per second (tiny unreliable packets)
+	-- Snapshots send the ENTIRE world to every client (no interest culling - the
+	-- map is small). MaxInterpJump guards the interpolator: a per-snapshot
+	-- position jump larger than this (world units) is treated as id-reuse /
+	-- teleport and snapped instead of lerped, so no phantom entity streaks in.
+	MaxInterpJump = 900,
+	-- (Interest/byte-budget constants below are unused now that snapshots are
+	-- full-world + reliable; kept only for reference / a future large-map mode.)
 
 	------------------------------------------------------------------ Client rendering
-	-- render this far behind the newest snapshot. Keep >= 2 snapshot intervals:
-	-- lower feels snappier but stutters if a packet is late/lost
-	InterpolationDelay = 0.07,
+	-- render this far behind the newest snapshot. Keep >= 2 snapshot intervals
+	-- (2 / SnapshotRate): lower feels snappier but stutters on network jitter.
+	InterpolationDelay = 0.09,
 	ViewHeightBase = 1200, -- world units visible vertically at minimum size...
 	ViewHeightPerRadius = 9, -- ...plus this per unit of your largest cell's radius (zoom out as you grow)
 	ViewHeightMin = 1000,
 	ViewHeightMax = 8200, -- allow zooming out to see (roughly) the whole map
 	SpectateViewHeight = 2800,
 	-- manual zoom (mouse wheel): multiplies the auto view height. >1 = zoomed out.
-	-- NOTE: dynamic entities (cells/pellets/viruses) beyond the server's
-	-- InterestMax won't appear at extreme zoom, but all orbs always will.
+	-- The whole world is sent to every client, so ALL entities are visible at
+	-- any zoom (no render distance).
 	ManualZoomMin = 0.5,
 	ManualZoomMax = 7.0,
 	ZoomWheelStep = 1.15, -- zoom multiplier per wheel notch
