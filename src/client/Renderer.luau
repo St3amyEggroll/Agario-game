@@ -81,6 +81,12 @@ end
 
 local orbPool, pelletPool, virusPool, cellPool
 
+-- NOTE: must be declared before buildPools - the pool creators close over it,
+-- and a local declared later in the file would silently resolve to nil there
+local function darker(c: Color3): Color3
+	return Color3.new(c.R * 0.72, c.G * 0.72, c.B * 0.72)
+end
+
 local function buildPools()
 	orbPool = newPool(function()
 		return { frame = circleFrame(3) }
@@ -258,10 +264,6 @@ local function place(w, sx: number, sy: number, d: number)
 		w.ld = d
 		w.frame.Size = UDim2.fromOffset(d, d)
 	end
-end
-
-local function darker(c: Color3): Color3
-	return Color3.new(c.R * 0.72, c.G * 0.72, c.B * 0.72)
 end
 
 -- active[id] = wrapper for every entity currently holding a frame
