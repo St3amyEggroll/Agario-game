@@ -1,0 +1,160 @@
+# Agario 2D (Roblox)
+
+A polished, low-latency 2D Agar.io-style game for Roblox, built performance-first:
+**no physics, no 3D parts, no per-frame Instance creation** — the entire game is
+server-side data simulated on a fixed tick, streamed as compact binary snapshots,
+and rendered client-side with pooled, culled GUI frames.
+
+## Syncing with Rojo
+
+```bash
+# install rojo 7+ (https://rojo.space), then from this folder:
+rojo serve
+```
+
+In Studio: install the Rojo plugin → **Connect** → the `src/` tree syncs into the
+right services automatically (`default.project.json` defines the mapping).
+`rojo build -o Agario2D.rbxlx` also works for a one-shot place file.
+
+### Manual placement (no Rojo)
+
+| Folder | Where it goes in the Explorer |
+|---|---|
+| `src/shared/*` | `ReplicatedStorage/Shared` (folder of ModuleScripts) |
+| `src/server/init.server.luau` | `ServerScriptService/Server` (a **Script**; the other `src/server/*.luau` files become ModuleScripts **inside** it) |
+| `src/client/init.client.luau` | `StarterPlayer/StarterPlayerScripts/Client` (a **LocalScript**; the other `src/client/*.luau` files become ModuleScripts inside it, and `src/client/UI/` a ModuleScript named `UI` whose children are the UI modules) |
+
+## The performance model (why it's not laggy)
+
+1. **No physics, ever.** Cells, orbs, viruses and pellets are plain Luau tables
+   (`x, y, mass, radius, id`). The server integrates movement and resolves
+   collisions manually in a fixed 30 Hz tick (`Simulation.luau`). Roblox physics
+   never runs; there is nothing for it to simulate.
+2. **Server-authoritative.** All eat/split/merge/pop decisions happen on the
+   server. Clients only send an aim point and rate-limited action requests
+   (`Network.luau` validates everything), so modified clients can't cheat and
+   there's nothing to desync.
+3. **Spatial hashing.** A uniform grid (`SpatialHash.luau`) makes every
+   collision/eat query O(nearby), never O(n²). Orbs live in a persistent hash
+   (they don't move); movers are re-bucketed each tick.
+4. **Snapshot networking + interpolation.** The server sends 20 Hz snapshots
+   over an `UnreliableRemoteEvent`. Clients render ~100 ms in the past,
+   interpolating between the two snapshots that bracket the render time
+   (`WorldState.luau`) — motion is perfectly smooth at any FPS, and lost
+   packets just interpolate to the next snapshot.
+5. **Interest management + byte budget.** Unreliable events drop payloads over
+   ~900 bytes, so each client's snapshot packs only the *closest* entities
+   around their view (own cells first) until `SnapshotByteBudget` is spent
+   (`Snapshots.luau`). A corner player never receives — let alone renders —
+   the far side of the map.
+6. **Orbs are deltas, not snapshots.** Orbs never move, so the high-rate channel
+   never carries them: one reliable full sync on join (~5 KB), then tiny
+   eat/respawn delta events. This is what keeps snapshots small enough for
+   hundreds of orbs to be free.
+7. **Compact payloads.** `SnapshotCodec.luau` packs everything into `buffer`s:
+   u16 quantized positions (~0.12 world-unit resolution), fixed-point radii,
+   u32-ms timestamps. A cell costs 9 bytes on the wire.
+8. **Pooled, culled rendering.** One ScreenGui; every entity is a frame from a
+   pre-allocated pool, acquired when it enters the view rect and released when
+   it leaves — never created/destroyed per frame (`Renderer.luau`). All frames
+   are Scale-positioned children of a single map frame, so the camera moves
+   *one* instance per frame, and static orbs cost zero property writes while
+   visible.
+
+### Tradeoffs to know about (and their knobs)
+
+- **Snapshot byte cap**: with dozens of players stacked in one spot, farthest
+  pellets/cells are culled first (`SnapshotByteBudget`, per-class priority in
+  `Snapshots.luau`). Raise `SnapshotRate` or lower `InterestBase` if you ever
+  see pop-in in mega-fights.
+- **Virus spikes** are faked with two rotated rounded squares (flat frames only,
+  no per-frame cost). Swap the template in `Renderer.luau` for an ImageLabel
+  sprite if you want the classic look.
+- **Freeze (F)** is a toggle (works on all input devices); hold-mode would just
+  move the remote calls to InputBegan/InputEnded.
+
+## Controls (defaults — all remappable in Settings, persisted via DataStore)
+
+| Key | Action |
+|---|---|
+| Space | Split all cells |
+| D | Double split (2 split passes) |
+| R | Triple split (3 split passes) |
+| W | Feed — eject a mass pellet (hold to stream; feeds players, viruses, experimentals) |
+| F | Freeze your cells (toggle) |
+| B | Respawn |
+| C | Fixed Mouse (locks aim direction) |
+| M | Menu / Settings |
+
+## What to test in Studio (mirrors the build milestones)
+
+1. **Map + orbs**: Play Solo → dark map, grid, ~600 colored orbs, smooth pan.
+2. **Movement**: press Play → your cell follows the mouse, slows as it grows,
+   camera zooms out with size. Watch HUD FPS/Ping.
+3. **Eating**: run over orbs → mass ticks up, orbs respawn elsewhere.
+4. **Split/merge**: Space to split (halves launch toward cursor), D/R for
+   multi-splits, pieces push apart, then glide back together and merge after
+   the cooldown (`MergeTimeBase + mass * MergeTimePerMass`).
+5. **Viruses**: feed a green virus 7 pellets (W) → it shoots a child virus.
+   Fly a big cell into one → you pop into pieces. Teal **experimentals** also
+   spray bonus orbs when fed. At 16 cells, viruses become safe food.
+6. **UI**: leaderboard sorts by mass, name+mass render on cells, death screen,
+   Spectate follows the leader, Shop equips skins.
+7. **Settings**: rebind a key, rejoin → it persisted (needs Studio API access
+   for DataStores; falls back to defaults silently otherwise).
+8. **Multiplayer**: Studio → Test tab → 2+ players local server. Eat each other;
+   check that a corner player receives only nearby entities.
+
+## Every Config knob (`src/shared/Config.luau`)
+
+All tuning lives in one module. Highlights (the file comments every field):
+
+- **Map**: `MapWidth/MapHeight` (keep square), `GridStep`.
+- **Rates**: `TickRate` (sim Hz), `SnapshotRate` (net Hz), `LeaderboardRate`.
+- **Orbs**: `OrbCount`, `OrbMass`, `MaxExtraOrbs` (experimental bonus orbs).
+- **Growth/speed**: `RadiusPerSqrtMass`, `StartMass`, `SpeedBase`,
+  `SpeedExponent` (agar-style `speed = base * mass^exp`), `MassDecayRate`,
+  `MassDecayMin`, `EatMassRatio` (1.25× to eat), `EatDepth` (overlap depth).
+- **Split/merge**: `MaxCells`, `SplitMinMass`, `SplitImpulse`, `ImpulseDamping`,
+  `MergeTimeBase` + `MergeTimePerMass`, `MergeOverlap`, `SeparationSoftness`,
+  `SplitCooldown`, `MultiSplitCooldown`.
+- **Feeding**: `EjectMinMass`, `EjectMassLoss`, `EjectPelletMass`, `PelletSpeed`,
+  `PelletFriction`, `PelletSelfEatDelay`, `FeedCooldown`, `MaxPellets`.
+- **Viruses**: `VirusCount`, `ExperimentalCount`, `VirusMass`, `VirusEatRatio`,
+  `VirusPopPieces`, `VirusFeedsToSplit`, `VirusSplitImpulse`, `VirusPushSpeed`,
+  `VirusFriction`, `MaxViruses`, `ExperimentalOrbsPerFeed`.
+- **Networking**: `SpatialCellSize`, `InterestBase/PerRadius/Max`,
+  `SpectatorInterest`, `SnapshotByteBudget` (keep < 900!), `AimSendRate`.
+- **Client feel**: `InterpolationDelay`, `ViewHeightBase/PerRadius/Min/Max`
+  (zoom curve), `SpectateViewHeight`, `ZoomSmoothing`, `CameraSmoothing`,
+  `LabelMinPixels`, `CullMargin`.
+- **Cosmetics**: `Palette`, `VirusColor`, `ExperimentalColor`,
+  `DefaultKeybinds`.
+
+## Project layout
+
+```
+default.project.json      Rojo mapping
+src/
+  shared/                 ReplicatedStorage.Shared (client + server)
+    Config.luau           every tunable
+    Util.luau             mass/radius/speed math
+    SpatialHash.luau      uniform-grid broadphase
+    SnapshotCodec.luau    binary pack/unpack (buffers, quantization)
+    Remotes.luau          RemoteEvent registry (creates on server)
+    ShopItems.luau        cosmetic catalog stub
+  server/                 ServerScriptService.Server
+    init.server.luau      fixed-tick loop + bootstrap
+    World.luau            authoritative state + spawn/despawn
+    Simulation.luau       movement, eat, split/merge, viruses, feeding
+    Snapshots.luau        interest management + packing + leaderboard
+    Network.luau          remote validation, player lifecycle
+    Keybinds.luau         DataStore persistence
+  client/                 StarterPlayerScripts.Client
+    init.client.luau      render loop + ping
+    WorldState.luau       snapshot buffer + interpolation + orb mirror
+    Camera.luau           2D pan/zoom (GUI-space, not the 3D camera)
+    Renderer.luau         pooled frames, culling, grid, labels
+    Input.luau            keybinds, aim, fixed-mouse, feed-hold
+    UI/                   HUD, Leaderboard, Menu, Settings, Shop, Theme
+```
