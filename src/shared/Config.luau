@@ -50,9 +50,10 @@ local Config = {
 	SplitMinMass = 36, -- a cell needs at least this much mass to split
 	SplitImpulse = 780, -- launch speed of the new half
 	ImpulseDamping = 4, -- exponential damping rate for split/pop impulses
-	MergeTimeBase = 10, -- seconds before split halves may re-merge...
-	MergeTimePerMass = 0.02, -- ...plus this many seconds per point of mass
-	MergeOverlap = 1.0, -- merge when centers are closer than max(r1, r2) * this
+	MergeTimeBase = 2, -- seconds before split halves may re-merge...
+	MergeTimePerMass = 0.006, -- ...plus this many seconds per point of mass
+	MergeOverlap = 1.25, -- merge when centers are closer than max(r1, r2) * this (looser = merges sooner)
+	MergePull = 320, -- once mergeable, cells actively glide toward each other (units/s) so merging feels fast
 	SeparationSoftness = 0.45, -- how hard same-player cells push apart pre-merge (0..1)
 	SplitCooldown = 0.12, -- server-side rate limit on split actions
 	MultiSplitCooldown = 0.25,
@@ -88,7 +89,7 @@ local Config = {
 	-- you move (they enter/leave the server's send set on screen).
 	InterestBase = 2400, -- interest radius = base + (largest own cell radius) * per-radius
 	InterestPerRadius = 10,
-	InterestMax = 4800,
+	InterestMax = 6000,
 	SpectatorInterest = 3200,
 	-- UnreliableRemoteEvents drop payloads over ~900 bytes, so snapshots are packed
 	-- against this byte budget (closest entities win; the rest are culled server-side).
@@ -102,16 +103,22 @@ local Config = {
 	ViewHeightBase = 1200, -- world units visible vertically at minimum size...
 	ViewHeightPerRadius = 9, -- ...plus this per unit of your largest cell's radius (zoom out as you grow)
 	ViewHeightMin = 1000,
-	ViewHeightMax = 4200,
+	ViewHeightMax = 8200, -- allow zooming out to see (roughly) the whole map
 	SpectateViewHeight = 2800,
 	-- manual zoom (mouse wheel): multiplies the auto view height. >1 = zoomed out.
-	ManualZoomMin = 0.6,
-	ManualZoomMax = 3.0,
-	ZoomWheelStep = 1.12, -- zoom multiplier per wheel notch
+	-- NOTE: dynamic entities (cells/pellets/viruses) beyond the server's
+	-- InterestMax won't appear at extreme zoom, but all orbs always will.
+	ManualZoomMin = 0.5,
+	ManualZoomMax = 7.0,
+	ZoomWheelStep = 1.15, -- zoom multiplier per wheel notch
 	ZoomSmoothing = 4, -- exponential smoothing rate for zoom changes
 	CameraSmoothing = 10, -- exponential smoothing rate for camera position
 	LabelMinPixels = 26, -- hide name/mass labels on cells smaller than this on screen
 	CullMargin = 120, -- extra world units around the view rect before culling
+	-- Skip drawing anything smaller than this many pixels on screen. When
+	-- zoomed out, orbs/pellets become sub-pixel dots that cost draw calls for
+	-- nothing; skipping them keeps far-zoom smooth no matter how much you zoom.
+	MinRenderPixels = 2.5,
 
 	------------------------------------------------------------------ Colors
 	Palette = {

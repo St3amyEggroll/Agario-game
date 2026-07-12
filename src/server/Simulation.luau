@@ -250,7 +250,7 @@ end
 -- back together. Trick: while un-mergeable we softly push overlapping cells
 -- apart; the moment BOTH are mergeable we stop separating entirely, so cells
 -- steered at the same cursor naturally overlap deep enough to merge.
-local function resolveOwnCells(now: number)
+local function resolveOwnCells(now: number, dt: number)
 	for _, info in World.players do
 		local cells = info.cells
 		local n = #cells
@@ -268,17 +268,29 @@ local function resolveOwnCells(now: number)
 				local dx, dy = b.x - a.x, b.y - a.y
 				local d = math.sqrt(dx * dx + dy * dy)
 				local sum = a.r + b.r
-				if d >= sum then
-					continue
-				end
 				local mergeable = now >= a.mergeAt and now >= b.mergeAt
 				if mergeable then
+					-- merge as soon as centers are close enough...
 					if d < math.max(a.r, b.r) * Config.MergeOverlap then
 						local big = a.m >= b.m and a or b
 						local small = big == a and b or a
 						merged = merged or {}
 						table.insert(merged, { big = big, small = small })
+					elseif d > 1e-3 and not info.frozen then
+						-- ...otherwise ACTIVELY pull the pair together so merging
+						-- is fast instead of relying on the player to steer them
+						-- into deep overlap. This is the key merge-speed fix.
+						-- (frozen cells hold position, so no pull while frozen)
+						local ux, uy = dx / d, dy / d
+						local pull = math.min(Config.MergePull * dt, d * 0.5)
+						a.x = math.clamp(a.x + ux * pull, 0, Config.MapWidth)
+						a.y = math.clamp(a.y + uy * pull, 0, Config.MapHeight)
+						b.x = math.clamp(b.x - ux * pull, 0, Config.MapWidth)
+						b.y = math.clamp(b.y - uy * pull, 0, Config.MapHeight)
 					end
+				elseif d >= sum then
+					-- not overlapping and not mergeable: nothing to resolve
+					continue
 				elseif not info.frozen then
 					-- soft positional correction: fraction of the overlap per
 					-- tick, so fresh split impulses can still carry pieces
@@ -513,7 +525,7 @@ function Simulation.step(dt: number, now: number)
 	movePellets(dt)
 	moveViruses(dt)
 	rebuildDynHash()
-	resolveOwnCells(now)
+	resolveOwnCells(now, dt)
 	eatPass(now)
 	feedViruses(now)
 	deathCheck()

@@ -195,6 +195,21 @@ end
 
 local function updateGrid(scale: number, minX: number, maxX: number, minY: number, maxY: number)
 	local step = Config.GridStep
+	-- when zoomed out so far that grid lines are only a few pixels apart, hide
+	-- the whole grid: it's just noise + overdraw at that point
+	if step * scale < 6 then
+		for k = 1, #gridV do
+			if gridV[k].Visible then
+				gridV[k].Visible = false
+			end
+		end
+		for k = 1, #gridH do
+			if gridH[k].Visible then
+				gridH[k].Visible = false
+			end
+		end
+		return
+	end
 	local usedV = 0
 	for i = math.max(0, math.ceil(minX / step)), math.min(MAP_W / step, math.floor(maxX / step)) do
 		usedV += 1
@@ -324,13 +339,19 @@ function Renderer.render(cam)
 
 	updateGrid(scale, minX, maxX, minY, maxY)
 
+	-- On-screen pixel-size cull: anything below this many pixels is invisible,
+	-- so we don't draw it at all. This is what makes far zoom-out cheap - the
+	-- more you zoom out, the more tiny orbs/pellets drop out of the draw set.
+	local minPx = Config.MinRenderPixels
+
 	generation += 1
 	local gen = generation
 
 	-- ORBS (static in world, so only camera motion causes writes - and those
 	-- are pixel-quantized leaf writes on the few dozen visible ones)
 	for id, orb in WorldState.orbs do
-		if orb.x >= minX and orb.x <= maxX and orb.y >= minY and orb.y <= maxY then
+		local px = orb.r * 2 * scale
+		if px >= minPx and orb.x >= minX and orb.x <= maxX and orb.y >= minY and orb.y <= maxY then
 			local w = activeOrbs[id]
 			if not w then
 				w = orbPool.acquire()
@@ -343,7 +364,7 @@ function Renderer.render(cam)
 				end
 				activeOrbs[id] = w
 			end
-			place(w, ox + orb.x * scale, oy + orb.y * scale, orb.r * 2 * scale)
+			place(w, ox + orb.x * scale, oy + orb.y * scale, px)
 			w.gen = gen
 		end
 	end
@@ -356,14 +377,15 @@ function Renderer.render(cam)
 
 	-- PELLETS
 	for id, p in WorldState.view.pellets do
-		if p.x >= minX and p.x <= maxX and p.y >= minY and p.y <= maxY then
+		local px = p.r * 2 * scale
+		if px >= minPx and p.x >= minX and p.x <= maxX and p.y >= minY and p.y <= maxY then
 			local w = activePellets[id]
 			if not w then
 				w = pelletPool.acquire()
 				w.frame.BackgroundColor3 = WorldState.colorForSlot(p.slot)
 				activePellets[id] = w
 			end
-			place(w, ox + p.x * scale, oy + p.y * scale, p.r * 2 * scale)
+			place(w, ox + p.x * scale, oy + p.y * scale, px)
 			w.gen = gen
 		end
 	end
@@ -381,7 +403,8 @@ function Renderer.render(cam)
 
 	-- VIRUSES
 	for id, v in WorldState.view.viruses do
-		if v.x >= minX and v.x <= maxX and v.y >= minY and v.y <= maxY then
+		local px = v.r * 2 * scale
+		if px >= minPx and v.x >= minX and v.x <= maxX and v.y >= minY and v.y <= maxY then
 			local w = activeViruses[id]
 			if not w then
 				w = virusPool.acquire()
@@ -398,7 +421,7 @@ function Renderer.render(cam)
 				w.disc.BackgroundColor3 = discColor
 				w.stroke.Color = darker(discColor)
 			end
-			place(w, ox + v.x * scale, oy + v.y * scale, v.r * 2 * scale)
+			place(w, ox + v.x * scale, oy + v.y * scale, px)
 			w.r = v.r
 			table.insert(visibleCellList, w)
 			w.gen = gen
@@ -413,7 +436,8 @@ function Renderer.render(cam)
 
 	-- CELLS (with name/mass labels)
 	for id, c in WorldState.view.cells do
-		if c.x >= minX and c.x <= maxX and c.y >= minY and c.y <= maxY then
+		local pixels = c.r * 2 * scale
+		if pixels >= minPx and c.x >= minX and c.x <= maxX and c.y >= minY and c.y <= maxY then
 			local w = activeCells[id]
 			if not w then
 				w = cellPool.acquire()
@@ -440,7 +464,6 @@ function Renderer.render(cam)
 					w.skin.Visible = false
 				end
 			end
-			local pixels = c.r * 2 * scale
 			place(w, ox + c.x * scale, oy + c.y * scale, pixels)
 
 			-- labels only when the cell is big enough on screen to read; text

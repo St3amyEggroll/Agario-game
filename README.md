@@ -134,7 +134,8 @@ All tuning lives in one module. Highlights (the file comments every field):
 - **Client feel**: `InterpolationDelay`, `ViewHeightBase/PerRadius/Min/Max`
   (auto zoom curve), `ManualZoomMin/Max` + `ZoomWheelStep` (wheel zoom),
   `SpectateViewHeight`, `ZoomSmoothing`, `CameraSmoothing`, `LabelMinPixels`,
-  `CullMargin`.
+  `CullMargin`, `MinRenderPixels` (skip drawing sub-N-pixel entities — the main
+  far-zoom perf lever).
 - **Cosmetics**: `Palette`, `VirusColor`, `ExperimentalColor`, `VirusImageId`,
   `DefaultKeybinds`.
 
