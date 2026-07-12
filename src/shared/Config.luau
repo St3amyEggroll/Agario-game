@@ -24,11 +24,15 @@ local Config = {
 
 	------------------------------------------------------------------ Mass / size / speed
 	RadiusPerSqrtMass = 4, -- radius = sqrt(mass) * this
-	StartMass = 25,
-	SpeedBase = 760, -- speed = SpeedBase * mass ^ SpeedExponent (standard agar-style falloff)
-	SpeedExponent = -0.44,
+	StartMass = 200,
+	-- speed = SpeedBase * mass ^ SpeedExponent. Agar's falloff is ~radius^-0.44
+	-- and radius ~ sqrt(mass), so the MASS exponent is ~-0.22 (the old -0.44
+	-- punished size twice as hard as agar and made everything feel slow):
+	-- small cells dart around, big cells crawl but stay playable
+	SpeedBase = 1250,
+	SpeedExponent = -0.22,
 	MassDecayRate = 0.002, -- fraction of mass lost per second, only above MassDecayMin
-	MassDecayMin = 120,
+	MassDecayMin = 300,
 	EatMassRatio = 1.25, -- eater must be at least this many times the prey's mass
 	EatDepth = 0.33, -- prey center must be inside eater radius minus prey radius * this
 
@@ -68,11 +72,14 @@ local Config = {
 	ExperimentalOrbsPerFeed = 2, -- bonus orbs an Experimental spits out per pellet fed
 
 	------------------------------------------------------------------ Networking
-	SpatialCellSize = 250, -- uniform grid bucket size for the spatial hash
-	InterestBase = 1600, -- interest radius = base + (largest own cell radius) * per-radius
-	InterestPerRadius = 8,
-	InterestMax = 3600,
-	SpectatorInterest = 2400,
+	SpatialCellSize = 400, -- uniform grid bucket size for the spatial hash
+	-- The interest radius must comfortably exceed what the most zoomed-out
+	-- client can SEE, or entities visibly pop in/out at the boundary while
+	-- you move (they enter/leave the server's send set on screen).
+	InterestBase = 2400, -- interest radius = base + (largest own cell radius) * per-radius
+	InterestPerRadius = 10,
+	InterestMax = 4800,
+	SpectatorInterest = 3200,
 	-- UnreliableRemoteEvents drop payloads over ~900 bytes, so snapshots are packed
 	-- against this byte budget (closest entities win; the rest are culled server-side).
 	SnapshotByteBudget = 850,

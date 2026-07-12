@@ -49,9 +49,14 @@ local function splitPass(info, now: number)
 			local half = cell.m / 2
 			World.setMass(cell, half)
 			cell.mergeAt = now + Util.mergeDelay(half)
-			local piece = World.spawnCell(cell.player, cell.x + dx * cell.r * 0.4, cell.y + dy * cell.r * 0.4, half)
-			piece.ix = dx * Config.SplitImpulse
-			piece.iy = dy * Config.SplitImpulse
+			-- splitting while frozen keeps the pieces stacked on the parent
+			-- (agar-style freeze-split); normal splits launch toward the aim
+			local offset = info.frozen and 1 or cell.r * 0.4
+			local piece = World.spawnCell(cell.player, cell.x + dx * offset, cell.y + dy * offset, half)
+			if not info.frozen then
+				piece.ix = dx * Config.SplitImpulse
+				piece.iy = dy * Config.SplitImpulse
+			end
 		end
 	end
 end
@@ -175,8 +180,13 @@ local function moveCells(dt: number)
 				vy = dy / d * speed
 			end
 		end
-		cell.x = math.clamp(cell.x + (vx + cell.ix) * dt, 0, Config.MapWidth)
-		cell.y = math.clamp(cell.y + (vy + cell.iy) * dt, 0, Config.MapHeight)
+		-- frozen cells hold position COMPLETELY (no aim, no impulses) - the
+		-- impulse still decays below so unfreezing doesn't launch stored
+		-- momentum
+		if not (info and info.frozen) then
+			cell.x = math.clamp(cell.x + (vx + cell.ix) * dt, 0, Config.MapWidth)
+			cell.y = math.clamp(cell.y + (vy + cell.iy) * dt, 0, Config.MapHeight)
+		end
 		-- split/pop impulses decay exponentially
 		local damp = math.exp(-Config.ImpulseDamping * dt)
 		cell.ix *= damp
@@ -265,9 +275,11 @@ local function resolveOwnCells(now: number)
 						merged = merged or {}
 						table.insert(merged, { big = big, small = small })
 					end
-				else
+				elseif not info.frozen then
 					-- soft positional correction: fraction of the overlap per
-					-- tick, so fresh split impulses can still carry pieces out
+					-- tick, so fresh split impulses can still carry pieces
+					-- out. Skipped entirely while frozen so stacked
+					-- freeze-splits STAY stacked.
 					local ux, uy = Util.unit(dx, dy)
 					if d < 1e-3 then
 						ux, uy = math.random() - 0.5, math.random() - 0.5

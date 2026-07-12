@@ -349,6 +349,11 @@ function Renderer.render(cam)
 		end
 	end
 
+	-- VIRUSES and CELLS share one z-ordered list (sorted by size below):
+	-- small cells hide UNDER a virus, but a cell big enough to eat the virus
+	-- renders OVER it, like agar
+	table.clear(visibleCellList)
+
 	-- VIRUSES
 	for id, v in WorldState.view.viruses do
 		if v.x >= minX and v.x <= maxX and v.y >= minY and v.y <= maxY then
@@ -369,6 +374,8 @@ function Renderer.render(cam)
 				w.stroke.Color = darker(discColor)
 			end
 			place(w, ox + v.x * scale, oy + v.y * scale, v.r * 2 * scale)
+			w.r = v.r
+			table.insert(visibleCellList, w)
 			w.gen = gen
 		end
 	end
@@ -379,8 +386,7 @@ function Renderer.render(cam)
 		end
 	end
 
-	-- CELLS (with name/mass labels + smaller-under-bigger z ordering)
-	table.clear(visibleCellList)
+	-- CELLS (with name/mass labels)
 	for id, c in WorldState.view.cells do
 		if c.x >= minX and c.x <= maxX and c.y >= minY and c.y <= maxY then
 			local w = activeCells[id]
@@ -440,13 +446,13 @@ function Renderer.render(cam)
 			activeCells[id] = nil
 		end
 	end
-	-- bigger cells draw over smaller ones (classic agar reading); viruses sit
-	-- at Z=200, above any cell small enough to hide inside them
+	-- bigger draws over smaller, cells and viruses together: you can hide
+	-- under a bigger virus, and you cover a virus you're big enough to eat
 	table.sort(visibleCellList, function(a, b)
 		return a.r < b.r
 	end)
 	for i, w in visibleCellList do
-		local z = math.min(10 + i, 198)
+		local z = math.min(10 + i, 240)
 		if w.frame.ZIndex ~= z then
 			w.frame.ZIndex = z
 		end
