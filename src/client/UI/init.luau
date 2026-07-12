@@ -48,12 +48,12 @@ function UI.init(playerGui: PlayerGui)
 	-- debug testing buttons (below the HUD panel); remove by setting
 	-- Config.Debug = false - the server also refuses these when it's off
 	if Config.Debug then
-		local addMass = Theme.button(gui, "+ Mass", UDim2.fromScale(0.01, 0.2), UDim2.fromScale(0.075, 0.045), function()
+		local addMass = Theme.button(gui, "+ Mass", UDim2.fromScale(0.01, 0.24), UDim2.fromScale(0.075, 0.045), function()
 			Remotes.Action:FireServer("debugmass", 1)
 		end)
 		addMass.BackgroundColor3 = Color3.fromRGB(55, 110, 70)
 		Theme.capText(addMass, 16)
-		local subMass = Theme.button(gui, "- Mass", UDim2.fromScale(0.01, 0.25), UDim2.fromScale(0.075, 0.045), function()
+		local subMass = Theme.button(gui, "- Mass", UDim2.fromScale(0.01, 0.29), UDim2.fromScale(0.075, 0.045), function()
 			Remotes.Action:FireServer("debugmass", -1)
 		end)
 		subMass.BackgroundColor3 = Color3.fromRGB(120, 60, 60)

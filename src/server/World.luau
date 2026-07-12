@@ -81,6 +81,28 @@ function World.spawnOrb(x: number?, y: number?, respawns: boolean)
 	return orb
 end
 
+-- Coins are just orbs with isCoin + a sentinel color + bigger radius, so they
+-- reuse the entire orb sync path (no codec/network changes).
+function World.spawnCoin(x: number?, y: number?)
+	if not x then
+		x, y = World.randomPos(80)
+	end
+	local coin = {
+		id = nextOrbId(),
+		x = x,
+		y = y :: any,
+		m = Config.CoinMass,
+		r = Util.radiusFromMass(Config.CoinMass),
+		color = Config.CoinColorIndex,
+		respawns = true,
+		isCoin = true,
+	}
+	World.orbs[coin.id] = coin
+	World.orbHash:insert(coin)
+	table.insert(World.pendingOrbSpawns, coin)
+	return coin
+end
+
 function World.removeOrb(orb)
 	World.orbs[orb.id] = nil
 	World.orbHash:remove(orb)
@@ -89,7 +111,9 @@ function World.removeOrb(orb)
 	-- always encode removals first) and be left with a ghost orb forever
 	Util.arrayRemove(World.pendingOrbSpawns, orb)
 	table.insert(World.pendingOrbRemovals, orb.id)
-	if orb.respawns then
+	if orb.isCoin then
+		World.spawnCoin() -- keep the rare coin population stable
+	elseif orb.respawns then
 		-- keep the baseline population stable: eaten orbs pop up elsewhere
 		World.spawnOrb(nil, nil, true)
 	else
@@ -213,6 +237,8 @@ function World.addPlayer(player)
 		slot = findFreeSlot(),
 		name = player.DisplayName,
 		colorIdx = math.random(#Config.Palette),
+		skinId = 0, -- 0 = no skin (plain colored circle); else an image/decal asset id
+		coins = 0, -- currency collected from gold coins
 		cells = {},
 		aimX = Config.MapWidth / 2,
 		aimY = Config.MapHeight / 2,
@@ -268,12 +294,15 @@ function World.safeSpawnPos(): (number, number)
 end
 
 function World.broadcastRosterUpdate(info)
-	Remotes.Roster:FireAllClients("update", info.slot, { n = info.name, c = info.colorIdx })
+	Remotes.Roster:FireAllClients("update", info.slot, { n = info.name, c = info.colorIdx, k = info.skinId })
 end
 
 function World.init()
 	for _ = 1, Config.OrbCount do
 		World.spawnOrb(nil, nil, true)
+	end
+	for _ = 1, Config.CoinCount do
+		World.spawnCoin()
 	end
 	for _ = 1, Config.VirusCount do
 		World.spawnVirus("virus")

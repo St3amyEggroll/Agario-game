@@ -65,7 +65,11 @@ local function feed(info, now: number)
 	for _, cell in table.clone(info.cells) do
 		if cell.m >= Config.EjectMinMass then
 			local dx, dy = Util.unit(info.aimX - cell.x, info.aimY - cell.y)
-			World.setMass(cell, cell.m - Config.EjectMassLoss)
+			-- optionally free: when EjectCostsMass is off, the pellet is spawned
+			-- without shrinking the firing cell
+			if Config.EjectCostsMass then
+				World.setMass(cell, cell.m - Config.EjectMassLoss)
+			end
 			-- small angular jitter so streams of pellets fan out slightly
 			local jitter = (math.random() - 0.5) * 0.14
 			local cosj, sinj = math.cos(jitter), math.sin(jitter)
@@ -141,7 +145,7 @@ local function drainActions(now: number)
 				info.frozen = not info.frozen
 			end
 		elseif action == "setskin" then
-			info.colorIdx = cmd.arg
+			info.skinId = cmd.arg -- image/decal asset id (0 = none), validated in Network
 			World.broadcastRosterUpdate(info)
 		elseif action == "debugmass" then
 			-- testing helper (gated by Config.Debug in Network): +/- one
@@ -360,8 +364,20 @@ local function eatPass(now: number)
 			end
 		end)
 		for _, orb in scratchHits do
-			cell.m += orb.m
-			grew = true
+			if orb.isCoin then
+				local owner = World.players[cell.player]
+				if owner then
+					owner.coins += 1
+					Remotes.PlayerState:FireClient(cell.player, "coins", owner.coins)
+				end
+				if Config.CoinBonusMass > 0 then
+					cell.m += Config.CoinBonusMass
+					grew = true
+				end
+			else
+				cell.m += orb.m
+				grew = true
+			end
 			World.removeOrb(orb)
 		end
 

@@ -62,11 +62,14 @@ local function onAction(player, action, arg)
 	info.lastAction[action] = now
 
 	if action == "setskin" then
+		-- arg is an image/decal asset id (0 clears the skin). Any non-negative
+		-- integer is allowed so players can paste custom ids, not only catalog
+		-- entries; a bad id just renders as a blank image, never a crash.
 		if not isFiniteNumber(arg) then
 			return
 		end
 		arg = math.floor(arg)
-		if arg < 1 or arg > #Config.Palette then
+		if arg < 0 or arg > 1e12 then
 			return
 		end
 	elseif action == "debugmass" then
@@ -85,7 +88,7 @@ local function sendFullRoster(player)
 	-- serialization reliably
 	local roster = {}
 	for slot, info in World.slotToInfo do
-		roster[tostring(slot)] = { n = info.name, c = info.colorIdx }
+		roster[tostring(slot)] = { n = info.name, c = info.colorIdx, k = info.skinId }
 	end
 	local myInfo = World.players[player]
 	Remotes.Roster:FireClient(player, "full", roster, myInfo.slot)

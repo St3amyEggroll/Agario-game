@@ -22,6 +22,15 @@ local Config = {
 	OrbMass = 1.2,
 	MaxExtraOrbs = 200, -- cap on bonus (non-respawning) orbs spat out by Experimentals
 
+	------------------------------------------------------------------ Coins (rare currency pickups)
+	CoinCount = 6, -- how many coins exist at once (keep low - they're rare)
+	CoinMass = 6, -- only sets the coin's visual radius; coins give currency, not mass
+	CoinBonusMass = 0, -- extra mass granted on pickup (0 = pure currency)
+	-- coins ride the orb sync channel: an orb whose color == CoinColorIndex is
+	-- drawn gold by the client and gives a coin on the server
+	CoinColorIndex = 255,
+	CoinColor = Color3.fromRGB(255, 205, 55),
+
 	------------------------------------------------------------------ Mass / size / speed
 	RadiusPerSqrtMass = 4, -- radius = sqrt(mass) * this
 	StartMass = 200,
@@ -29,7 +38,7 @@ local Config = {
 	-- and radius ~ sqrt(mass), so the MASS exponent is ~-0.22 (the old -0.44
 	-- punished size twice as hard as agar and made everything feel slow):
 	-- small cells dart around, big cells crawl but stay playable
-	SpeedBase = 1250,
+	SpeedBase = 1120,
 	SpeedExponent = -0.22,
 	MassDecayRate = 0.002, -- fraction of mass lost per second, only above MassDecayMin
 	MassDecayMin = 300,
@@ -50,7 +59,8 @@ local Config = {
 
 	------------------------------------------------------------------ Feed / ejected pellets
 	EjectMinMass = 36, -- cell must have at least this much mass to eject
-	EjectMassLoss = 13, -- mass the cell loses per eject
+	EjectCostsMass = false, -- if false, feeding/ejecting does NOT shrink your own cell (free pellets)
+	EjectMassLoss = 13, -- mass the cell loses per eject (only applied when EjectCostsMass)
 	EjectPelletMass = 10, -- mass the pellet actually carries (difference is "wasted", like agar)
 	PelletSpeed = 640,
 	PelletFriction = 3.2, -- exponential slowdown rate; pellets come to rest

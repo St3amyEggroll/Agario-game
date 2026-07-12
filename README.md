@@ -115,13 +115,16 @@ All tuning lives in one module. Highlights (the file comments every field):
 - **Map**: `MapWidth/MapHeight` (keep square), `GridStep`.
 - **Rates**: `TickRate` (sim Hz), `SnapshotRate` (net Hz), `LeaderboardRate`.
 - **Orbs**: `OrbCount`, `OrbMass`, `MaxExtraOrbs` (experimental bonus orbs).
+- **Coins** (rare gold currency pickups): `CoinCount`, `CoinMass` (visual size),
+  `CoinBonusMass`, `CoinColorIndex`, `CoinColor`.
 - **Growth/speed**: `RadiusPerSqrtMass`, `StartMass`, `SpeedBase`,
   `SpeedExponent` (agar-style `speed = base * mass^exp`), `MassDecayRate`,
   `MassDecayMin`, `EatMassRatio` (1.25× to eat), `EatDepth` (overlap depth).
 - **Split/merge**: `MaxCells`, `SplitMinMass`, `SplitImpulse`, `ImpulseDamping`,
   `MergeTimeBase` + `MergeTimePerMass`, `MergeOverlap`, `SeparationSoftness`,
   `SplitCooldown`, `MultiSplitCooldown`.
-- **Feeding**: `EjectMinMass`, `EjectMassLoss`, `EjectPelletMass`, `PelletSpeed`,
+- **Feeding**: `EjectMinMass`, `EjectCostsMass` (off = feeding doesn't shrink
+  your cell), `EjectMassLoss`, `EjectPelletMass`, `PelletSpeed`,
   `PelletFriction`, `PelletSelfEatDelay`, `FeedCooldown`, `MaxPellets`.
 - **Viruses**: `VirusCount`, `ExperimentalCount`, `VirusMass`, `VirusEatRatio`,
   `VirusPopPieces`, `VirusFeedsToSplit`, `VirusSplitImpulse`, `VirusPushSpeed`,
@@ -146,7 +149,8 @@ src/
     SpatialHash.luau      uniform-grid broadphase
     SnapshotCodec.luau    binary pack/unpack (buffers, quantization)
     Remotes.luau          RemoteEvent registry (creates on server)
-    ShopItems.luau        cosmetic catalog stub
+    Skins.luau            searchable image/decal skin catalog
+    ShopItems.luau        (legacy, unused) cosmetic catalog stub
   server/                 ServerScriptService.Server
     init.server.luau      fixed-tick loop + bootstrap
     World.luau            authoritative state + spawn/despawn

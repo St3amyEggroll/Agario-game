@@ -27,6 +27,7 @@ local WorldState = {
 	orbs = {}, -- [id] = {x, y, color, r}
 	roster = {}, -- [slot] = {n = name, c = colorIdx}
 	mySlot = nil,
+	coins = 0, -- currency collected (from gold coins)
 	status = "menu", -- "menu" | "alive" | "dead" | "spectate"
 	leaderboard = {}, -- array of {s, n, m}
 	snaps = {}, -- ascending by t
@@ -84,11 +85,14 @@ Remotes.Leaderboard.OnClientEvent:Connect(function(entries)
 	end
 end)
 
-Remotes.PlayerState.OnClientEvent:Connect(function(event)
+Remotes.PlayerState.OnClientEvent:Connect(function(event, arg)
 	if event == "spawned" then
 		WorldState.status = "alive"
 	elseif event == "died" then
 		WorldState.status = "dead"
+	elseif event == "coins" then
+		WorldState.coins = arg
+		return -- coins is a lightweight update; no menu/status refresh needed
 	end
 	if WorldState.onPlayerState then
 		WorldState.onPlayerState(event)
@@ -233,6 +237,12 @@ end
 function WorldState.nameForSlot(slot: number): string
 	local entry = WorldState.roster[slot]
 	return entry and entry.n or "?"
+end
+
+-- Skin image asset id for a slot (0 / nil = no skin).
+function WorldState.skinForSlot(slot: number): number
+	local entry = WorldState.roster[slot]
+	return (entry and entry.k) or 0
 end
 
 return WorldState

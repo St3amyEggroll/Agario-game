@@ -31,6 +31,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Util = require(Shared.Util)
+local Skins = require(Shared.Skins)
 local WorldState = require(script.Parent.WorldState)
 
 local MAP_W = Config.MapWidth
@@ -124,6 +125,21 @@ local function buildPools()
 		local stroke = Instance.new("UIStroke")
 		stroke.Thickness = 2
 		stroke.Parent = f
+		-- skin image fills the circle, clipped round by its own UICorner.
+		-- ScaleType.Crop so non-square art fills without distortion. Hidden
+		-- until the player actually has a skin.
+		local skin = Instance.new("ImageLabel")
+		skin.AnchorPoint = Vector2.new(0.5, 0.5)
+		skin.Position = UDim2.fromScale(0.5, 0.5)
+		skin.Size = UDim2.fromScale(1, 1)
+		skin.BackgroundTransparency = 1
+		skin.ScaleType = Enum.ScaleType.Crop
+		skin.Visible = false
+		skin.ZIndex = 10
+		local skinCorner = Instance.new("UICorner")
+		skinCorner.CornerRadius = UDim.new(0.5, 0)
+		skinCorner.Parent = skin
+		skin.Parent = f
 		local nameLabel = Instance.new("TextLabel")
 		nameLabel.AnchorPoint = Vector2.new(0.5, 0.5)
 		nameLabel.Position = UDim2.fromScale(0.5, 0.4)
@@ -143,6 +159,7 @@ local function buildPools()
 		massLabel.Parent = f
 		return {
 			frame = f,
+			skin = skin,
 			stroke = stroke,
 			nameLabel = nameLabel,
 			massLabel = massLabel,
@@ -150,6 +167,8 @@ local function buildPools()
 			lastMass = -1,
 			lastNameSize = -1,
 			lastMassSize = -1,
+			lastSkin = -1,
+			lastZ = -1,
 			slot = -1,
 		}
 	end)
@@ -315,7 +334,13 @@ function Renderer.render(cam)
 			local w = activeOrbs[id]
 			if not w then
 				w = orbPool.acquire()
-				w.frame.BackgroundColor3 = Config.Palette[orb.color] or Config.Palette[1]
+				-- the coin sentinel color renders gold; everything else is a
+				-- normal palette orb
+				if orb.color == Config.CoinColorIndex then
+					w.frame.BackgroundColor3 = Config.CoinColor
+				else
+					w.frame.BackgroundColor3 = Config.Palette[orb.color] or Config.Palette[1]
+				end
 				activeOrbs[id] = w
 			end
 			place(w, ox + orb.x * scale, oy + orb.y * scale, orb.r * 2 * scale)
@@ -401,6 +426,19 @@ function Renderer.render(cam)
 				w.frame.BackgroundColor3 = color
 				w.stroke.Color = darker(color)
 				w.lastName = ""
+				w.lastSkin = -1 -- force a skin refresh for the new occupant
+			end
+			-- skin image (rbxthumb renders decals reliably); cached so the
+			-- Image string is only written when the skin actually changes
+			local skinId = WorldState.skinForSlot(c.slot)
+			if w.lastSkin ~= skinId then
+				w.lastSkin = skinId
+				if skinId > 0 then
+					w.skin.Image = Skins.thumb(skinId)
+					w.skin.Visible = true
+				else
+					w.skin.Visible = false
+				end
 			end
 			local pixels = c.r * 2 * scale
 			place(w, ox + c.x * scale, oy + c.y * scale, pixels)
@@ -455,6 +493,13 @@ function Renderer.render(cam)
 		local z = math.min(10 + i, 240)
 		if w.frame.ZIndex ~= z then
 			w.frame.ZIndex = z
+		end
+		-- the skin is a child but ZIndexBehavior is Sibling (global z), so it
+		-- must track its cell's z or it'd render under other cells' bodies.
+		-- Equal z + child-after-parent tree order keeps it above its own body.
+		if w.skin and w.lastZ ~= z then
+			w.lastZ = z
+			w.skin.ZIndex = z
 		end
 	end
 end
