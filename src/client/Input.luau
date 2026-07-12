@@ -139,6 +139,17 @@ function Input.init()
 		end
 	end)
 
+	-- mouse wheel: manual zoom (wheel up = in, wheel down = out)
+	UserInputService.InputChanged:Connect(function(input, gameProcessed)
+		if input.UserInputType == Enum.UserInputType.MouseWheel and not gameProcessed then
+			if input.Position.Z > 0 then
+				Camera.zoomBy(1 / Config.ZoomWheelStep)
+			elseif input.Position.Z < 0 then
+				Camera.zoomBy(Config.ZoomWheelStep)
+			end
+		end
+	end)
+
 	Remotes.Keybinds.OnClientEvent:Connect(function(saved)
 		if typeof(saved) == "table" then
 			for action in Config.DefaultKeybinds do

@@ -2,19 +2,28 @@
 	Renderer - draws the whole game as flat frames in one ScreenGui.
 	Zero Parts, zero physics, zero per-frame Instance creation.
 
-	Key trick: everything is parented to ONE "map frame" whose children use
-	Scale-based UDim2s (world position / map size). The camera then only moves
-	and resizes that single frame; every child follows for free. Static things
-	(orbs, grid lines) therefore cost NOTHING per frame beyond their existence -
-	their properties are written once, on (re)assignment.
+	PERFORMANCE MODEL (learned the hard way): never animate a container with
+	many children. Resizing/moving a parent frame forces Roblox to re-layout
+	every descendant (and re-fit TextScaled text, re-tessellate UICorners),
+	which collapses FPS. So instead:
 
-	Pooling: each entity class has a pool of pre-built frame "wrappers". Frames
-	are acquired when an entity enters the view rect and released when it
-	leaves - never Destroy()ed, never created mid-frame after warmup.
+	  - every entity is an independent LEAF frame positioned in SCREEN SPACE
+	    (offset UDim2s). Writing Position/Size on a leaf is cheap and cascades
+	    to nothing.
+	  - writes are skipped when nothing changed: positions/sizes are quantized
+	    to whole pixels and cached per wrapper, so an idle scene costs zero
+	    property writes.
+	  - labels use manual TextSize (NOT TextScaled - TextScaled re-fits text on
+	    every resize, which is exactly the per-frame cost we must avoid).
 
-	Culling: an explicit world-space view rect test decides which entities get
+	Pooling: each entity class has a pool of pre-built frame "wrappers",
+	acquired when an entity enters the view rect and released when it leaves -
+	never Destroy()ed, never created mid-frame after warmup.
+
+	Culling: an explicit world-space view-rect test decides which entities get
 	a frame at all. A player in a corner pays nothing for the far side of the
-	map (the engine additionally clips, but we don't even touch the properties).
+	map. Grid lines are likewise a small pool covering only the visible rows
+	and columns.
 ]]
 
 local Workspace = game:GetService("Workspace")
@@ -26,12 +35,13 @@ local WorldState = require(script.Parent.WorldState)
 
 local MAP_W = Config.MapWidth
 local MAP_H = Config.MapHeight
+local GRID_COLOR = Color3.fromRGB(42, 46, 58)
 
 local Renderer = {}
 
 local gui: ScreenGui
 local backdrop: Frame
-local mapFrame: Frame
+local mapRect: Frame -- map background; the ONLY thing sized to the map, and it has no scale-children except grid lines
 
 --------------------------------------------------------------------- pools
 
@@ -65,7 +75,7 @@ local function circleFrame(zindex: number): Frame
 	local corner = Instance.new("UICorner")
 	corner.CornerRadius = UDim.new(0.5, 0)
 	corner.Parent = f
-	f.Parent = mapFrame
+	f.Parent = backdrop
 	return f
 end
 
@@ -73,36 +83,24 @@ local orbPool, pelletPool, virusPool, cellPool
 
 local function buildPools()
 	orbPool = newPool(function()
-		return { frame = circleFrame(2) }
-	end)
-
-	pelletPool = newPool(function()
 		return { frame = circleFrame(3) }
 	end)
 
+	pelletPool = newPool(function()
+		return { frame = circleFrame(4) }
+	end)
+
 	virusPool = newPool(function()
-		local f = circleFrame(200)
-		-- cheap "spiky" look: two rotated rounded squares behind the disc.
-		-- Real spike geometry would need ImageLabels or many frames; this is
-		-- the flat-frame tradeoff (swap for an ImageLabel sprite if desired).
-		for i, rot in { 15, 30 } do
-			local spike = Instance.new("Frame")
-			spike.AnchorPoint = Vector2.new(0.5, 0.5)
-			spike.Position = UDim2.fromScale(0.5, 0.5)
-			spike.Size = UDim2.fromScale(1.06, 1.06)
-			spike.Rotation = rot
-			spike.BorderSizePixel = 0
-			spike.ZIndex = 199
-			local corner = Instance.new("UICorner")
-			corner.CornerRadius = UDim.new(0.32, 0)
-			corner.Parent = spike
-			spike.Name = "Spike" .. i
-			spike.Parent = f
-		end
-		local stroke = Instance.new("UIStroke")
-		stroke.Thickness = 2
-		stroke.Parent = f
-		return { frame = f, spikes = { f.Spike1, f.Spike2 }, stroke = stroke, kind = 0 }
+		-- viruses are a single ImageLabel sprite (Config.VirusImageId): looks
+		-- right AND is one leaf instance - cheaper than fake spike geometry
+		local img = Instance.new("ImageLabel")
+		img.AnchorPoint = Vector2.new(0.5, 0.5)
+		img.BackgroundTransparency = 1
+		img.Image = Config.VirusImageId
+		img.Visible = false
+		img.ZIndex = 200
+		img.Parent = backdrop
+		return { frame = img, kind = 0 }
 	end)
 
 	cellPool = newPool(function()
@@ -116,7 +114,9 @@ local function buildPools()
 		nameLabel.Size = UDim2.fromScale(1.5, 0.3)
 		nameLabel.BackgroundTransparency = 1
 		nameLabel.Font = Enum.Font.GothamBold
-		nameLabel.TextScaled = true
+		nameLabel.TextScaled = false -- manual TextSize: TextScaled re-fits on every resize (slow)
+		nameLabel.TextWrapped = false
+		nameLabel.TextSize = 14
 		nameLabel.TextColor3 = Color3.new(1, 1, 1)
 		nameLabel.TextStrokeTransparency = 0.4
 		nameLabel.ZIndex = 250
@@ -132,9 +132,70 @@ local function buildPools()
 			massLabel = massLabel,
 			lastName = "",
 			lastMass = -1,
+			lastNameSize = -1,
+			lastMassSize = -1,
 			slot = -1,
 		}
 	end)
+end
+
+--------------------------------------------------------------------- grid
+
+-- Pooled grid lines, parented to mapRect so they clip to the map bounds.
+-- Only the visible rows/columns get a line (a few dozen frames, no corners,
+-- no strokes, no text - the cheapest instances there are).
+local gridV: { Frame } = {}
+local gridH: { Frame } = {}
+
+local function newGridLine(vertical: boolean): Frame
+	local line = Instance.new("Frame")
+	line.BackgroundColor3 = GRID_COLOR
+	line.BorderSizePixel = 0
+	line.ZIndex = 2
+	line.Visible = false
+	line.Size = vertical and UDim2.new(0, 1, 1, 0) or UDim2.new(1, 0, 0, 1)
+	line.Parent = mapRect
+	return line
+end
+
+local function updateGrid(scale: number, minX: number, maxX: number, minY: number, maxY: number)
+	local step = Config.GridStep
+	local usedV = 0
+	for i = math.max(0, math.ceil(minX / step)), math.min(MAP_W / step, math.floor(maxX / step)) do
+		usedV += 1
+		local line = gridV[usedV]
+		if not line then
+			line = newGridLine(true)
+			gridV[usedV] = line
+		end
+		line.Position = UDim2.fromOffset(math.floor(i * step * scale + 0.5), 0)
+		if not line.Visible then
+			line.Visible = true
+		end
+	end
+	for k = usedV + 1, #gridV do
+		if gridV[k].Visible then
+			gridV[k].Visible = false
+		end
+	end
+	local usedH = 0
+	for i = math.max(0, math.ceil(minY / step)), math.min(MAP_H / step, math.floor(maxY / step)) do
+		usedH += 1
+		local line = gridH[usedH]
+		if not line then
+			line = newGridLine(false)
+			gridH[usedH] = line
+		end
+		line.Position = UDim2.fromOffset(0, math.floor(i * step * scale + 0.5))
+		if not line.Visible then
+			line.Visible = true
+		end
+	end
+	for k = usedH + 1, #gridH do
+		if gridH[k].Visible then
+			gridH[k].Visible = false
+		end
+	end
 end
 
 --------------------------------------------------------------------- setup
@@ -147,7 +208,7 @@ function Renderer.init(playerGui: PlayerGui)
 	gui.DisplayOrder = 1
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-	-- out-of-map background (also clips the world to the screen)
+	-- static full-screen background (never moves, never resizes)
 	backdrop = Instance.new("Frame")
 	backdrop.Size = UDim2.fromScale(1, 1)
 	backdrop.BackgroundColor3 = Color3.fromRGB(18, 20, 26)
@@ -155,37 +216,16 @@ function Renderer.init(playerGui: PlayerGui)
 	backdrop.ClipsDescendants = true
 	backdrop.Parent = gui
 
-	mapFrame = Instance.new("Frame")
-	mapFrame.BackgroundColor3 = Color3.fromRGB(28, 31, 40)
-	mapFrame.BorderSizePixel = 0
-	mapFrame.ZIndex = 1
+	mapRect = Instance.new("Frame")
+	mapRect.BackgroundColor3 = Color3.fromRGB(28, 31, 40)
+	mapRect.BorderSizePixel = 0
+	mapRect.ZIndex = 1
+	mapRect.ClipsDescendants = true -- grid lines clip to the map edge
 	local edge = Instance.new("UIStroke")
 	edge.Color = Color3.fromRGB(90, 100, 130)
 	edge.Thickness = 3
-	edge.Parent = mapFrame
-	mapFrame.Parent = backdrop
-
-	-- Static grid: built ONCE, positions in scale-space, zero per-frame cost.
-	-- ~66 thin frames; the engine clips whatever is off screen.
-	local gridColor = Color3.fromRGB(42, 46, 58)
-	for i = 0, MAP_W / Config.GridStep do
-		local v = Instance.new("Frame")
-		v.BackgroundColor3 = gridColor
-		v.BorderSizePixel = 0
-		v.Size = UDim2.new(0, 1, 1, 0)
-		v.Position = UDim2.fromScale(i * Config.GridStep / MAP_W, 0)
-		v.ZIndex = 1
-		v.Parent = mapFrame
-	end
-	for i = 0, MAP_H / Config.GridStep do
-		local h = Instance.new("Frame")
-		h.BackgroundColor3 = gridColor
-		h.BorderSizePixel = 0
-		h.Size = UDim2.new(1, 0, 0, 1)
-		h.Position = UDim2.fromScale(0, i * Config.GridStep / MAP_H)
-		h.ZIndex = 1
-		h.Parent = mapFrame
-	end
+	edge.Parent = mapRect
+	mapRect.Parent = backdrop
 
 	buildPools()
 	gui.Parent = playerGui
@@ -193,9 +233,20 @@ end
 
 --------------------------------------------------------------------- helpers
 
-local function place(frame: Frame, x: number, y: number, r: number)
-	frame.Position = UDim2.fromScale(x / MAP_W, y / MAP_H)
-	frame.Size = UDim2.fromScale(r * 2 / MAP_W, r * 2 / MAP_H)
+-- Quantize to whole pixels and skip the write when nothing changed: an idle
+-- scene costs zero property sets, and sub-pixel churn never touches the engine.
+local function place(w, sx: number, sy: number, d: number)
+	sx = math.floor(sx + 0.5)
+	sy = math.floor(sy + 0.5)
+	d = math.floor(d + 0.5)
+	if w.lx ~= sx or w.ly ~= sy then
+		w.lx, w.ly = sx, sy
+		w.frame.Position = UDim2.fromOffset(sx, sy)
+	end
+	if w.ld ~= d then
+		w.ld = d
+		w.frame.Size = UDim2.fromOffset(d, d)
+	end
 end
 
 local function darker(c: Color3): Color3
@@ -211,15 +262,27 @@ local generation = 0 -- frame stamp used to release wrappers whose entity left
 
 local visibleCellList = {} -- reused scratch for z-sorting
 
+local lastMapScale = -1
+local lastMapOx, lastMapOy = math.huge, math.huge
+
 --------------------------------------------------------------------- render
 
 function Renderer.render(cam)
 	local viewport = Workspace.CurrentCamera.ViewportSize
 	local scale = cam.scale
+	-- screen position of world origin: screenX = ox + worldX * scale
+	local ox = viewport.X / 2 - cam.x * scale
+	local oy = viewport.Y / 2 - cam.y * scale
 
-	-- one transform moves the whole world
-	mapFrame.Position = UDim2.fromOffset(viewport.X / 2 - cam.x * scale, viewport.Y / 2 - cam.y * scale)
-	mapFrame.Size = UDim2.fromOffset(MAP_W * scale, MAP_H * scale)
+	-- map background: cached so it's only touched while the camera moves/zooms
+	if scale ~= lastMapScale then
+		lastMapScale = scale
+		mapRect.Size = UDim2.fromOffset(MAP_W * scale, MAP_H * scale)
+	end
+	if ox ~= lastMapOx or oy ~= lastMapOy then
+		lastMapOx, lastMapOy = ox, oy
+		mapRect.Position = UDim2.fromOffset(ox, oy)
+	end
 
 	-- world-space view rect (+margin) used for explicit culling
 	local halfW = viewport.X / 2 / scale + Config.CullMargin
@@ -227,20 +290,22 @@ function Renderer.render(cam)
 	local minX, maxX = cam.x - halfW, cam.x + halfW
 	local minY, maxY = cam.y - halfH, cam.y + halfH
 
+	updateGrid(scale, minX, maxX, minY, maxY)
+
 	generation += 1
 	local gen = generation
 
-	-- ORBS: static; properties are written once when the orb first enters the
-	-- view, then never touched again while it stays visible.
+	-- ORBS (static in world, so only camera motion causes writes - and those
+	-- are pixel-quantized leaf writes on the few dozen visible ones)
 	for id, orb in WorldState.orbs do
 		if orb.x >= minX and orb.x <= maxX and orb.y >= minY and orb.y <= maxY then
 			local w = activeOrbs[id]
 			if not w then
 				w = orbPool.acquire()
-				place(w.frame, orb.x, orb.y, orb.r)
 				w.frame.BackgroundColor3 = Config.Palette[orb.color] or Config.Palette[1]
 				activeOrbs[id] = w
 			end
+			place(w, ox + orb.x * scale, oy + orb.y * scale, orb.r * 2 * scale)
 			w.gen = gen
 		end
 	end
@@ -260,7 +325,7 @@ function Renderer.render(cam)
 				w.frame.BackgroundColor3 = WorldState.colorForSlot(p.slot)
 				activePellets[id] = w
 			end
-			place(w.frame, p.x, p.y, p.r)
+			place(w, ox + p.x * scale, oy + p.y * scale, p.r * 2 * scale)
 			w.gen = gen
 		end
 	end
@@ -282,13 +347,11 @@ function Renderer.render(cam)
 			end
 			if w.kind ~= v.kind then
 				w.kind = v.kind
-				local color = v.kind == 2 and Config.ExperimentalColor or Config.VirusColor
-				w.frame.BackgroundColor3 = color
-				w.spikes[1].BackgroundColor3 = darker(color)
-				w.spikes[2].BackgroundColor3 = darker(color)
-				w.stroke.Color = darker(color)
+				-- experimentals get a teal tint over the sprite; regular
+				-- viruses show the image untinted
+				w.frame.ImageColor3 = v.kind == 2 and Color3.fromRGB(150, 255, 225) or Color3.new(1, 1, 1)
 			end
-			place(w.frame, v.x, v.y, v.r)
+			place(w, ox + v.x * scale, oy + v.y * scale, v.r * 2 * scale)
 			w.gen = gen
 		end
 	end
@@ -316,10 +379,11 @@ function Renderer.render(cam)
 				w.stroke.Color = darker(color)
 				w.lastName = ""
 			end
-			place(w.frame, c.x, c.y, c.r)
-
-			-- labels only when the cell is big enough on screen to read
 			local pixels = c.r * 2 * scale
+			place(w, ox + c.x * scale, oy + c.y * scale, pixels)
+
+			-- labels only when the cell is big enough on screen to read; text
+			-- size is manual + cached so we never trigger a text re-fit
 			local showLabels = pixels >= Config.LabelMinPixels
 			if showLabels then
 				local name = WorldState.nameForSlot(c.slot)
@@ -331,6 +395,16 @@ function Renderer.render(cam)
 				if w.lastMass ~= mass then
 					w.lastMass = mass
 					w.massLabel.Text = tostring(mass)
+				end
+				local nameSize = math.min(math.floor(pixels * 0.16 + 4), 40)
+				if w.lastNameSize ~= nameSize then
+					w.lastNameSize = nameSize
+					w.nameLabel.TextSize = nameSize
+				end
+				local massSize = math.min(math.floor(pixels * 0.11 + 3), 28)
+				if w.lastMassSize ~= massSize then
+					w.lastMassSize = massSize
+					w.massLabel.TextSize = massSize
 				end
 			end
 			if w.nameLabel.Visible ~= showLabels then
@@ -355,7 +429,10 @@ function Renderer.render(cam)
 		return a.r < b.r
 	end)
 	for i, w in visibleCellList do
-		w.frame.ZIndex = math.min(10 + i, 198)
+		local z = math.min(10 + i, 198)
+		if w.frame.ZIndex ~= z then
+			w.frame.ZIndex = z
+		end
 	end
 end
 

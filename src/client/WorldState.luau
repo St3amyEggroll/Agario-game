@@ -97,29 +97,35 @@ end)
 
 --------------------------------------------------------------------- sampling
 
-local function lerp(a: number, b: number, t: number): number
-	return a + (b - a) * t
-end
-
 -- Fill `out` with entities interpolated between maps m1 (older) and m2 (newer).
 -- Entities only in the newer snapshot snap in at their new position (they just
 -- entered interest range); entities only in the older one are gone (eaten or
 -- left range) and simply aren't rendered.
+-- PERF: `out` tables are reused across frames (update-in-place + remove stale
+-- ids) instead of reallocated - this runs per entity per frame, and fresh
+-- tables every frame would be constant GC churn.
 local function sampleMap(m1, m2, alpha: number, out)
-	table.clear(out)
+	for id in out do
+		if not m2[id] then
+			out[id] = nil
+		end
+	end
 	for id, e2 in m2 do
+		local t = out[id]
+		if not t then
+			t = {}
+			out[id] = t
+		end
 		local e1 = m1 and m1[id]
 		if e1 then
-			out[id] = {
-				x = lerp(e1.x, e2.x, alpha),
-				y = lerp(e1.y, e2.y, alpha),
-				r = lerp(e1.r, e2.r, alpha),
-				slot = e2.slot,
-				kind = e2.kind,
-			}
+			t.x = e1.x + (e2.x - e1.x) * alpha
+			t.y = e1.y + (e2.y - e1.y) * alpha
+			t.r = e1.r + (e2.r - e1.r) * alpha
 		else
-			out[id] = e2
+			t.x, t.y, t.r = e2.x, e2.y, e2.r
 		end
+		t.slot = e2.slot
+		t.kind = e2.kind
 	end
 end
 

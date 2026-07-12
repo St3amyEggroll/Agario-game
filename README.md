@@ -54,12 +54,15 @@ right services automatically (`default.project.json` defines the mapping).
 7. **Compact payloads.** `SnapshotCodec.luau` packs everything into `buffer`s:
    u16 quantized positions (~0.12 world-unit resolution), fixed-point radii,
    u32-ms timestamps. A cell costs 9 bytes on the wire.
-8. **Pooled, culled rendering.** One ScreenGui; every entity is a frame from a
-   pre-allocated pool, acquired when it enters the view rect and released when
-   it leaves — never created/destroyed per frame (`Renderer.luau`). All frames
-   are Scale-positioned children of a single map frame, so the camera moves
-   *one* instance per frame, and static orbs cost zero property writes while
-   visible.
+8. **Pooled, culled, leaf-only rendering.** One ScreenGui; every entity is a
+   frame from a pre-allocated pool, acquired when it enters the view rect and
+   released when it leaves — never created/destroyed per frame
+   (`Renderer.luau`). Every entity is an independent *leaf* frame positioned
+   in screen space: nothing with many children is ever moved or resized
+   (parent resizes cascade a re-layout to every descendant and kill FPS).
+   Writes are pixel-quantized and cached, so unchanged frames cost zero
+   property sets, and labels use manual `TextSize` instead of `TextScaled`
+   (which re-fits text on every resize).
 
 ### Tradeoffs to know about (and their knobs)
 
@@ -67,9 +70,8 @@ right services automatically (`default.project.json` defines the mapping).
   pellets/cells are culled first (`SnapshotByteBudget`, per-class priority in
   `Snapshots.luau`). Raise `SnapshotRate` or lower `InterestBase` if you ever
   see pop-in in mega-fights.
-- **Virus spikes** are faked with two rotated rounded squares (flat frames only,
-  no per-frame cost). Swap the template in `Renderer.luau` for an ImageLabel
-  sprite if you want the classic look.
+- **Viruses** render as a single ImageLabel sprite (`VirusImageId` in Config);
+  experimentals are the same sprite with a teal tint.
 - **Freeze (F)** is a toggle (works on all input devices); hold-mode would just
   move the remote calls to InputBegan/InputEnded.
 
@@ -85,6 +87,7 @@ right services automatically (`default.project.json` defines the mapping).
 | B | Respawn |
 | C | Fixed Mouse (locks aim direction) |
 | M | Menu / Settings |
+| Mouse wheel | Zoom in/out (`ManualZoomMin/Max`, `ZoomWheelStep`) |
 
 ## What to test in Studio (mirrors the build milestones)
 
@@ -126,9 +129,10 @@ All tuning lives in one module. Highlights (the file comments every field):
 - **Networking**: `SpatialCellSize`, `InterestBase/PerRadius/Max`,
   `SpectatorInterest`, `SnapshotByteBudget` (keep < 900!), `AimSendRate`.
 - **Client feel**: `InterpolationDelay`, `ViewHeightBase/PerRadius/Min/Max`
-  (zoom curve), `SpectateViewHeight`, `ZoomSmoothing`, `CameraSmoothing`,
-  `LabelMinPixels`, `CullMargin`.
-- **Cosmetics**: `Palette`, `VirusColor`, `ExperimentalColor`,
+  (auto zoom curve), `ManualZoomMin/Max` + `ZoomWheelStep` (wheel zoom),
+  `SpectateViewHeight`, `ZoomSmoothing`, `CameraSmoothing`, `LabelMinPixels`,
+  `CullMargin`.
+- **Cosmetics**: `Palette`, `VirusColor`, `ExperimentalColor`, `VirusImageId`,
   `DefaultKeybinds`.
 
 ## Project layout

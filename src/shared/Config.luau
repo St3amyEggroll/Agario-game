@@ -83,6 +83,10 @@ local Config = {
 	ViewHeightMin = 1000,
 	ViewHeightMax = 4200,
 	SpectateViewHeight = 2800,
+	-- manual zoom (mouse wheel): multiplies the auto view height. >1 = zoomed out.
+	ManualZoomMin = 0.6,
+	ManualZoomMax = 3.0,
+	ZoomWheelStep = 1.12, -- zoom multiplier per wheel notch
 	ZoomSmoothing = 4, -- exponential smoothing rate for zoom changes
 	CameraSmoothing = 10, -- exponential smoothing rate for camera position
 	LabelMinPixels = 26, -- hide name/mass labels on cells smaller than this on screen
@@ -105,6 +109,7 @@ local Config = {
 	},
 	VirusColor = Color3.fromRGB(70, 200, 80),
 	ExperimentalColor = Color3.fromRGB(70, 190, 170),
+	VirusImageId = "rbxassetid://109391875228628", -- virus sprite (ImageLabel)
 
 	------------------------------------------------------------------ Default keybinds (remappable in Settings)
 	DefaultKeybinds = {
