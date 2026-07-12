@@ -91,16 +91,26 @@ local function buildPools()
 	end)
 
 	virusPool = newPool(function()
-		-- viruses are a single ImageLabel sprite (Config.VirusImageId): looks
-		-- right AND is one leaf instance - cheaper than fake spike geometry
+		-- layered virus: a solid green disc UNDER the sprite. If the image
+		-- asset fails to load (bad/decal id, no asset permissions, offline
+		-- Studio), viruses still render as clear green circles instead of
+		-- becoming invisible insta-pop hazards. When the sprite loads, it
+		-- covers the disc (sized slightly larger so spiky edges overhang).
+		local f = circleFrame(200)
+		f.BackgroundColor3 = Config.VirusColor
+		local stroke = Instance.new("UIStroke")
+		stroke.Thickness = 2
+		stroke.Color = darker(Config.VirusColor)
+		stroke.Parent = f
 		local img = Instance.new("ImageLabel")
 		img.AnchorPoint = Vector2.new(0.5, 0.5)
+		img.Position = UDim2.fromScale(0.5, 0.5)
+		img.Size = UDim2.fromScale(1.18, 1.18)
 		img.BackgroundTransparency = 1
 		img.Image = Config.VirusImageId
-		img.Visible = false
-		img.ZIndex = 200
-		img.Parent = backdrop
-		return { frame = img, kind = 0 }
+		img.ZIndex = 201
+		img.Parent = f
+		return { frame = f, image = img, disc = f, stroke = stroke, kind = 0 }
 	end)
 
 	cellPool = newPool(function()
@@ -233,11 +243,12 @@ end
 
 --------------------------------------------------------------------- helpers
 
--- Quantize to whole pixels and skip the write when nothing changed: an idle
--- scene costs zero property sets, and sub-pixel churn never touches the engine.
+-- Quantize positions to quarter-pixels (fine enough that motion stays smooth,
+-- coarse enough to dedupe writes) and sizes to whole pixels; skip the write
+-- when nothing changed so an idle scene costs zero property sets.
 local function place(w, sx: number, sy: number, d: number)
-	sx = math.floor(sx + 0.5)
-	sy = math.floor(sy + 0.5)
+	sx = math.floor(sx * 4 + 0.5) * 0.25
+	sy = math.floor(sy * 4 + 0.5) * 0.25
 	d = math.floor(d + 0.5)
 	if w.lx ~= sx or w.ly ~= sy then
 		w.lx, w.ly = sx, sy
@@ -347,9 +358,13 @@ function Renderer.render(cam)
 			end
 			if w.kind ~= v.kind then
 				w.kind = v.kind
-				-- experimentals get a teal tint over the sprite; regular
-				-- viruses show the image untinted
-				w.frame.ImageColor3 = v.kind == 2 and Color3.fromRGB(150, 255, 225) or Color3.new(1, 1, 1)
+				-- experimentals get a teal tint (sprite + fallback disc);
+				-- regular viruses show the image untinted over a green disc
+				local isExp = v.kind == 2
+				w.image.ImageColor3 = isExp and Color3.fromRGB(150, 255, 225) or Color3.new(1, 1, 1)
+				local discColor = isExp and Config.ExperimentalColor or Config.VirusColor
+				w.disc.BackgroundColor3 = discColor
+				w.stroke.Color = darker(discColor)
 			end
 			place(w, ox + v.x * scale, oy + v.y * scale, v.r * 2 * scale)
 			w.gen = gen

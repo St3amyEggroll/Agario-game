@@ -129,15 +129,35 @@ local function sampleMap(m1, m2, alpha: number, out)
 	end
 end
 
+local renderClock: number? = nil
+
 -- Called once per render frame, before the camera and renderer read anything.
-function WorldState.sample()
+-- dt advances a LOCAL render clock: rendering must progress smoothly every
+-- frame, NOT in 50 ms steps whenever a packet happens to arrive (deriving the
+-- render time straight from the newest snapshot does exactly that and looks
+-- like shuddering). The local clock is gently pulled toward
+-- (newest snapshot time - InterpolationDelay) to absorb network jitter and
+-- clock drift; only a big desync (join, long stall) hard-snaps it.
+function WorldState.sample(dt: number)
 	local snaps = WorldState.snaps
 	local n = #snaps
 	if n == 0 then
 		return
 	end
 
-	local renderTime = snaps[n].t - Config.InterpolationDelay
+	local target = snaps[n].t - Config.InterpolationDelay
+	local clock = renderClock or target
+	clock += dt
+	local err = target - clock
+	if math.abs(err) > 0.3 then
+		clock = target
+	else
+		clock += err * math.min(0.15, dt * 3)
+	end
+	renderClock = clock
+	-- never sample past the newest data (extrapolating = overshoot artifacts)
+	local renderTime = math.min(clock, snaps[n].t)
+
 	-- find the pair bracketing renderTime, scanning from the newest end
 	local older, newer = nil, snaps[n]
 	for i = n - 1, 1, -1 do

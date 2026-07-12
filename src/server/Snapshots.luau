@@ -93,7 +93,7 @@ end
 
 --------------------------------------------------------------------- send
 
-function Snapshots.send(now: number)
+function Snapshots.send()
 	flushOrbDeltas()
 
 	local top = topAliveInfo()
@@ -174,7 +174,10 @@ function Snapshots.send(now: number)
 			budget -= Codec.PELLET_BYTES
 		end
 
-		Remotes.Snapshot:FireClient(player, Codec.packSnapshot(now, cells, viruses, pellets))
+		-- timestamp with the SIMULATION clock (time of the tick that produced
+		-- these positions), not send-time: 30 Hz ticks vs 20 Hz sends alias by
+		-- up to 33 ms, and stamping send-time makes interpolation wobble
+		Remotes.Snapshot:FireClient(player, Codec.packSnapshot(World.now, cells, viruses, pellets))
 	end
 end
 

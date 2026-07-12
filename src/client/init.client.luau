@@ -43,7 +43,7 @@ Input.init()
 UI.init(playerGui)
 
 RunService.RenderStepped:Connect(function(dt)
-	WorldState.sample()
+	WorldState.sample(dt)
 	Camera.update(dt)
 	Renderer.render(Camera)
 	Input.tick(dt, os.clock())

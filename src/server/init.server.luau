@@ -56,7 +56,7 @@ RunService.Heartbeat:Connect(function(dt)
 	snapAccumulator += dt
 	if snapAccumulator >= SNAP_INTERVAL then
 		snapAccumulator %= SNAP_INTERVAL
-		Snapshots.send(os.clock() - startClock)
+		Snapshots.send()
 	end
 
 	lbAccumulator += dt
