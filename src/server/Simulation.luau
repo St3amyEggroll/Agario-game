@@ -279,10 +279,12 @@ local function resolveOwnCells(now: number, dt: number)
 					elseif d > 1e-3 and not info.frozen then
 						-- ...otherwise ACTIVELY pull the pair together so merging
 						-- is fast instead of relying on the player to steer them
-						-- into deep overlap. This is the key merge-speed fix.
+						-- into deep overlap. Pull speed scales with the larger
+						-- radius so big cells (big gap) don't creep.
 						-- (frozen cells hold position, so no pull while frozen)
 						local ux, uy = dx / d, dy / d
-						local pull = math.min(Config.MergePull * dt, d * 0.5)
+						local pullSpeed = Config.MergePull + math.max(a.r, b.r) * Config.MergePullPerRadius
+						local pull = math.min(pullSpeed * dt, d * 0.5)
 						a.x = math.clamp(a.x + ux * pull, 0, Config.MapWidth)
 						a.y = math.clamp(a.y + uy * pull, 0, Config.MapHeight)
 						b.x = math.clamp(b.x - ux * pull, 0, Config.MapWidth)

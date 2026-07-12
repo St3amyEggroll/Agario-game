@@ -6,8 +6,8 @@
 
 local Config = {
 	------------------------------------------------------------------ Map
-	MapWidth = 8000,
-	MapHeight = 8000, -- keep square: the renderer assumes a square map so circles stay circular
+	MapWidth = 16000,
+	MapHeight = 16000, -- keep square: the renderer assumes a square map so circles stay circular
 	GridStep = 250, -- background grid spacing (world units)
 
 	------------------------------------------------------------------ Server timing
@@ -21,12 +21,12 @@ local Config = {
 	LeaderboardRate = 1, -- leaderboard broadcasts per second (reliable)
 
 	------------------------------------------------------------------ Orbs (static food)
-	OrbCount = 600, -- baseline orb population; eaten orbs respawn elsewhere to keep this stable
+	OrbCount = 1800, -- baseline orb population; eaten orbs respawn elsewhere to keep this stable
 	OrbMass = 1.2,
-	MaxExtraOrbs = 200, -- cap on bonus (non-respawning) orbs spat out by Experimentals
+	MaxExtraOrbs = 300, -- cap on bonus (non-respawning) orbs spat out by Experimentals
 
 	------------------------------------------------------------------ Coins (rare currency pickups)
-	CoinCount = 6, -- how many coins exist at once (keep low - they're rare)
+	CoinCount = 12, -- how many coins exist at once (keep low - they're rare)
 	CoinMass = 6, -- only sets the coin's visual radius; coins give currency, not mass
 	CoinBonusMass = 0, -- extra mass granted on pickup (0 = pure currency)
 	-- coins ride the orb sync channel: an orb whose color == CoinColorIndex is
@@ -53,10 +53,14 @@ local Config = {
 	SplitMinMass = 36, -- a cell needs at least this much mass to split
 	SplitImpulse = 780, -- launch speed of the new half
 	ImpulseDamping = 4, -- exponential damping rate for split/pop impulses
-	MergeTimeBase = 2, -- seconds before split halves may re-merge...
-	MergeTimePerMass = 0.006, -- ...plus this many seconds per point of mass
-	MergeOverlap = 1.25, -- merge when centers are closer than max(r1, r2) * this (looser = merges sooner)
-	MergePull = 320, -- once mergeable, cells actively glide toward each other (units/s) so merging feels fast
+	MergeTimeBase = 1, -- seconds before split halves may re-merge...
+	MergeTimePerMass = 0.001, -- ...plus this many seconds per point of mass (kept tiny so big cells still merge fast)
+	MergeOverlap = 1.3, -- merge when centers are closer than max(r1, r2) * this (looser = merges sooner)
+	-- once mergeable, cells actively glide together. The pull speed scales with
+	-- cell radius (MergePullPerRadius) so BIG cells - which have a big gap to
+	-- close - still merge quickly instead of creeping together.
+	MergePull = 340, -- base pull speed (units/s)
+	MergePullPerRadius = 3.5, -- extra pull speed per unit of the larger cell's radius
 	SeparationSoftness = 0.45, -- how hard same-player cells push apart pre-merge (0..1)
 	SplitCooldown = 0.12, -- server-side rate limit on split actions
 	MultiSplitCooldown = 0.25,
@@ -73,8 +77,8 @@ local Config = {
 	MaxPellets = 180, -- hard cap on live pellets (oldest recycled); also bounds snapshot bandwidth
 
 	------------------------------------------------------------------ Viruses / Experimentals
-	VirusCount = 14,
-	ExperimentalCount = 4,
+	VirusCount = 28,
+	ExperimentalCount = 8,
 	VirusMass = 110,
 	VirusEatRatio = 1.15, -- a cell this many times the virus mass pops when overlapping it
 	VirusPopPieces = 8, -- max extra pieces a popped cell shatters into (limited by MaxCells)
@@ -82,7 +86,7 @@ local Config = {
 	VirusSplitImpulse = 820,
 	VirusPushSpeed = 110, -- how fast a fed virus drifts in the feed direction
 	VirusFriction = 2.5,
-	MaxViruses = 26, -- global cap so fed viruses can't overrun the map
+	MaxViruses = 50, -- global cap so fed viruses can't overrun the map
 	ExperimentalOrbsPerFeed = 2, -- bonus orbs an Experimental spits out per pellet fed
 
 	------------------------------------------------------------------ Networking
@@ -103,7 +107,7 @@ local Config = {
 	ViewHeightBase = 1200, -- world units visible vertically at minimum size...
 	ViewHeightPerRadius = 9, -- ...plus this per unit of your largest cell's radius (zoom out as you grow)
 	ViewHeightMin = 1000,
-	ViewHeightMax = 8200, -- allow zooming out to see (roughly) the whole map
+	ViewHeightMax = 13000, -- allow zooming out to survey a big chunk of the (now 16k) map
 	SpectateViewHeight = 2800,
 	-- manual zoom (mouse wheel): multiplies the auto view height. >1 = zoomed out.
 	-- The whole world is sent to every client, so ALL entities are visible at
