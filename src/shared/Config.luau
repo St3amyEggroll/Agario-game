@@ -145,7 +145,7 @@ local Config = {
 
 	------------------------------------------------------------------ Debug / testing
 	Debug = true, -- shows testing helpers (+/- mass buttons) and lets the server accept them. Turn OFF for release!
-	DebugMassStep = 100, -- mass added/removed per debug button click
+	DebugMassPercent = 10, -- percent of current mass added/removed per debug button click
 
 	------------------------------------------------------------------ Default keybinds (remappable in Settings)
 	DefaultKeybinds = {

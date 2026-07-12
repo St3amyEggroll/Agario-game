@@ -148,8 +148,8 @@ local function drainActions(now: number)
 			info.skinId = cmd.arg -- image/decal asset id (0 = none), validated in Network
 			World.broadcastRosterUpdate(info)
 		elseif action == "debugmass" then
-			-- testing helper (gated by Config.Debug in Network): +/- one
-			-- DebugMassStep on the player's largest cell
+			-- testing helper (gated by Config.Debug in Network): +/- a percentage
+			-- of the largest cell's current mass (arg is +1 or -1)
 			if Config.Debug and info.alive then
 				local biggest
 				for _, cell in info.cells do
@@ -158,7 +158,8 @@ local function drainActions(now: number)
 					end
 				end
 				if biggest then
-					World.setMass(biggest, math.max(biggest.m + cmd.arg * Config.DebugMassStep, 10))
+					local factor = 1 + cmd.arg * Config.DebugMassPercent / 100
+					World.setMass(biggest, math.max(biggest.m * factor, 10))
 				end
 			end
 		end
