@@ -12,7 +12,9 @@ local Config = {
 
 	------------------------------------------------------------------ Server timing
 	TickRate = 30, -- fixed simulation timestep (Hz). Decoupled from rendering & snapshots.
-	SnapshotRate = 20, -- world snapshots per second per client (UnreliableRemoteEvent)
+	-- 30 Hz snapshots (one per tick): lower = less bandwidth but more input
+	-- delay, since InterpolationDelay must cover ~2 snapshot intervals
+	SnapshotRate = 30,
 	LeaderboardRate = 1, -- leaderboard broadcasts per second (reliable)
 
 	------------------------------------------------------------------ Orbs (static food)
@@ -74,10 +76,12 @@ local Config = {
 	-- UnreliableRemoteEvents drop payloads over ~900 bytes, so snapshots are packed
 	-- against this byte budget (closest entities win; the rest are culled server-side).
 	SnapshotByteBudget = 850,
-	AimSendRate = 20, -- client -> server aim updates per second
+	AimSendRate = 60, -- client -> server aim updates per second (tiny unreliable packets)
 
 	------------------------------------------------------------------ Client rendering
-	InterpolationDelay = 0.1, -- render this far behind the newest snapshot (~2 snapshot intervals)
+	-- render this far behind the newest snapshot. Keep >= 2 snapshot intervals:
+	-- lower feels snappier but stutters if a packet is late/lost
+	InterpolationDelay = 0.07,
 	ViewHeightBase = 1200, -- world units visible vertically at minimum size...
 	ViewHeightPerRadius = 9, -- ...plus this per unit of your largest cell's radius (zoom out as you grow)
 	ViewHeightMin = 1000,
@@ -109,7 +113,7 @@ local Config = {
 	},
 	VirusColor = Color3.fromRGB(70, 200, 80),
 	ExperimentalColor = Color3.fromRGB(70, 190, 170),
-	VirusImageId = "rbxassetid://109391875228628", -- virus sprite (ImageLabel)
+	VirusImageId = "rbxassetid://105917001657812", -- virus sprite (ImageLabel)
 
 	------------------------------------------------------------------ Default keybinds (remappable in Settings)
 	DefaultKeybinds = {
