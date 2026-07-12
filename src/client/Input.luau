@@ -92,6 +92,10 @@ local function dispatch(action: string)
 		lastFeed = 0 -- fire immediately on next tick
 	elseif action == "Freeze" then
 		fireAction("freeze")
+	elseif action == "PullTogether" then
+		fireAction("pulltogether")
+	elseif action == "Speed" then
+		fireAction("speedboost")
 	elseif action == "Respawn" then
 		fireAction("respawn")
 	elseif action == "FixedMouse" then

@@ -258,6 +258,8 @@ function World.addPlayer(player)
 		colorIdx = math.random(#Config.Palette),
 		skinId = 0, -- 0 = no skin (plain colored circle); else an image/decal asset id
 		coins = 0, -- currency collected from gold coins
+		pullUntil = 0, -- Pull Together ability active until this server time
+		speedUntil = 0, -- Speed ability active until this server time
 		cells = {},
 		aimX = Config.MapWidth / 2,
 		aimY = Config.MapHeight / 2,

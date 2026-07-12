@@ -138,6 +138,17 @@ local function drainActions(now: number)
 			if info.alive then
 				feed(info, now)
 			end
+		elseif action == "pulltogether" then
+			-- ability: force all cells mergeable + strong glide for a moment,
+			-- yanking them into one (see resolveOwnCells)
+			if info.alive then
+				info.pullUntil = now + Config.PullDuration
+			end
+		elseif action == "speedboost" then
+			-- ability: temporary movement speed multiplier (see moveCells)
+			if info.alive then
+				info.speedUntil = now + Config.SpeedBoostDuration
+			end
 		elseif action == "freeze" then
 			-- Freeze is a toggle (spec allows toggle or hold; toggle chosen so
 			-- it works the same on any input device)
@@ -173,7 +184,7 @@ local function moveCells(dt: number)
 	for _, cell in World.cells do
 		local info = World.players[cell.player]
 		local vx, vy = 0, 0
-		if info and not info.frozen then
+		if info then
 			local dx = info.aimX - cell.x
 			local dy = info.aimY - cell.y
 			local d = math.sqrt(dx * dx + dy * dy)
@@ -181,17 +192,20 @@ local function moveCells(dt: number)
 				-- speed falls off with mass; also scales down as the cursor
 				-- gets inside the cell so you can hover to stop (agar feel)
 				local speed = Util.speedFromMass(cell.m) * math.clamp(d / cell.r, 0, 1)
+				-- freeze now only SLOWS you (you can still kinda move), and the
+				-- Speed ability temporarily boosts you
+				if info.frozen then
+					speed *= Config.FreezeMoveFactor
+				end
+				if info.speedUntil and World.now < info.speedUntil then
+					speed *= Config.SpeedBoostMult
+				end
 				vx = dx / d * speed
 				vy = dy / d * speed
 			end
 		end
-		-- frozen cells hold position COMPLETELY (no aim, no impulses) - the
-		-- impulse still decays below so unfreezing doesn't launch stored
-		-- momentum
-		if not (info and info.frozen) then
-			cell.x = math.clamp(cell.x + (vx + cell.ix) * dt, 0, Config.MapWidth)
-			cell.y = math.clamp(cell.y + (vy + cell.iy) * dt, 0, Config.MapHeight)
-		end
+		cell.x = math.clamp(cell.x + (vx + cell.ix) * dt, 0, Config.MapWidth)
+		cell.y = math.clamp(cell.y + (vy + cell.iy) * dt, 0, Config.MapHeight)
 		-- split/pop impulses decay exponentially
 		local damp = math.exp(-Config.ImpulseDamping * dt)
 		cell.ix *= damp
@@ -258,6 +272,12 @@ local function resolveOwnCells(now: number, dt: number)
 		if n < 2 then
 			continue
 		end
+		-- The "Pull Together" ability: while active, ALL cells are forced
+		-- mergeable and glide together much faster (regroup on demand).
+		local pulling = info.pullUntil and now < info.pullUntil
+		local easeRate = pulling and (Config.MergeEaseRate * Config.PullEaseMult) or Config.MergeEaseRate
+		local ease = 1 - math.exp(-easeRate * dt) -- fraction of the gap closed this tick
+
 		local merged = nil -- collect merges, apply after the pair loop
 		for i = 1, n - 1 do
 			local a = cells[i]
@@ -269,7 +289,7 @@ local function resolveOwnCells(now: number, dt: number)
 				local dx, dy = b.x - a.x, b.y - a.y
 				local d = math.sqrt(dx * dx + dy * dy)
 				local sum = a.r + b.r
-				local mergeable = now >= a.mergeAt and now >= b.mergeAt
+				local mergeable = pulling or (now >= a.mergeAt and now >= b.mergeAt)
 				if mergeable then
 					-- merge as soon as centers are close enough...
 					if d < math.max(a.r, b.r) * Config.MergeOverlap then
@@ -277,19 +297,16 @@ local function resolveOwnCells(now: number, dt: number)
 						local small = big == a and b or a
 						merged = merged or {}
 						table.insert(merged, { big = big, small = small })
-					elseif d > 1e-3 and not info.frozen then
-						-- ...otherwise ACTIVELY pull the pair together so merging
-						-- is fast instead of relying on the player to steer them
-						-- into deep overlap. Pull speed scales with the larger
-						-- radius so big cells (big gap) don't creep.
-						-- (frozen cells hold position, so no pull while frozen)
+					elseif d > 1e-3 then
+						-- ...otherwise GLIDE together with an exponential ease so
+						-- they visibly come together over the gap instead of
+						-- snapping. Each cell moves half the closing distance.
 						local ux, uy = dx / d, dy / d
-						local pullSpeed = Config.MergePull + math.max(a.r, b.r) * Config.MergePullPerRadius
-						local pull = math.min(pullSpeed * dt, d * 0.5)
-						a.x = math.clamp(a.x + ux * pull, 0, Config.MapWidth)
-						a.y = math.clamp(a.y + uy * pull, 0, Config.MapHeight)
-						b.x = math.clamp(b.x - ux * pull, 0, Config.MapWidth)
-						b.y = math.clamp(b.y - uy * pull, 0, Config.MapHeight)
+						local close = d * 0.5 * ease
+						a.x = math.clamp(a.x + ux * close, 0, Config.MapWidth)
+						a.y = math.clamp(a.y + uy * close, 0, Config.MapHeight)
+						b.x = math.clamp(b.x - ux * close, 0, Config.MapWidth)
+						b.y = math.clamp(b.y - uy * close, 0, Config.MapHeight)
 					end
 				elseif d >= sum then
 					-- not overlapping and not mergeable: nothing to resolve

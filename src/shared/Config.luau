@@ -36,7 +36,7 @@ local Config = {
 
 	------------------------------------------------------------------ Mass / size / speed
 	RadiusPerSqrtMass = 4, -- radius = sqrt(mass) * this
-	StartMass = 200,
+	StartMass = 1000,
 	-- speed = SpeedBase * mass ^ SpeedExponent. Agar's falloff is ~radius^-0.44
 	-- and radius ~ sqrt(mass), so the MASS exponent is ~-0.22 (the old -0.44
 	-- punished size twice as hard as agar and made everything feel slow):
@@ -44,7 +44,7 @@ local Config = {
 	SpeedBase = 1120,
 	SpeedExponent = -0.22,
 	MassDecayRate = 0.002, -- fraction of mass lost per second, only above MassDecayMin
-	MassDecayMin = 300,
+	MassDecayMin = 1100, -- above the 1000 spawn mass so fresh spawns don't immediately bleed
 	EatMassRatio = 1.25, -- eater must be at least this many times the prey's mass
 	EatDepth = 0.33, -- prey center must be inside eater radius minus prey radius * this
 
@@ -56,11 +56,24 @@ local Config = {
 	MergeTimeBase = 1, -- seconds before split halves may re-merge...
 	MergeTimePerMass = 0.001, -- ...plus this many seconds per point of mass (kept tiny so big cells still merge fast)
 	MergeOverlap = 1.3, -- merge when centers are closer than max(r1, r2) * this (looser = merges sooner)
-	-- once mergeable, cells actively glide together. The pull speed scales with
-	-- cell radius (MergePullPerRadius) so BIG cells - which have a big gap to
-	-- close - still merge quickly instead of creeping together.
-	MergePull = 340, -- base pull speed (units/s)
-	MergePullPerRadius = 3.5, -- extra pull speed per unit of the larger cell's radius
+	-- Once mergeable, cells GLIDE together with an exponential ease (higher =
+	-- quicker glide) so they visibly come together over the split gap instead
+	-- of snapping/instantly merging. This is a VISUAL glide only; the time
+	-- before cells become mergeable is the MergeTime formula above.
+	MergeEaseRate = 3.5,
+
+	------------------------------------------------------------------ Abilities
+	-- Pull Together: force all your cells mergeable and glide them into one.
+	PullDuration = 1.4, -- seconds the forced-merge glide stays active
+	PullEaseMult = 5, -- glide is this many times faster than the passive MergeEaseRate
+	PullCooldown = 5, -- min seconds between uses (server-enforced)
+	-- Speed: temporary movement boost.
+	SpeedBoostMult = 1.7, -- movement speed multiplier while active
+	SpeedBoostDuration = 3, -- seconds
+	SpeedBoostCooldown = 7, -- min seconds between uses (server-enforced)
+	-- Freeze no longer locks you solid - you can still creep at this fraction of
+	-- normal speed.
+	FreezeMoveFactor = 0.25,
 	SeparationSoftness = 0.45, -- how hard same-player cells push apart pre-merge (0..1)
 	SplitCooldown = 0.12, -- server-side rate limit on split actions
 	MultiSplitCooldown = 0.25,
@@ -72,7 +85,7 @@ local Config = {
 	EjectPelletMass = 10, -- mass the pellet actually carries (difference is "wasted", like agar)
 	PelletSpeed = 640,
 	PelletFriction = 3.2, -- exponential slowdown rate; pellets come to rest
-	PelletSelfEatDelay = 0.35, -- seconds before you can re-eat your own pellet
+	PelletSelfEatDelay = 0.2, -- seconds before you can re-eat your own pellet (self-feed to grow, any size)
 	FeedCooldown = 0.06, -- server-side rate limit on feed actions
 	MaxPellets = 180, -- hard cap on live pellets (oldest recycled); also bounds snapshot bandwidth
 
@@ -154,6 +167,8 @@ local Config = {
 		TripleSplit = "R", -- performs 3 splits back-to-back
 		Feed = "W",
 		Freeze = "F", -- implemented as a toggle (hold-mode would just be InputBegan/Ended around the same remote)
+		PullTogether = "T", -- ability: yank all your cells into one
+		Speed = "E", -- ability: temporary speed boost
 		Respawn = "B",
 		FixedMouse = "C",
 		Menu = "M",
