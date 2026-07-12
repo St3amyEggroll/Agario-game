@@ -29,6 +29,7 @@ local ACTION_COOLDOWN: { [string]: number } = {
 	play = 0.5,
 	spectate = 0.25,
 	setskin = 0.2,
+	debugmass = 0.05,
 }
 
 local function isFiniteNumber(v): boolean
@@ -68,6 +69,13 @@ local function onAction(player, action, arg)
 		if arg < 1 or arg > #Config.Palette then
 			return
 		end
+	elseif action == "debugmass" then
+		-- testing helper: only a direction is accepted (the server owns the
+		-- step size), and only while Config.Debug is on
+		if not Config.Debug or not isFiniteNumber(arg) then
+			return
+		end
+		arg = arg >= 0 and 1 or -1
 	end
 	Simulation.enqueue(player, action, arg)
 end

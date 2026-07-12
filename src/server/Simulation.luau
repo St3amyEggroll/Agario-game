@@ -138,6 +138,20 @@ local function drainActions(now: number)
 		elseif action == "setskin" then
 			info.colorIdx = cmd.arg
 			World.broadcastRosterUpdate(info)
+		elseif action == "debugmass" then
+			-- testing helper (gated by Config.Debug in Network): +/- one
+			-- DebugMassStep on the player's largest cell
+			if Config.Debug and info.alive then
+				local biggest
+				for _, cell in info.cells do
+					if not biggest or cell.m > biggest.m then
+						biggest = cell
+					end
+				end
+				if biggest then
+					World.setMass(biggest, math.max(biggest.m + cmd.arg * Config.DebugMassStep, 10))
+				end
+			end
 		end
 	end
 	table.clear(Simulation.queue)
