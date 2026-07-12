@@ -339,10 +339,13 @@ function Renderer.render(cam)
 
 	updateGrid(scale, minX, maxX, minY, maxY)
 
-	-- On-screen pixel-size cull: anything below this many pixels is invisible,
-	-- so we don't draw it at all. This is what makes far zoom-out cheap - the
-	-- more you zoom out, the more tiny orbs/pellets drop out of the draw set.
+	-- On-screen pixel-size cull with HYSTERESIS: an entity starts being drawn
+	-- at minPx, but keeps being drawn until it shrinks past minPxLow. Without
+	-- the two thresholds, anything hovering right at minPx flickers in and out
+	-- frame-to-frame while zooming - the "glitch". An already-drawn entity
+	-- (its id is in the active map) uses the lower threshold.
 	local minPx = Config.MinRenderPixels
+	local minPxLow = minPx * 0.5
 
 	generation += 1
 	local gen = generation
@@ -351,8 +354,8 @@ function Renderer.render(cam)
 	-- are pixel-quantized leaf writes on the few dozen visible ones)
 	for id, orb in WorldState.orbs do
 		local px = orb.r * 2 * scale
-		if px >= minPx and orb.x >= minX and orb.x <= maxX and orb.y >= minY and orb.y <= maxY then
-			local w = activeOrbs[id]
+		local w = activeOrbs[id]
+		if px >= (w and minPxLow or minPx) and orb.x >= minX and orb.x <= maxX and orb.y >= minY and orb.y <= maxY then
 			if not w then
 				w = orbPool.acquire()
 				-- the coin sentinel color renders gold; everything else is a
@@ -378,8 +381,8 @@ function Renderer.render(cam)
 	-- PELLETS
 	for id, p in WorldState.view.pellets do
 		local px = p.r * 2 * scale
-		if px >= minPx and p.x >= minX and p.x <= maxX and p.y >= minY and p.y <= maxY then
-			local w = activePellets[id]
+		local w = activePellets[id]
+		if px >= (w and minPxLow or minPx) and p.x >= minX and p.x <= maxX and p.y >= minY and p.y <= maxY then
 			if not w then
 				w = pelletPool.acquire()
 				w.frame.BackgroundColor3 = WorldState.colorForSlot(p.slot)
@@ -404,8 +407,8 @@ function Renderer.render(cam)
 	-- VIRUSES
 	for id, v in WorldState.view.viruses do
 		local px = v.r * 2 * scale
-		if px >= minPx and v.x >= minX and v.x <= maxX and v.y >= minY and v.y <= maxY then
-			local w = activeViruses[id]
+		local w = activeViruses[id]
+		if px >= (w and minPxLow or minPx) and v.x >= minX and v.x <= maxX and v.y >= minY and v.y <= maxY then
 			if not w then
 				w = virusPool.acquire()
 				activeViruses[id] = w
@@ -437,8 +440,8 @@ function Renderer.render(cam)
 	-- CELLS (with name/mass labels)
 	for id, c in WorldState.view.cells do
 		local pixels = c.r * 2 * scale
-		if pixels >= minPx and c.x >= minX and c.x <= maxX and c.y >= minY and c.y <= maxY then
-			local w = activeCells[id]
+		local w = activeCells[id]
+		if pixels >= (w and minPxLow or minPx) and c.x >= minX and c.x <= maxX and c.y >= minY and c.y <= maxY then
 			if not w then
 				w = cellPool.acquire()
 				w.slot = -1
