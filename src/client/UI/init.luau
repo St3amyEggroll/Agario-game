@@ -1,7 +1,12 @@
 --[[
-	UI - assembles the interface ScreenGui: HUD, leaderboard, bottom menu,
-	settings (keybinds) and the shop stub. World rendering lives in a separate,
-	lower ScreenGui (Renderer); this one sits on top.
+	UI - assembles the interface ScreenGui: HUD, bottom menu, settings (keybinds),
+	shop, the ability dock, and the top-left control row. World rendering lives in
+	a separate, lower ScreenGui (Renderer); this one sits on top.
+
+	Layout (minimal / classic-agar): top-left = control row (Settings / Menu /
+	Respawn) with the tiny stat block under it; bottom-left = Mass; bottom-center
+	= level bar; bottom-right = ability dock. Leaderboard is the Roblox player
+	list (top-right, native).
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -14,7 +19,6 @@ local Menu = require(script.Menu)
 local Settings = require(script.Settings)
 local Shop = require(script.Shop)
 local AbilityDock = require(script.AbilityDock)
-local Minimap = require(script.Minimap)
 local Input = require(script.Parent.Input)
 local WorldState = require(script.Parent.WorldState)
 
@@ -34,45 +38,39 @@ function UI.init(playerGui: PlayerGui)
 
 	Menu.init(gui, Shop.toggle) -- overlay first so panels draw above it
 	HUD.init(gui)
-	AbilityDock.init(gui) -- bottom-center on-screen action buttons (also touch controls)
-	Minimap.init(gui) -- bottom-right corner map
-	-- (custom leaderboard panel removed - the Roblox player list is the
-	-- leaderboard now, driven by leaderstats/Mass)
+	AbilityDock.init(gui) -- bottom-right on-screen action buttons (also touch controls)
 	Settings.init(gui)
 	Shop.init(gui)
 
-	-- top-left settings button; the Menu keybind (M) mirrors it
-	local menuButton = Theme.button(gui, "\u{2630} Settings", UDim2.fromScale(0.01, 0.015), UDim2.fromScale(0.075, 0.05), function()
+	-- top-left control row: Settings (M key mirrors it) / Menu / Respawn
+	local settingsBtn = Theme.button(gui, "Settings", UDim2.fromScale(0.012, 0.014), UDim2.fromScale(0.072, 0.045), function()
 		Settings.toggle()
 	end)
-	Theme.capText(menuButton, 18)
+	Theme.capText(settingsBtn, 15)
 	Input.onMenuToggle = Settings.toggle
 
-	-- instant Respawn (also the B key) + back-to-Menu (also the N key), top-center
-	local respawnButton = Theme.button(gui, "Respawn", UDim2.fromScale(0.4, 0.015), UDim2.fromScale(0.09, 0.05), function()
-		Remotes.Action:FireServer("respawn")
-	end)
-	respawnButton.BackgroundColor3 = Color3.fromRGB(60, 150, 90)
-	Theme.capText(respawnButton, 17)
-	local toMenuButton = Theme.button(gui, "Menu", UDim2.fromScale(0.505, 0.015), UDim2.fromScale(0.09, 0.05), function()
+	local toMenuBtn = Theme.button(gui, "Menu", UDim2.fromScale(0.09, 0.014), UDim2.fromScale(0.052, 0.045), function()
 		Remotes.Action:FireServer("tomenu")
 	end)
-	Theme.capText(toMenuButton, 17)
+	Theme.capText(toMenuBtn, 15)
 
-	-- debug testing buttons (below the HUD panel); remove by setting
-	-- Config.Debug = false - the server also refuses these when it's off
+	local respawnBtn = Theme.outlineButton(gui, "Respawn", UDim2.fromScale(0.148, 0.014), UDim2.fromScale(0.078, 0.045), Theme.Green, function()
+		Remotes.Action:FireServer("respawn")
+	end)
+	Theme.capText(respawnBtn, 15)
+
+	-- debug testing buttons (below the stat block); gated by Config.Debug - the
+	-- server also refuses these when it's off
 	if Config.Debug then
 		local pctLabel = ("%d%%"):format(Config.DebugMassPercent)
-		local addMass = Theme.button(gui, "+ " .. pctLabel, UDim2.fromScale(0.01, 0.24), UDim2.fromScale(0.075, 0.045), function()
+		local addMass = Theme.outlineButton(gui, "+" .. pctLabel, UDim2.fromScale(0.012, 0.2), UDim2.fromScale(0.055, 0.04), Theme.Green, function()
 			Remotes.Action:FireServer("debugmass", 1)
 		end)
-		addMass.BackgroundColor3 = Color3.fromRGB(55, 110, 70)
-		Theme.capText(addMass, 16)
-		local subMass = Theme.button(gui, "- " .. pctLabel, UDim2.fromScale(0.01, 0.29), UDim2.fromScale(0.075, 0.045), function()
+		Theme.capText(addMass, 14)
+		local subMass = Theme.outlineButton(gui, "-" .. pctLabel, UDim2.fromScale(0.072, 0.2), UDim2.fromScale(0.055, 0.04), Theme.Danger, function()
 			Remotes.Action:FireServer("debugmass", -1)
 		end)
-		subMass.BackgroundColor3 = Color3.fromRGB(120, 60, 60)
-		Theme.capText(subMass, 16)
+		Theme.capText(subMass, 14)
 	end
 
 	-- server state -> UI
@@ -88,7 +86,6 @@ end
 function UI.update(dt: number)
 	HUD.update(dt)
 	AbilityDock.update(dt)
-	Minimap.update(dt)
 end
 
 return UI

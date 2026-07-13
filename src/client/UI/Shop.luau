@@ -38,7 +38,7 @@ local function build()
 	built = true
 	for _, skin in Skins.List do
 		local card = Instance.new("Frame")
-		card.BackgroundColor3 = Theme.ButtonColor
+		card.BackgroundColor3 = Theme.Panel2Color
 		card.BorderSizePixel = 0
 		Theme.round(card, 8)
 		card.Parent = scroll

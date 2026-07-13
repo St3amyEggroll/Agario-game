@@ -1,11 +1,12 @@
 --[[
-	HUD - top-left stat block + bottom-center level bar.
+	HUD (minimal / classic-agar layout):
+	  - MASS: a big mono number floating bottom-left (no card, just a text stroke
+	    so it reads over any cell), with a small "MASS" caption above it.
+	  - Ping / FPS / Coins: tiny mono lines tucked top-left, under the menu row.
+	  - Level bar: a thin XP bar floating bottom-center.
 
-	Hierarchy (the overhaul): MASS is the hero readout (big mono number); Ping,
-	FPS and Coins drop to small mono chips beneath it, so the number you care
-	about while playing dominates and the diagnostics stay glanceable. FPS is an
-	exponential moving average of frame time; ping is set by the round-trip loop
-	in the client bootstrap.
+	FPS is an exponential moving average of frame time; ping is set by the
+	round-trip loop in the client bootstrap.
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -21,7 +22,6 @@ local pingLabel: TextLabel
 local fpsLabel: TextLabel
 local coinLabel: TextLabel
 
--- level bar (bottom-center)
 local levelBar: Frame
 local levelBadge: TextLabel
 local xpFill: Frame
@@ -33,65 +33,76 @@ local lastMassText, lastPingText, lastFpsText, lastCoinText = "", "", "", ""
 local lastLevelText, lastXpText, lastFill = "", "", -1
 local uiAccumulator = 0
 
--- one small stat chip: an uppercase caption over a mono value. Returns the value
--- label so the update loop can write to it.
-local function makeChip(parent: Instance, x: number, w: number, caption: string, valueColor: Color3): TextLabel
-	local chip = Instance.new("Frame")
-	chip.Position = UDim2.fromScale(x, 0.6)
-	chip.Size = UDim2.fromScale(w, 0.34)
-	chip.BackgroundColor3 = Theme.Panel2Color
-	chip.BackgroundTransparency = 0.15
-	chip.BorderSizePixel = 0
-	Theme.round(chip, 8)
-	chip.Parent = parent
-
-	local cap = Theme.caption(chip, caption, UDim2.fromScale(0.12, 0.14), UDim2.fromScale(0.76, 0.34))
+-- one tiny top-left stat line ("PING 42ms"): muted caption + mono value, floating
+local function statLine(parent: Instance, y: number, caption: string, valueColor: Color3): TextLabel
+	local cap = Theme.caption(parent, caption, UDim2.fromScale(0, y), UDim2.fromScale(0.5, 0.3))
 	cap.TextXAlignment = Enum.TextXAlignment.Left
-	Theme.capText(cap, 11)
+	cap.TextStrokeColor3 = Color3.new(0, 0, 0)
+	cap.TextStrokeTransparency = 0.5
+	Theme.capText(cap, 12)
 
-	local val = Theme.mono(chip, "--", UDim2.fromScale(0.12, 0.48), UDim2.fromScale(0.76, 0.4))
+	local val = Theme.readout(parent, "--", UDim2.fromScale(0.5, y), UDim2.fromScale(0.5, 0.3))
 	val.TextColor3 = valueColor
 	val.TextXAlignment = Enum.TextXAlignment.Left
-	Theme.capText(val, 16)
+	Theme.capText(val, 13)
 	return val
 end
 
 function HUD.init(parent: Instance)
-	local panel = Theme.panel(parent, UDim2.fromScale(0.01, 0.075), UDim2.fromScale(0.16, 0.155))
+	-- tiny stat block, top-left (sits below the menu-button row placed by UI.init)
+	local stats = Instance.new("Frame")
+	stats.Position = UDim2.fromScale(0.012, 0.075)
+	stats.Size = UDim2.fromScale(0.13, 0.11)
+	stats.BackgroundTransparency = 1
+	stats.Parent = parent
+	pingLabel = statLine(stats, 0.02, "Ping", Theme.TextColor)
+	fpsLabel = statLine(stats, 0.36, "FPS", Theme.TextColor)
+	coinLabel = statLine(stats, 0.70, "Coins", Theme.Gold)
 
-	local cap = Theme.caption(panel, "Mass", UDim2.fromScale(0.06, 0.07), UDim2.fromScale(0.6, 0.16))
-	cap.TextXAlignment = Enum.TextXAlignment.Left
-	Theme.capText(cap, 13)
-
-	massLabel = Theme.mono(panel, "0", UDim2.fromScale(0.055, 0.2), UDim2.fromScale(0.9, 0.34))
+	-- MASS: big floating readout, bottom-left
+	local massBox = Instance.new("Frame")
+	massBox.AnchorPoint = Vector2.new(0, 1)
+	massBox.Position = UDim2.fromScale(0.014, 0.965)
+	massBox.Size = UDim2.fromScale(0.26, 0.13)
+	massBox.BackgroundTransparency = 1
+	massBox.Parent = parent
+	local massCap = Theme.caption(massBox, "Mass", UDim2.fromScale(0.01, 0), UDim2.fromScale(0.6, 0.26))
+	massCap.TextXAlignment = Enum.TextXAlignment.Left
+	massCap.TextStrokeColor3 = Color3.new(0, 0, 0)
+	massCap.TextStrokeTransparency = 0.5
+	Theme.capText(massCap, 14)
+	massLabel = Theme.readout(massBox, "0", UDim2.fromScale(0, 0.26), UDim2.fromScale(1, 0.74))
 	massLabel.TextXAlignment = Enum.TextXAlignment.Left
-	Theme.capText(massLabel, 34)
-
-	pingLabel = makeChip(panel, 0.05, 0.29, "Ping", Theme.TextColor)
-	fpsLabel = makeChip(panel, 0.355, 0.29, "FPS", Theme.TextColor)
-	coinLabel = makeChip(panel, 0.66, 0.29, "Coins", Theme.Gold)
+	Theme.capText(massLabel, 44)
 
 	HUD.initLevelBar(parent)
 end
 
--- XP / level bar, bottom-center: a "Lv N" badge + a progress track whose fill
--- width is the fraction into the current level (derived from raw XP via the
--- shared level curve, so it matches the server with no extra networking).
+-- thin XP bar, bottom-center: "Lv N" + a progress track (fraction from raw XP
+-- via the shared curve, so it matches the server with no extra networking).
 function HUD.initLevelBar(parent: Instance)
-	local bar = Theme.panel(parent, UDim2.fromScale(0.5, 0.955), UDim2.fromScale(0.28, 0.045), Vector2.new(0.5, 0.5))
+	local bar = Instance.new("Frame")
+	bar.AnchorPoint = Vector2.new(0.5, 1)
+	bar.Position = UDim2.fromScale(0.5, 0.985)
+	bar.Size = UDim2.fromScale(0.3, 0.035)
+	bar.BackgroundTransparency = 1
+	bar.Parent = parent
 	levelBar = bar
 
-	levelBadge = Theme.mono(bar, "Lv 1", UDim2.fromScale(0.03, 0.2), UDim2.fromScale(0.16, 0.6))
+	levelBadge = Theme.readout(bar, "Lv 1", UDim2.fromScale(0, 0), UDim2.fromScale(0.16, 1))
 	levelBadge.TextColor3 = Theme.AccentColor
 	levelBadge.TextXAlignment = Enum.TextXAlignment.Left
-	Theme.capText(levelBadge, 18)
+	Theme.capText(levelBadge, 16)
 
 	local track = Instance.new("Frame")
-	track.Position = UDim2.fromScale(0.21, 0.28)
-	track.Size = UDim2.fromScale(0.76, 0.44)
+	track.AnchorPoint = Vector2.new(0, 0.5)
+	track.Position = UDim2.fromScale(0.19, 0.5)
+	track.Size = UDim2.fromScale(0.81, 0.5)
 	track.BackgroundColor3 = Theme.Field
+	track.BackgroundTransparency = 0.25
 	track.BorderSizePixel = 0
 	Theme.round(track, 6)
+	Theme.stroke(track)
 	track.Parent = bar
 
 	xpFill = Instance.new("Frame")
@@ -104,7 +115,9 @@ function HUD.initLevelBar(parent: Instance)
 
 	xpText = Theme.mono(track, "0 / 0", UDim2.fromScale(0, 0), UDim2.fromScale(1, 1))
 	xpText.ZIndex = 2
-	Theme.capText(xpText, 13)
+	xpText.TextStrokeColor3 = Color3.new(0, 0, 0)
+	xpText.TextStrokeTransparency = 0.4
+	Theme.capText(xpText, 12)
 end
 
 function HUD.setPing(ms: number)
@@ -114,8 +127,6 @@ end
 function HUD.update(dt: number)
 	smoothedDt += (dt - smoothedDt) * 0.05
 
-	-- refresh the text a few times a second; writing TextLabel.Text at 60 Hz
-	-- forces pointless re-layout
 	uiAccumulator += dt
 	if uiAccumulator < 0.2 then
 		return
@@ -143,10 +154,9 @@ function HUD.update(dt: number)
 		fpsLabel.Text = fpsText
 	end
 
-	-- level bar: hidden behind the play menu (it overlaps the bottom bar there),
-	-- shown while playing or spectating
-	local status = WorldState.status
-	local showBar = status == "alive" or status == "spectate"
+	-- level bar: shown only while actually playing (in menu/spectate the bottom
+	-- menu bar occupies the same lane)
+	local showBar = WorldState.status == "alive"
 	if levelBar.Visible ~= showBar then
 		levelBar.Visible = showBar
 	end
@@ -154,7 +164,6 @@ function HUD.update(dt: number)
 		return
 	end
 
-	-- derive level + progress from raw XP (shared curve)
 	local level, into, need = LevelCurve.progress(WorldState.xp or 0)
 	local levelText = "Lv " .. level
 	if levelText ~= lastLevelText then
