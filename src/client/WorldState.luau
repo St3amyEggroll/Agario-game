@@ -28,6 +28,7 @@ local WorldState = {
 	roster = {}, -- [slot] = {n = name, c = colorIdx}
 	mySlot = nil,
 	coins = 0, -- currency collected (from gold coins)
+	xp = 0, -- lifetime XP (server-authoritative); HUD derives level + bar via Shared.Levels
 	status = "menu", -- "menu" | "alive" | "dead" | "spectate"
 	leaderboard = {}, -- array of {s, n, m}
 	snaps = {}, -- ascending by t
@@ -75,6 +76,12 @@ Remotes.Roster.OnClientEvent:Connect(function(msg, a, b)
 		WorldState.roster[a] = b
 	elseif msg == "remove" then
 		WorldState.roster[a] = nil
+	end
+end)
+
+Remotes.Level.OnClientEvent:Connect(function(xp)
+	if typeof(xp) == "number" then
+		WorldState.xp = xp
 	end
 end)
 

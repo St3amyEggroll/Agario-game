@@ -137,6 +137,15 @@ local Config = {
 	MaxViruses = 50, -- global cap so fed viruses can't overrun the map
 	ExperimentalOrbsPerFeed = 2, -- bonus orbs an Experimental spits out per pellet fed
 
+	------------------------------------------------------------------ Levels / XP
+	-- XP is earned from the MASS of food you consume (orbs + enemy cells + enemy
+	-- pellets); self-feeding your own pellets gives none, so you can't farm your
+	-- own level. XP is lifetime-cumulative and saved across sessions.
+	XpPerMass = 1, -- XP gained per unit of consumed food mass
+	LevelBaseXp = 400, -- XP to go from level 1 -> 2
+	LevelGrowth = 1.18, -- each level needs this many times more XP than the last (geometric)
+	MaxLevel = 500, -- hard cap (also bounds the level-from-xp loop)
+
 	------------------------------------------------------------------ Networking
 	SpatialCellSize = 400, -- uniform grid bucket size for the spatial hash (server collision only)
 	AimSendRate = 60, -- client -> server aim updates per second (tiny unreliable packets)

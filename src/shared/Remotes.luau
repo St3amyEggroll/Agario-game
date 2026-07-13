@@ -26,6 +26,7 @@ local DEFS: { [string]: string } = {
 	Ping = "RemoteEvent", -- round-trip echo for the HUD ping display
 	Keybinds = "RemoteEvent", -- keybind save (c->s) / load (s->c)
 	Name = "RemoteEvent", -- server -> client: your saved/current display name (prefills the menu box)
+	Level = "RemoteEvent", -- server -> client: your lifetime XP total (client derives level + bar via Shared.Levels)
 	Chat = "RemoteEvent", -- server -> client: (slot, message) for a chat bubble above that player's cell
 	PlayerState = "RemoteEvent", -- server -> client: "spawned" / "died"
 }

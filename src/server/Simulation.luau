@@ -21,6 +21,7 @@ local Config = require(Shared.Config)
 local Util = require(Shared.Util)
 local Remotes = require(Shared.Remotes)
 local World = require(script.Parent.World)
+local Levels = require(script.Parent.Levels)
 
 local Simulation = {
 	queue = {}, -- {player, action, arg} pushed by Network, drained each tick
@@ -460,6 +461,7 @@ local function eatPass(now: number)
 		local minX, minY = cell.x - r, cell.y - r
 		local maxX, maxY = cell.x + r, cell.y + r
 		local grew = false
+		local xpGain = 0 -- real food mass eaten this pass (orbs + enemy cells + enemy pellets)
 
 		-- orbs (persistent hash; collect then remove so we never mutate a
 		-- bucket mid-iteration)
@@ -483,6 +485,7 @@ local function eatPass(now: number)
 				end
 			else
 				cell.m += orb.m
+				xpGain += orb.m
 				grew = true
 			end
 			World.removeOrb(orb)
@@ -520,6 +523,7 @@ local function eatPass(now: number)
 			end
 			if e.kind == "cell" then
 				cell.m += e.m
+				xpGain += e.m -- eating another player is the big XP source
 				grew = true
 				World.removeCell(e)
 			elseif e.kind == "pellet" then
@@ -528,6 +532,7 @@ local function eatPass(now: number)
 					cell.m += e.m * Config.SelfFeedMassFactor
 				else
 					cell.m += e.m
+					xpGain += e.m -- only ENEMY pellets earn XP (no farming your own)
 				end
 				grew = true
 				World.removePellet(e)
@@ -540,6 +545,9 @@ local function eatPass(now: number)
 		end
 		if grew then
 			World.setMass(cell, cell.m)
+		end
+		if xpGain > 0 then
+			Levels.award(World.players[cell.player], xpGain)
 		end
 	end
 end

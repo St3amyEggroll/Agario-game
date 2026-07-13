@@ -19,7 +19,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Codec = require(Shared.SnapshotCodec)
 local Remotes = require(Shared.Remotes)
+local LevelCurve = require(Shared.Levels)
 local World = require(script.Parent.World)
+local Levels = require(script.Parent.Levels)
 
 local Snapshots = {}
 
@@ -68,14 +70,23 @@ end
 --------------------------------------------------------------------- leaderboard
 
 function Snapshots.sendLeaderboard()
+	-- push any changed XP totals to their owners (drives the client level bar)
+	Levels.pushChanged()
+
 	local entries = {}
 	for player, info in World.players do
 		local mass = info.alive and math.floor(World.totalMass(info) + 0.5) or 0
-		-- Roblox native player-list score
+		-- Roblox native player-list columns: Level (always) + Mass (in-game)
 		local ls = player:FindFirstChild("leaderstats")
-		local massValue = ls and ls:FindFirstChild("Mass")
-		if massValue then
-			massValue.Value = mass
+		if ls then
+			local massValue = ls:FindFirstChild("Mass")
+			if massValue then
+				massValue.Value = mass
+			end
+			local levelValue = ls:FindFirstChild("Level")
+			if levelValue then
+				levelValue.Value = LevelCurve.levelForXp(info.xp)
+			end
 		end
 		if info.alive then
 			table.insert(entries, { s = info.slot, n = info.name, m = mass })

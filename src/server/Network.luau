@@ -17,6 +17,7 @@ local Simulation = require(script.Parent.Simulation)
 local Snapshots = require(script.Parent.Snapshots)
 local Keybinds = require(script.Parent.Keybinds)
 local Names = require(script.Parent.Names)
+local Levels = require(script.Parent.Levels)
 
 local Network = {}
 
@@ -124,10 +125,14 @@ local function onPlayerAdded(player)
 	if player.Character then
 		player.Character:Destroy()
 	end
-	-- Roblox native leaderboard: a leaderstats/Mass value shown in the player
-	-- list (updated each leaderboard tick in Snapshots.sendLeaderboard)
+	-- Roblox native player list: Level + Mass columns (updated each leaderboard
+	-- tick in Snapshots.sendLeaderboard). Level is added first so it sits in the
+	-- leftmost column.
 	local ls = Instance.new("Folder")
 	ls.Name = "leaderstats"
+	local level = Instance.new("IntValue")
+	level.Name = "Level"
+	level.Parent = ls
 	local mass = Instance.new("IntValue")
 	mass.Name = "Mass"
 	mass.Parent = ls
@@ -139,6 +144,7 @@ local function onPlayerAdded(player)
 	Snapshots.sendFullOrbs(player)
 	Keybinds.onPlayerAdded(player)
 	Names.onPlayerAdded(player) -- async: loads saved name, then prefills the client box
+	Levels.onPlayerAdded(player) -- async: loads saved XP, then sends it so the HUD shows the right level
 
 	-- chat bubbles: when a player chats, filter it and broadcast (slot, text)
 	-- so every client can float a bubble above that player's cell
@@ -165,6 +171,7 @@ local function onPlayerRemoving(player)
 	local info = World.players[player]
 	Keybinds.onPlayerRemoving(player)
 	Names.onPlayerRemoving(player)
+	Levels.onPlayerRemoving(player) -- final XP save
 	World.removePlayer(player)
 	if info then
 		Remotes.Roster:FireAllClients("remove", info.slot)
