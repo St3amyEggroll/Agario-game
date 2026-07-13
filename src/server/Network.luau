@@ -69,7 +69,9 @@ local function onAction(player, action, arg)
 				maxMass = cell.m
 			end
 		end
-		cooldown = cooldown * math.clamp(maxMass / Config.StartMass, 0.7, 1.0)
+		-- smaller cells split faster; even big cells get a slight speed-up (cap
+		-- at 0.85 instead of 1.0) so splitting stays snappy at big sizes
+		cooldown = cooldown * math.clamp(maxMass / Config.StartMass, 0.65, 0.85)
 	end
 	local now = os.clock()
 	local last = info.lastAction[action]

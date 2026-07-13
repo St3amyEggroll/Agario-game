@@ -81,7 +81,12 @@ local Config = {
 	-- Freeze fully locks your aim movement (0 = can't steer while frozen). Split
 	-- impulses still apply, so freeze-split pieces still launch out and settle.
 	FreezeMoveFactor = 0,
-	SeparationSoftness = 1.0, -- how solid same-player cells are before they can merge (1 = fully solid, never overlap)
+	-- How much of the overlap same-player cells resolve per tick before they can
+	-- merge. 1.0 (fully solid) over-corrects and makes packed cells jitter, so
+	-- this is damped; SeparationSlop is a small dead-zone so a barely-overlapping
+	-- cell settles instead of constantly re-separating (also anti-jitter).
+	SeparationSoftness = 0.6,
+	SeparationSlop = 0.05, -- allow up to this fraction of overlap without pushing (cells settle, no jitter)
 	-- Cap how fast cells push apart (units/s). Without this, a deep overlap (a
 	-- fresh split, or cells piling up) resolves in ONE tick = a big instant jump
 	-- that reads as a teleport/blink. Capping makes separation a smooth push
@@ -89,7 +94,7 @@ local Config = {
 	-- small cells can't overlap through it.
 	SeparationMaxSpeed = 1000,
 	SplitCooldown = 0.1, -- server-side rate limit on split actions (1.2x faster)
-	MultiSplitCooldown = 0.21,
+	MultiSplitCooldown = 0.15, -- multi/triple split rate limit (faster)
 
 	------------------------------------------------------------------ Feed / ejected pellets
 	EjectMinMass = 1, -- cell must have at least this much mass to eject (1 = W works at any size)
@@ -138,13 +143,13 @@ local Config = {
 	InterpolationDelay = 0.11,
 	ViewHeightBase = 1200, -- world units visible vertically at minimum size...
 	ViewHeightPerRadius = 9, -- ...plus this per unit of your largest cell's radius (zoom out as you grow)
-	ViewHeightMin = 1000,
+	ViewHeightMin = 650, -- how tight you can zoom in (lower = closer to your cell)
 	ViewHeightMax = 13000, -- allow zooming out to survey a big chunk of the (now 16k) map
 	SpectateViewHeight = 2800,
 	-- manual zoom (mouse wheel): multiplies the auto view height. >1 = zoomed out.
 	-- The whole world is sent to every client, so ALL entities are visible at
 	-- any zoom (no render distance).
-	ManualZoomMin = 0.5,
+	ManualZoomMin = 0.33, -- mouse-wheel zoom-IN limit (lower = can zoom closer to your character)
 	ManualZoomMax = 7.0,
 	ZoomWheelStep = 1.15, -- zoom multiplier per wheel notch
 	ZoomSmoothing = 4, -- exponential smoothing rate for zoom changes

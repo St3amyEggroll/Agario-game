@@ -338,8 +338,10 @@ local function resolveOwnCells(now: number, dt: number)
 						merged = merged or {}
 						table.insert(merged, { big = big, small = small }) -- big keeps its spot
 					end
-				elseif d >= sum then
-					-- not overlapping and not mergeable: nothing to resolve
+				elseif d >= sum * (1 - Config.SeparationSlop) then
+					-- not overlapping (beyond the small slop dead-zone) and not
+					-- mergeable: nothing to resolve. The dead-zone lets packed
+					-- cells settle instead of jittering.
 					continue
 				elseif not info.frozen then
 					-- SOLID collision: ACCUMULATE each cell's desired push here;
