@@ -10,7 +10,6 @@ local Config = require(Shared.Config)
 local Remotes = require(Shared.Remotes)
 local Theme = require(script.Theme)
 local HUD = require(script.HUD)
-local Leaderboard = require(script.Leaderboard)
 local Menu = require(script.Menu)
 local Settings = require(script.Settings)
 local Shop = require(script.Shop)
@@ -19,7 +18,6 @@ local WorldState = require(script.Parent.WorldState)
 
 local UI = {}
 UI.HUD = HUD
-UI.Leaderboard = Leaderboard
 UI.Menu = Menu
 UI.Settings = Settings
 UI.Shop = Shop
@@ -34,7 +32,8 @@ function UI.init(playerGui: PlayerGui)
 
 	Menu.init(gui, Shop.toggle) -- overlay first so panels draw above it
 	HUD.init(gui)
-	Leaderboard.init(gui)
+	-- (custom leaderboard panel removed - the Roblox player list is the
+	-- leaderboard now, driven by leaderstats/Mass)
 	Settings.init(gui)
 	Shop.init(gui)
 
@@ -65,9 +64,8 @@ function UI.init(playerGui: PlayerGui)
 	WorldState.onPlayerState = function(_event)
 		Menu.refresh()
 	end
-	WorldState.onLeaderboard = function(entries)
-		Leaderboard.update(entries)
-	end
+	-- WorldState.leaderboard is still kept (from the Leaderboard remote) so the
+	-- spectate/menu camera can follow the leader - it just isn't drawn anymore.
 
 	gui.Parent = playerGui
 end

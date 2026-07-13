@@ -168,7 +168,7 @@ local function drainActions(now: number)
 				end
 				if biggest then
 					local factor = 1 + cmd.arg * Config.DebugMassPercent / 100
-					World.setMass(biggest, math.max(biggest.m * factor, 10))
+					World.setMass(biggest, math.max(biggest.m * factor, Config.MinCellMass))
 				end
 			end
 		end
@@ -364,6 +364,12 @@ local function popCell(cell, virus, now: number)
 		return
 	end
 	local pieces = math.min(Config.VirusPopPieces, avail)
+	-- keep every resulting piece >= MinCellMass: reduce the piece count if the
+	-- cell isn't big enough to shatter that many and stay above the floor
+	pieces = math.min(pieces, math.max(0, math.floor(cell.m / Config.MinCellMass) - 1))
+	if pieces <= 0 then
+		return -- not enough mass to split without going under the floor; just absorb
+	end
 	local chunk = cell.m / (pieces + 1)
 	World.setMass(cell, chunk)
 	cell.mergeAt = now + Util.mergeDelay(chunk)

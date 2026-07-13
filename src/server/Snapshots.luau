@@ -69,11 +69,20 @@ end
 
 function Snapshots.sendLeaderboard()
 	local entries = {}
-	for _, info in World.players do
+	for player, info in World.players do
+		local mass = info.alive and math.floor(World.totalMass(info) + 0.5) or 0
+		-- Roblox native player-list score
+		local ls = player:FindFirstChild("leaderstats")
+		local massValue = ls and ls:FindFirstChild("Mass")
+		if massValue then
+			massValue.Value = mass
+		end
 		if info.alive then
-			table.insert(entries, { s = info.slot, n = info.name, m = math.floor(World.totalMass(info) + 0.5) })
+			table.insert(entries, { s = info.slot, n = info.name, m = mass })
 		end
 	end
+	-- still broadcast the top list: the client uses it to pick the spectate/menu
+	-- camera's leader (the custom UI panel is gone)
 	table.sort(entries, function(a, b)
 		return a.m > b.m
 	end)

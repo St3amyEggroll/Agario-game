@@ -25,14 +25,16 @@ local Camera = require(script.Camera)
 local Renderer = require(script.Renderer)
 local Input = require(script.Input)
 local UI = require(script.UI)
+local ChatBubbles = require(script.ChatBubbles)
 
 local localPlayer = Players.LocalPlayer
 local playerGui = localPlayer:WaitForChild("PlayerGui")
 
 -- the game is 100% ScreenGui: park the 3D camera and hide core UI that
--- assumes a character
+-- assumes a character. The PlayerList is kept ON - it's our leaderboard now
+-- (leaderstats/Mass, set server-side).
 Workspace.CurrentCamera.CameraType = Enum.CameraType.Scriptable
-for _, coreGui in { Enum.CoreGuiType.PlayerList, Enum.CoreGuiType.Backpack, Enum.CoreGuiType.Health, Enum.CoreGuiType.EmotesMenu } do
+for _, coreGui in { Enum.CoreGuiType.Backpack, Enum.CoreGuiType.Health, Enum.CoreGuiType.EmotesMenu } do
 	pcall(function()
 		StarterGui:SetCoreGuiEnabled(coreGui, false)
 	end)
@@ -41,11 +43,13 @@ end
 Renderer.init(playerGui)
 Input.init()
 UI.init(playerGui)
+ChatBubbles.init(playerGui)
 
 RunService.RenderStepped:Connect(function(dt)
 	WorldState.sample(dt)
 	Camera.update(dt)
 	Renderer.render(Camera)
+	ChatBubbles.render(Camera)
 	Input.tick(dt, os.clock())
 	UI.update(dt)
 end)

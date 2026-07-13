@@ -50,7 +50,8 @@ local Config = {
 
 	------------------------------------------------------------------ Split / merge
 	MaxCells = 32, -- max simultaneous cells per player
-	SplitMinMass = 36, -- a cell needs at least this much mass to split
+	MinCellMass = 100, -- a cell can never be smaller than this (split/pop keep every piece >= this)
+	SplitMinMass = 200, -- a cell needs at least this much mass to split (so both halves stay >= MinCellMass)
 	SplitImpulse = 936, -- launch speed of the new half (1.2x faster split)
 	ImpulseDamping = 4, -- exponential damping rate for split/pop impulses
 	-- merge timer scales with cell mass: little cells ~MergeTimeBase, growing
@@ -168,8 +169,10 @@ local Config = {
 	Debug = true, -- shows testing helpers (+/- mass buttons) and lets the server accept them. Turn OFF for release!
 	DebugMassPercent = 10, -- percent of current mass added/removed per debug button click
 
-	------------------------------------------------------------------ Names
+	------------------------------------------------------------------ Names / Chat
 	MaxNameLength = 16, -- custom names are clamped to this many characters
+	MaxChatLength = 60, -- chat messages are clamped to this many characters
+	ChatBubbleTime = 5, -- seconds a chat bubble stays above a cell
 
 	------------------------------------------------------------------ Default keybinds (remappable in Settings)
 	DefaultKeybinds = {

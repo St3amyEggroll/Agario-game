@@ -7,6 +7,7 @@
 ]]
 
 local Players = game:GetService("Players")
+local TextService = game:GetService("TextService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
@@ -109,12 +110,41 @@ local function onPlayerAdded(player)
 	if player.Character then
 		player.Character:Destroy()
 	end
+	-- Roblox native leaderboard: a leaderstats/Mass value shown in the player
+	-- list (updated each leaderboard tick in Snapshots.sendLeaderboard)
+	local ls = Instance.new("Folder")
+	ls.Name = "leaderstats"
+	local mass = Instance.new("IntValue")
+	mass.Name = "Mass"
+	mass.Parent = ls
+	ls.Parent = player
+
 	local info = World.addPlayer(player)
 	sendFullRoster(player)
 	World.broadcastRosterUpdate(info)
 	Snapshots.sendFullOrbs(player)
 	Keybinds.onPlayerAdded(player)
 	Names.onPlayerAdded(player) -- async: loads saved name, then prefills the client box
+
+	-- chat bubbles: when a player chats, filter it and broadcast (slot, text)
+	-- so every client can float a bubble above that player's cell
+	player.Chatted:Connect(function(message)
+		task.spawn(function()
+			local pinfo = World.players[player]
+			if not pinfo or typeof(message) ~= "string" then
+				return
+			end
+			local text = message:gsub("[%c]", ""):sub(1, Config.MaxChatLength)
+			if #text == 0 then
+				return
+			end
+			local ok, filtered = pcall(function()
+				local obj = TextService:FilterStringAsync(text, player.UserId)
+				return obj:GetNonChatStringForBroadcastAsync()
+			end)
+			Remotes.Chat:FireAllClients(pinfo.slot, (ok and filtered) or text)
+		end)
+	end)
 end
 
 local function onPlayerRemoving(player)
