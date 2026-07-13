@@ -119,20 +119,20 @@ end)
 -- tables every frame would be constant GC churn.
 local MAX_JUMP2 = Config.MaxInterpJump * Config.MaxInterpJump
 
-local function sampleMap(m1, m2, alpha: number, out)
+local function sampleMap(m1, m2, alpha: number, out, allowNew: boolean)
 	for id in out do
 		if not m2[id] then
 			out[id] = nil
 		end
 	end
 	for id, e2 in m2 do
-		local t = out[id]
-		if not t then
-			t = {}
-			out[id] = t
-		end
 		local e1 = m1 and m1[id]
 		if e1 then
+			local t = out[id]
+			if not t then
+				t = {}
+				out[id] = t
+			end
 			local dx, dy = e2.x - e1.x, e2.y - e1.y
 			if dx * dx + dy * dy > MAX_JUMP2 then
 				-- an implausibly large jump between two adjacent snapshots means
@@ -145,11 +145,31 @@ local function sampleMap(m1, m2, alpha: number, out)
 				t.y = e1.y + dy * alpha
 				t.r = e1.r + (e2.r - e1.r) * alpha
 			end
-		else
+			t.slot = e2.slot
+			t.kind = e2.kind
+		elseif allowNew then
+			-- no history yet (just joined / long stall): show newest as-is
+			local t = out[id]
+			if not t then
+				t = {}
+				out[id] = t
+			end
 			t.x, t.y, t.r = e2.x, e2.y, e2.r
+			t.slot = e2.slot
+			t.kind = e2.kind
+		else
+			-- This id is in the NEWER snapshot but not the OLDER one, so it spawned
+			-- between them (full-world snapshots => "missing from older" can only
+			-- mean "just spawned"). It doesn't exist yet at renderTime, which is
+			-- ~InterpolationDelay behind newest. Do NOT snap it to its current
+			-- position - that pops it in ahead of the delayed world, then it snaps
+			-- back a frame later once it has a bracketing pair. That pop IS the
+			-- split-piece / new-pellet glitch. Skip it; it appears smoothly once
+			-- renderTime advances to its first snapshot.
+			if out[id] then
+				out[id] = nil
+			end
 		end
-		t.slot = e2.slot
-		t.kind = e2.kind
 	end
 end
 
@@ -196,25 +216,26 @@ function WorldState.sample(dt: number)
 	local view = WorldState.view
 	if not older then
 		-- not enough history yet (just joined / long stall): show newest as-is
-		sampleMap(nil, newer.cells, 0, view.cells)
-		sampleMap(nil, newer.viruses, 0, view.viruses)
-		sampleMap(nil, newer.pellets, 0, view.pellets)
+		sampleMap(nil, newer.cells, 0, view.cells, true)
+		sampleMap(nil, newer.viruses, 0, view.viruses, true)
+		sampleMap(nil, newer.pellets, 0, view.pellets, true)
 	else
 		local span = newer.t - older.t
 		local alpha = span > 1e-4 and math.clamp((renderTime - older.t) / span, 0, 1) or 1
-		sampleMap(older.cells, newer.cells, alpha, view.cells)
-		sampleMap(older.viruses, newer.viruses, alpha, view.viruses)
-		sampleMap(older.pellets, newer.pellets, alpha, view.pellets)
+		sampleMap(older.cells, newer.cells, alpha, view.cells, false)
+		sampleMap(older.viruses, newer.viruses, alpha, view.viruses, false)
+		sampleMap(older.pellets, newer.pellets, alpha, view.pellets, false)
 	end
 
-	-- aggregate my own cells from the interpolated view so camera + HUD are smooth
+	-- Camera follow: centroid from the INTERPOLATED view, so the camera tracks a
+	-- smooth 60 fps target.
 	local own = WorldState.own
 	local mySlot = WorldState.mySlot
-	local totalMass, cx, cy, maxR, count = 0, 0, 0, 0, 0
+	local viewMass, cx, cy, maxR, count = 0, 0, 0, 0, 0
 	for _, cell in view.cells do
 		if cell.slot == mySlot then
 			local m = Util.massFromRadius(cell.r)
-			totalMass += m
+			viewMass += m
 			cx += cell.x * m
 			cy += cell.y * m
 			maxR = math.max(maxR, cell.r)
@@ -222,12 +243,23 @@ function WorldState.sample(dt: number)
 		end
 	end
 	own.count = count
-	own.mass = totalMass
 	own.maxR = maxR
-	if count > 0 and totalMass > 0 then
-		own.x = cx / totalMass
-		own.y = cy / totalMass
+	if count > 0 and viewMass > 0 then
+		own.x = cx / viewMass
+		own.y = cy / viewMass
 	end
+	-- Zoom + HUD mass: sum from the NEWEST snapshot, not the delayed view. A
+	-- freshly-split piece is held out of the view for ~InterpolationDelay (so it
+	-- doesn't pop, see sampleMap); if the zoom read mass from the view it would
+	-- see the total briefly halve and pulse the zoom on every split - exactly the
+	-- split-zoom we don't want. The newest snapshot always has the full set.
+	local newestMass = 0
+	for _, cell in snaps[n].cells do
+		if cell.slot == mySlot then
+			newestMass += Util.massFromRadius(cell.r)
+		end
+	end
+	own.mass = newestMass
 end
 
 -- Centroid of some other player's cells in the current view (spectate camera).
