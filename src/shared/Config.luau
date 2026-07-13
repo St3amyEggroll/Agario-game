@@ -55,18 +55,11 @@ local Config = {
 	ImpulseDamping = 4, -- exponential damping rate for split/pop impulses
 	MergeTimeBase = 10, -- flat seconds before split halves may re-merge...
 	MergeTimePerMass = 0, -- ...+ per-mass (0 = every cell waits exactly MergeTimeBase = 10s)
-	-- merge only once the small cell is deep INSIDE the big one (center within
-	-- this fraction of the big radius). Small value = you actually see the cell
-	-- slide in before it combines, instead of it vanishing on first contact.
-	MergeOverlap = 0.45,
-	-- Once mergeable, each cell GLIDES toward the meeting point at ITS OWN
-	-- size-based movement speed (small cells fast, big cells lumber) times this
-	-- factor. Lower = slower, more visible merge. Visual glide only; the wait
-	-- before cells CAN merge is the MergeTime above.
-	MergeSpeedFactor = 0.8,
-	-- Merging cells meet at their midpoint, leaned this fraction toward the aim
-	-- (mouse) so they combine where you're pointing. 0 = pure midpoint.
-	MergeAimBias = 0.4,
+	-- Merge only once the SMALLER cell's center is within this fraction of the
+	-- BIGGER cell's radius (nearly concentric). Small so big cells don't snap
+	-- together from a visible gap. Only the smaller cell moves (into the big);
+	-- the big one stays put (see Simulation), so merges never jump.
+	MergeOverlap = 0.2,
 
 	------------------------------------------------------------------ Abilities
 	-- Pull Together: force all your cells mergeable and glide them into one.
@@ -93,7 +86,8 @@ local Config = {
 	PelletFriction = 3.2, -- exponential slowdown rate; pellets come to rest
 	PelletSelfEatDelay = 0.2, -- seconds before you can re-eat your own pellet (self-feed to grow, any size)
 	FeedCooldown = 0.06, -- server-side rate limit on feed actions
-	MaxPellets = 180, -- hard cap on live pellets (oldest recycled); also bounds snapshot bandwidth
+	MaxPellets = 110, -- hard cap on live pellets (oldest recycled); bounds render/snapshot cost
+	PelletLifetime = 12, -- seconds before an un-eaten pellet despawns (server deletes to stay light)
 
 	------------------------------------------------------------------ Viruses / Experimentals
 	VirusCount = 28,
@@ -142,7 +136,7 @@ local Config = {
 	-- zoomed out, orbs/pellets become sub-pixel dots that cost draw calls for
 	-- nothing; skipping them keeps far-zoom smooth. Kept low (1.5) + a wide
 	-- hysteresis band (see Renderer) so entities don't blink near the cutoff.
-	MinRenderPixels = 1.5,
+	MinRenderPixels = 1.0, -- only orbs use this now (sub-pixel = invisible); pellets/viruses/cells always render
 
 	------------------------------------------------------------------ Colors
 	Palette = {

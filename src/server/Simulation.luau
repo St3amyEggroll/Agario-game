@@ -215,10 +215,18 @@ local function moveCells(dt: number)
 	end
 end
 
+local pelletExpireScratch = {}
+
 local function movePellets(dt: number)
 	local damp = math.exp(-Config.PelletFriction * dt)
+	local now = World.now
+	local lifetime = Config.PelletLifetime
+	table.clear(pelletExpireScratch)
 	for _, p in World.pellets do
-		if p.vx * p.vx + p.vy * p.vy > 4 then
+		if now - p.born > lifetime then
+			-- server deletes old pellets so they can't pile up and lag things
+			pelletExpireScratch[#pelletExpireScratch + 1] = p
+		elseif p.vx * p.vx + p.vy * p.vy > 4 then
 			p.x = math.clamp(p.x + p.vx * dt, 0, Config.MapWidth)
 			p.y = math.clamp(p.y + p.vy * dt, 0, Config.MapHeight)
 			p.vx *= damp
@@ -226,6 +234,10 @@ local function movePellets(dt: number)
 		else
 			p.vx, p.vy = 0, 0
 		end
+	end
+	-- remove after iterating (removePellet mutates the array)
+	for _, p in pelletExpireScratch do
+		World.removePellet(p)
 	end
 end
 
@@ -282,11 +294,9 @@ local function resolveOwnCells(now: number, dt: number)
 			continue
 		end
 		-- The "Pull Together" ability: while active, ALL cells are forced
-		-- mergeable and glide together much faster (regroup on demand).
+		-- mergeable and actively yanked together (regroup on demand). Normal
+		-- merging has NO artificial pull - see below.
 		local pulling = info.pullUntil and now < info.pullUntil
-		-- each cell glides at its own size-based speed * this multiplier (the
-		-- Pull ability speeds it up)
-		local speedMult = (pulling and Config.PullEaseMult or 1) * Config.MergeSpeedFactor
 
 		local merged = nil -- collect merges, apply after the pair loop
 		for i = 1, n - 1 do
@@ -303,36 +313,21 @@ local function resolveOwnCells(now: number, dt: number)
 				-- ability is active).
 				local mergeable = pulling or (now >= a.mergeAt and now >= b.mergeAt)
 				if mergeable then
-					-- merge once the two are basically on top of each other...
-					if d < math.max(a.r, b.r) * Config.MergeOverlap then
-						local big = a.m >= b.m and a or b
-						local small = big == a and b or a
-						-- combine AT the meeting point (midpoint of the pair) so
-						-- neither cell keeps its old spot - they merge into
-						-- each other
+					local big = a.m >= b.m and a or b
+					local small = big == a and b or a
+					-- merge once the SMALLER cell is basically on top of the
+					-- bigger's center (MergeOverlap is small, so no snap-from-afar
+					-- at big sizes)
+					if d < big.r * Config.MergeOverlap then
 						merged = merged or {}
-						table.insert(merged, {
-							big = big,
-							small = small,
-							mx = (a.x + b.x) * 0.5,
-							my = (a.y + b.y) * 0.5,
-						})
+						table.insert(merged, { big = big, small = small }) -- big keeps its spot
 					elseif d > 1e-3 and (pulling or not info.frozen) then
-						-- ...otherwise GLIDE toward a shared meeting point: the
-						-- pair's midpoint leaned toward the aim (mouse), so they
-						-- combine where you're pointing. Each cell travels at ITS
-						-- OWN size-based speed, so a small cell darts in while a
-						-- big one lumbers (they move at their natural speeds).
-						local mx, my = (a.x + b.x) * 0.5, (a.y + b.y) * 0.5
-						local odx = (info.aimX - mx) * Config.MergeAimBias
-						local ody = (info.aimY - my) * Config.MergeAimBias
-						local od = math.sqrt(odx * odx + ody * ody)
-						if od > sum then
-							odx, ody = odx / od * sum, ody / od * sum
-						end
-						local tx, ty = mx + odx, my + ody
-						moveToward(a, tx, ty, Util.speedFromMass(a.m) * speedMult * dt)
-						moveToward(b, tx, ty, Util.speedFromMass(b.m) * speedMult * dt)
+						-- glide ONLY the smaller cell into the bigger one, at the
+						-- smaller cell's own normal move speed (the Pull ability
+						-- speeds it up). The BIGGER cell is NOT pulled - it stays
+						-- put (only your steering moves it), so the small slides in.
+						local mult = pulling and Config.PullEaseMult or 1
+						moveToward(small, big.x, big.y, Util.speedFromMass(small.m) * mult * dt)
 					end
 				elseif d >= sum then
 					-- not overlapping and not mergeable: nothing to resolve
@@ -358,11 +353,9 @@ local function resolveOwnCells(now: number, dt: number)
 		if merged then
 			for _, pair in merged do
 				if not pair.big.dead and not pair.small.dead then
+					-- the bigger cell absorbs the smaller IN PLACE (it never moved
+					-- for the merge), so there's no snap/jump
 					World.setMass(pair.big, pair.big.m + pair.small.m)
-					-- place the combined cell at the meeting point, not either
-					-- cell's old position (they merged INTO each other)
-					pair.big.x = pair.mx
-					pair.big.y = pair.my
 					World.removeCell(pair.small)
 				end
 			end
