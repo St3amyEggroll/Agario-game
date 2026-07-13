@@ -378,17 +378,18 @@ function Renderer.render(cam)
 		end
 	end
 
-	-- PELLETS
+	-- PELLETS - no pixel-size cull (they're few and bounded by MaxPellets, so
+	-- always render when on-screen; the pixel cull is only for the ~1800 orbs).
+	-- This is what stopped pellets from blinking/vanishing when zoomed out.
 	for id, p in WorldState.view.pellets do
-		local px = p.r * 2 * scale
 		local w = activePellets[id]
-		if px >= (w and minPxLow or minPx) and p.x >= minX and p.x <= maxX and p.y >= minY and p.y <= maxY then
+		if p.x >= minX and p.x <= maxX and p.y >= minY and p.y <= maxY then
 			if not w then
 				w = pelletPool.acquire()
 				w.frame.BackgroundColor3 = WorldState.colorForSlot(p.slot)
 				activePellets[id] = w
 			end
-			place(w, ox + p.x * scale, oy + p.y * scale, px)
+			place(w, ox + p.x * scale, oy + p.y * scale, p.r * 2 * scale)
 			w.gen = gen
 		end
 	end
@@ -404,11 +405,11 @@ function Renderer.render(cam)
 	-- renders OVER it, like agar
 	table.clear(visibleCellList)
 
-	-- VIRUSES
+	-- VIRUSES - no pixel-size cull either (few of them; always render on-screen)
 	for id, v in WorldState.view.viruses do
 		local px = v.r * 2 * scale
 		local w = activeViruses[id]
-		if px >= (w and minPxLow or minPx) and v.x >= minX and v.x <= maxX and v.y >= minY and v.y <= maxY then
+		if v.x >= minX and v.x <= maxX and v.y >= minY and v.y <= maxY then
 			if not w then
 				w = virusPool.acquire()
 				activeViruses[id] = w
@@ -438,11 +439,11 @@ function Renderer.render(cam)
 		end
 	end
 
-	-- CELLS (with name/mass labels)
+	-- CELLS (with name/mass labels) - no pixel-size cull; always render on-screen
 	for id, c in WorldState.view.cells do
 		local pixels = c.r * 2 * scale
 		local w = activeCells[id]
-		if pixels >= (w and minPxLow or minPx) and c.x >= minX and c.x <= maxX and c.y >= minY and c.y <= maxY then
+		if c.x >= minX and c.x <= maxX and c.y >= minY and c.y <= maxY then
 			if not w then
 				w = cellPool.acquire()
 				w.slot = -1

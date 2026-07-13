@@ -137,7 +137,7 @@ local Config = {
 	ZoomSmoothing = 4, -- exponential smoothing rate for zoom changes
 	CameraSmoothing = 10, -- exponential smoothing rate for camera position
 	LabelMinPixels = 26, -- hide name/mass labels on cells smaller than this on screen
-	CullMargin = 120, -- extra world units around the view rect before culling
+	CullMargin = 300, -- extra world units around the view rect before culling (bigger = less edge pop when zoomed out)
 	-- Skip drawing anything smaller than this many pixels on screen. When
 	-- zoomed out, orbs/pellets become sub-pixel dots that cost draw calls for
 	-- nothing; skipping them keeps far-zoom smooth. Kept low (1.5) + a wide
