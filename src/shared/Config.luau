@@ -64,6 +64,9 @@ local Config = {
 	-- visible slide-in). Visual glide only; the wait before cells CAN merge is
 	-- the MergeTime above. The lighter cell moves more (slides into the heavier).
 	MergeAnimTime = 5.0, -- ~4s for the actual slide-in from touching (raise for a slower merge animation)
+	-- Merging cells meet at their midpoint, leaned this fraction toward the aim
+	-- (mouse) so they combine where you're pointing. 0 = pure midpoint.
+	MergeAimBias = 0.4,
 
 	------------------------------------------------------------------ Abilities
 	-- Pull Together: force all your cells mergeable and glide them into one.

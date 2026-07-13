@@ -259,10 +259,10 @@ end
 
 --------------------------------------------------- same-player collide/merge
 
--- Split halves must stay separate until both merge timers expire, then glide
--- back together. Trick: while un-mergeable we softly push overlapping cells
--- apart; the moment BOTH are mergeable we stop separating entirely, so cells
--- steered at the same cursor naturally overlap deep enough to merge.
+-- Split halves stay separate until a merge timer expires, then glide toward a
+-- shared meeting point (their midpoint, leaned toward the mouse) and combine
+-- THERE - they merge into each other rather than one absorbing the other in
+-- place. While un-mergeable, overlapping cells are softly pushed apart.
 local function resolveOwnCells(now: number, dt: number)
 	for _, info in World.players do
 		local cells = info.cells
@@ -288,28 +288,50 @@ local function resolveOwnCells(now: number, dt: number)
 				local dx, dy = b.x - a.x, b.y - a.y
 				local d = math.sqrt(dx * dx + dy * dy)
 				local sum = a.r + b.r
-				local mergeable = pulling or (now >= a.mergeAt and now >= b.mergeAt)
+				-- EITHER timer being up is enough to merge (not both).
+				local mergeable = pulling or now >= a.mergeAt or now >= b.mergeAt
 				if mergeable then
-					-- merge as soon as centers are close enough...
+					-- merge once the two are basically on top of each other...
 					if d < math.max(a.r, b.r) * Config.MergeOverlap then
 						local big = a.m >= b.m and a or b
 						local small = big == a and b or a
+						-- combine AT the meeting point (midpoint of the pair) so
+						-- neither cell keeps its old spot - they merge into
+						-- each other
 						merged = merged or {}
-						table.insert(merged, { big = big, small = small })
+						table.insert(merged, {
+							big = big,
+							small = small,
+							mx = (a.x + b.x) * 0.5,
+							my = (a.y + b.y) * 0.5,
+						})
 					elseif d > 1e-3 and (pulling or not info.frozen) then
-						-- ...otherwise GLIDE together at a CONSTANT speed sized so
-						-- the full close takes ~animTime seconds - a slow, visible
-						-- 1-2s slide-in instead of a fast exponential snap.
-						-- Weighted by mass: the LIGHTER cell moves more, so it
-						-- slides into the heavier one (looks like absorption).
+						-- ...otherwise GLIDE together. Two parts:
+						-- 1) close toward EACH OTHER at constant speed (~animTime
+						--    for a full slide), weighted so the LIGHTER cell moves
+						--    more. This guarantees they converge and merge.
+						-- 2) drift the whole pair toward the aim by the SAME vector
+						--    (doesn't change their separation), leaning the meeting
+						--    point toward where the mouse is pointing.
 						local ux, uy = dx / d, dy / d
-						local close = math.min(sum / animTime * dt, d) -- constant speed, never overshoot
-						local wa = b.m / (a.m + b.m) -- a moves by the other's mass share
-						local wb = 1 - wa
+						local close = math.min(sum / animTime * dt, d)
+						local wa = b.m / (a.m + b.m) -- lighter cell -> larger share of the move
 						a.x = math.clamp(a.x + ux * close * wa, 0, Config.MapWidth)
 						a.y = math.clamp(a.y + uy * close * wa, 0, Config.MapHeight)
-						b.x = math.clamp(b.x - ux * close * wb, 0, Config.MapWidth)
-						b.y = math.clamp(b.y - uy * close * wb, 0, Config.MapHeight)
+						b.x = math.clamp(b.x - ux * close * (1 - wa), 0, Config.MapWidth)
+						b.y = math.clamp(b.y - uy * close * (1 - wa), 0, Config.MapHeight)
+
+						local mx, my = (a.x + b.x) * 0.5, (a.y + b.y) * 0.5
+						local aimdx, aimdy = info.aimX - mx, info.aimY - my
+						local ad = math.sqrt(aimdx * aimdx + aimdy * aimdy)
+						if ad > 1 then
+							local drift = math.min(close, ad) * Config.MergeAimBias
+							local ddx, ddy = aimdx / ad * drift, aimdy / ad * drift
+							a.x = math.clamp(a.x + ddx, 0, Config.MapWidth)
+							a.y = math.clamp(a.y + ddy, 0, Config.MapHeight)
+							b.x = math.clamp(b.x + ddx, 0, Config.MapWidth)
+							b.y = math.clamp(b.y + ddy, 0, Config.MapHeight)
+						end
 					end
 				elseif d >= sum then
 					-- not overlapping and not mergeable: nothing to resolve
@@ -336,6 +358,10 @@ local function resolveOwnCells(now: number, dt: number)
 			for _, pair in merged do
 				if not pair.big.dead and not pair.small.dead then
 					World.setMass(pair.big, pair.big.m + pair.small.m)
+					-- place the combined cell at the meeting point, not either
+					-- cell's old position (they merged INTO each other)
+					pair.big.x = pair.mx
+					pair.big.y = pair.my
 					World.removeCell(pair.small)
 				end
 			end
