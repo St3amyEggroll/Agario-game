@@ -333,20 +333,21 @@ local function resolveOwnCells(now: number, dt: number)
 					-- not overlapping and not mergeable: nothing to resolve
 					continue
 				elseif not info.frozen then
-					-- soft positional correction: fraction of the overlap per
-					-- tick, so fresh split impulses can still carry pieces
-					-- out. Skipped entirely while frozen so stacked
-					-- freeze-splits STAY stacked.
+					-- SOLID collision: cells that can't merge yet can't overlap.
+					-- Resolve the full overlap (SeparationSoftness = 1 => they end
+					-- up exactly touching), weighted by mass so the LIGHTER cell
+					-- gives way more (a small cell can't shove a big one).
 					local ux, uy = Util.unit(dx, dy)
 					if d < 1e-3 then
 						ux, uy = math.random() - 0.5, math.random() - 0.5
 						ux, uy = Util.unit(ux, uy)
 					end
-					local push = (sum - d) * 0.5 * Config.SeparationSoftness
-					a.x = math.clamp(a.x - ux * push, 0, Config.MapWidth)
-					a.y = math.clamp(a.y - uy * push, 0, Config.MapHeight)
-					b.x = math.clamp(b.x + ux * push, 0, Config.MapWidth)
-					b.y = math.clamp(b.y + uy * push, 0, Config.MapHeight)
+					local overlap = (sum - d) * Config.SeparationSoftness
+					local wa = b.m / (a.m + b.m) -- lighter cell (a) -> larger share of the push
+					a.x = math.clamp(a.x - ux * overlap * wa, 0, Config.MapWidth)
+					a.y = math.clamp(a.y - uy * overlap * wa, 0, Config.MapHeight)
+					b.x = math.clamp(b.x + ux * overlap * (1 - wa), 0, Config.MapWidth)
+					b.y = math.clamp(b.y + uy * overlap * (1 - wa), 0, Config.MapHeight)
 				end
 			end
 		end

@@ -73,7 +73,7 @@ local Config = {
 	-- Freeze fully locks your aim movement (0 = can't steer while frozen). Split
 	-- impulses still apply, so freeze-split pieces still launch out and settle.
 	FreezeMoveFactor = 0,
-	SeparationSoftness = 0.45, -- how hard same-player cells push apart pre-merge (0..1)
+	SeparationSoftness = 1.0, -- how solid same-player cells are before they can merge (1 = fully solid, never overlap)
 	SplitCooldown = 0.12, -- server-side rate limit on split actions
 	MultiSplitCooldown = 0.25,
 
