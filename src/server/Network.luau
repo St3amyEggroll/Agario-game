@@ -60,6 +60,17 @@ local function onAction(player, action, arg)
 	if not cooldown then
 		return -- not a real action
 	end
+	-- smaller cells split slightly faster: scale the split cooldown by your
+	-- largest cell's mass (small = shorter cooldown)
+	if action == "split" or action == "multisplit" or action == "triplesplit" then
+		local maxMass = 0
+		for _, cell in info.cells do
+			if cell.m > maxMass then
+				maxMass = cell.m
+			end
+		end
+		cooldown = cooldown * math.clamp(maxMass / Config.StartMass, 0.7, 1.0)
+	end
 	local now = os.clock()
 	local last = info.lastAction[action]
 	if last and now - last < cooldown then

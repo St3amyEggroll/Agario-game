@@ -301,6 +301,12 @@ local function resolveOwnCells(now: number, dt: number)
 		-- merging has NO artificial pull - see below.
 		local pulling = info.pullUntil and now < info.pullUntil
 
+		-- reset per-cell separation accumulators (see below)
+		for _, c in cells do
+			c._sx = 0
+			c._sy = 0
+		end
+
 		local merged = nil -- collect merges, apply after the pair loop
 		for i = 1, n - 1 do
 			local a = cells[i]
@@ -336,10 +342,11 @@ local function resolveOwnCells(now: number, dt: number)
 					-- not overlapping and not mergeable: nothing to resolve
 					continue
 				elseif not info.frozen then
-					-- SOLID collision: cells that can't merge yet can't overlap.
-					-- Resolve the full overlap (SeparationSoftness = 1 => they end
-					-- up exactly touching), weighted by mass so the LIGHTER cell
-					-- gives way more (a small cell can't shove a big one).
+					-- SOLID collision: ACCUMULATE each cell's desired push here;
+					-- it's applied (capped per CELL) after the pair loop. Capping
+					-- per pair was the bug - a cell stacked with many others (a
+					-- multi-split) got shoved by every pair at once = a huge
+					-- one-tick jump/teleport.
 					local ux, uy = Util.unit(dx, dy)
 					if d < 1e-3 then
 						ux, uy = math.random() - 0.5, math.random() - 0.5
@@ -347,18 +354,27 @@ local function resolveOwnCells(now: number, dt: number)
 					end
 					local overlap = (sum - d) * Config.SeparationSoftness
 					local wa = b.m / (a.m + b.m) -- lighter cell (a) -> larger share of the push
-					-- cap each cell's push this tick so deep overlaps resolve
-					-- smoothly over several ticks instead of teleporting apart
-					local maxStep = Config.SeparationMaxSpeed * dt
-					local aStep = math.min(overlap * wa, maxStep)
-					local bStep = math.min(overlap * (1 - wa), maxStep)
-					a.x = math.clamp(a.x - ux * aStep, 0, Config.MapWidth)
-					a.y = math.clamp(a.y - uy * aStep, 0, Config.MapHeight)
-					b.x = math.clamp(b.x + ux * bStep, 0, Config.MapWidth)
-					b.y = math.clamp(b.y + uy * bStep, 0, Config.MapHeight)
+					a._sx -= ux * overlap * wa
+					a._sy -= uy * overlap * wa
+					b._sx += ux * overlap * (1 - wa)
+					b._sy += uy * overlap * (1 - wa)
 				end
 			end
 		end
+
+		-- apply each cell's TOTAL accumulated push this tick, capped to a max
+		-- speed so it's always a smooth slide, never a teleport
+		local maxStep = Config.SeparationMaxSpeed * dt
+		for _, c in cells do
+			local sx, sy = c._sx, c._sy
+			local mag = math.sqrt(sx * sx + sy * sy)
+			if mag > 1e-4 then
+				local step = math.min(mag, maxStep)
+				c.x = math.clamp(c.x + sx / mag * step, 0, Config.MapWidth)
+				c.y = math.clamp(c.y + sy / mag * step, 0, Config.MapHeight)
+			end
+		end
+
 		if merged then
 			for _, pair in merged do
 				if not pair.big.dead and not pair.small.dead then
