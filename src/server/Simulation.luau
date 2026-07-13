@@ -321,13 +321,13 @@ local function resolveOwnCells(now: number, dt: number)
 					if d < big.r * Config.MergeOverlap then
 						merged = merged or {}
 						table.insert(merged, { big = big, small = small }) -- big keeps its spot
-					elseif d > 1e-3 and (pulling or not info.frozen) then
-						-- glide ONLY the smaller cell into the bigger one, at the
-						-- smaller cell's own normal move speed (the Pull ability
-						-- speeds it up). The BIGGER cell is NOT pulled - it stays
-						-- put (only your steering moves it), so the small slides in.
-						local mult = pulling and Config.PullEaseMult or 1
-						moveToward(small, big.x, big.y, Util.speedFromMass(small.m) * mult * dt)
+					elseif pulling and d > 1e-3 then
+						-- ONLY the Pull Together ability adds movement: it yanks the
+						-- smaller cell into the bigger one for a quick regroup.
+						-- NORMAL merging adds NO movement at all - your cells come
+						-- together purely from your own steering (moveCells), so
+						-- they travel at exactly their normal speed, never faster.
+						moveToward(small, big.x, big.y, Util.speedFromMass(small.m) * Config.PullEaseMult * dt)
 					end
 				elseif d >= sum then
 					-- not overlapping and not mergeable: nothing to resolve
