@@ -1,12 +1,12 @@
 --[[
-	UI - assembles the interface ScreenGui: HUD, bottom menu, settings (keybinds),
-	shop, the ability dock, and the top-left control row. World rendering lives in
-	a separate, lower ScreenGui (Renderer); this one sits on top.
+	UI - assembles the interface ScreenGui: the play menu, HUD, ability dock,
+	the in-game pause menu, settings (keybinds) and the shop. World rendering
+	lives in a separate, lower ScreenGui (Renderer); this one sits on top.
 
-	Layout (minimal / classic-agar): top-left = control row (Settings / Menu /
-	Respawn) with the tiny stat block under it; bottom-left = Mass; bottom-center
-	= level bar; bottom-right = ability dock. Leaderboard is the Roblox player
-	list (top-right, native).
+	Layout (minimal / classic-agar): bottom-left = Mass, top-left = tiny stats +
+	the ☰ pause button, bottom-center = level bar, bottom-right = ability dock.
+	Leaderboard is the Roblox player list (top-right, native). Menu / Respawn /
+	Settings live in the ☰ pause popup; Spectate lives on the play menu.
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -19,6 +19,7 @@ local Menu = require(script.Menu)
 local Settings = require(script.Settings)
 local Shop = require(script.Shop)
 local AbilityDock = require(script.AbilityDock)
+local Pause = require(script.Pause)
 local Input = require(script.Parent.Input)
 local WorldState = require(script.Parent.WorldState)
 
@@ -36,38 +37,24 @@ function UI.init(playerGui: PlayerGui)
 	gui.DisplayOrder = 10
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-	Menu.init(gui, Shop.toggle) -- overlay first so panels draw above it
+	Menu.init(gui, Shop.toggle, Settings.toggle) -- overlay first so panels draw above it
 	HUD.init(gui)
 	AbilityDock.init(gui) -- bottom-right on-screen action buttons (also touch controls)
+	Pause.init(gui, Settings.toggle) -- ☰ top-left -> Resume / Respawn / Settings / Leave
 	Settings.init(gui)
 	Shop.init(gui)
 
-	-- top-left control row: Settings (M key mirrors it) / Menu / Respawn
-	local settingsBtn = Theme.button(gui, "Settings", UDim2.fromScale(0.012, 0.014), UDim2.fromScale(0.072, 0.045), function()
-		Settings.toggle()
-	end)
-	Theme.capText(settingsBtn, 15)
-	Input.onMenuToggle = Settings.toggle
-
-	local toMenuBtn = Theme.button(gui, "Menu", UDim2.fromScale(0.09, 0.014), UDim2.fromScale(0.052, 0.045), function()
-		Remotes.Action:FireServer("tomenu")
-	end)
-	Theme.capText(toMenuBtn, 15)
-
-	local respawnBtn = Theme.outlineButton(gui, "Respawn", UDim2.fromScale(0.148, 0.014), UDim2.fromScale(0.078, 0.045), Theme.Green, function()
-		Remotes.Action:FireServer("respawn")
-	end)
-	Theme.capText(respawnBtn, 15)
+	Input.onMenuToggle = Settings.toggle -- the M keybind mirrors the settings panel
 
 	-- debug testing buttons (below the stat block); gated by Config.Debug - the
 	-- server also refuses these when it's off
 	if Config.Debug then
 		local pctLabel = ("%d%%"):format(Config.DebugMassPercent)
-		local addMass = Theme.outlineButton(gui, "+" .. pctLabel, UDim2.fromScale(0.012, 0.2), UDim2.fromScale(0.055, 0.04), Theme.Green, function()
+		local addMass = Theme.outlineButton(gui, "+" .. pctLabel, UDim2.fromScale(0.012, 0.35), UDim2.fromScale(0.055, 0.04), Theme.Green, function()
 			Remotes.Action:FireServer("debugmass", 1)
 		end)
 		Theme.capText(addMass, 14)
-		local subMass = Theme.outlineButton(gui, "-" .. pctLabel, UDim2.fromScale(0.072, 0.2), UDim2.fromScale(0.055, 0.04), Theme.Danger, function()
+		local subMass = Theme.outlineButton(gui, "-" .. pctLabel, UDim2.fromScale(0.072, 0.35), UDim2.fromScale(0.055, 0.04), Theme.Danger, function()
 			Remotes.Action:FireServer("debugmass", -1)
 		end)
 		Theme.capText(subMass, 14)
@@ -77,8 +64,6 @@ function UI.init(playerGui: PlayerGui)
 	WorldState.onPlayerState = function(_event)
 		Menu.refresh()
 	end
-	-- WorldState.leaderboard is still kept (from the Leaderboard remote) so the
-	-- spectate/menu camera can follow the leader - it just isn't drawn anymore.
 
 	gui.Parent = playerGui
 end
@@ -86,6 +71,8 @@ end
 function UI.update(dt: number)
 	HUD.update(dt)
 	AbilityDock.update(dt)
+	Pause.update(dt)
+	Menu.update(dt)
 end
 
 return UI

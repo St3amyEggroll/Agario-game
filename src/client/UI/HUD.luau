@@ -21,6 +21,8 @@ local massLabel: TextLabel
 local pingLabel: TextLabel
 local fpsLabel: TextLabel
 local coinLabel: TextLabel
+local statsFrame: Frame
+local massFrame: Frame
 
 local levelBar: Frame
 local levelBadge: TextLabel
@@ -51,10 +53,11 @@ end
 function HUD.init(parent: Instance)
 	-- tiny stat block, top-left (sits below the menu-button row placed by UI.init)
 	local stats = Instance.new("Frame")
-	stats.Position = UDim2.fromScale(0.012, 0.075)
+	stats.Position = UDim2.fromScale(0.065, 0.02)
 	stats.Size = UDim2.fromScale(0.13, 0.11)
 	stats.BackgroundTransparency = 1
 	stats.Parent = parent
+	statsFrame = stats
 	pingLabel = statLine(stats, 0.02, "Ping", Theme.TextColor)
 	fpsLabel = statLine(stats, 0.36, "FPS", Theme.TextColor)
 	coinLabel = statLine(stats, 0.70, "Coins", Theme.Gold)
@@ -66,6 +69,7 @@ function HUD.init(parent: Instance)
 	massBox.Size = UDim2.fromScale(0.26, 0.13)
 	massBox.BackgroundTransparency = 1
 	massBox.Parent = parent
+	massFrame = massBox
 	local massCap = Theme.caption(massBox, "Mass", UDim2.fromScale(0.01, 0), UDim2.fromScale(0.6, 0.26))
 	massCap.TextXAlignment = Enum.TextXAlignment.Left
 	massCap.TextStrokeColor3 = Color3.new(0, 0, 0)
@@ -133,6 +137,22 @@ function HUD.update(dt: number)
 	end
 	uiAccumulator = 0
 
+	-- the whole in-game HUD hides in the menu / when dead (the play menu owns
+	-- that screen); shown while playing
+	local playing = WorldState.status == "alive"
+	if statsFrame.Visible ~= playing then
+		statsFrame.Visible = playing
+	end
+	if massFrame.Visible ~= playing then
+		massFrame.Visible = playing
+	end
+	if not playing then
+		if levelBar.Visible then
+			levelBar.Visible = false
+		end
+		return
+	end
+
 	local massText = tostring(math.floor(WorldState.own.mass + 0.5))
 	if massText ~= lastMassText then
 		lastMassText = massText
@@ -154,14 +174,9 @@ function HUD.update(dt: number)
 		fpsLabel.Text = fpsText
 	end
 
-	-- level bar: shown only while actually playing (in menu/spectate the bottom
-	-- menu bar occupies the same lane)
-	local showBar = WorldState.status == "alive"
-	if levelBar.Visible ~= showBar then
-		levelBar.Visible = showBar
-	end
-	if not showBar then
-		return
+	-- level bar shows while playing (we already returned above if not)
+	if not levelBar.Visible then
+		levelBar.Visible = true
 	end
 
 	local level, into, need = LevelCurve.progress(WorldState.xp or 0)
