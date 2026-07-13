@@ -54,8 +54,10 @@ local function splitPass(info, now: number)
 			-- launches out toward the aim via its impulse - so it emerges from
 			-- the parent instead of popping in offset.
 			local piece = World.spawnCell(cell.player, cell.x + dx * cell.r * 0.15, cell.y + dy * cell.r * 0.15, half)
-			piece.ix = dx * Config.SplitImpulse
-			piece.iy = dy * Config.SplitImpulse
+			-- launch faster the bigger the cell, so big halves clear each other quickly
+			local impulse = math.max(Config.SplitImpulse, cell.r * Config.SplitImpulsePerRadius)
+			piece.ix = dx * impulse
+			piece.iy = dy * impulse
 		end
 	end
 end
@@ -419,7 +421,9 @@ local function popCell(cell, virus, now: number)
 		local angle = math.random() * math.pi * 2
 		local dx, dy = math.cos(angle), math.sin(angle)
 		local piece = World.spawnCell(cell.player, cell.x + dx * cell.r * 0.15, cell.y + dy * cell.r * 0.15, chunk)
-		local kick = Config.SplitImpulse * (0.6 + math.random() * 0.4)
+		-- scale the pop kick by cell radius too, so big cells scatter their pieces
+		-- fast enough to clear their (larger) radius instead of sitting in a blob
+		local kick = math.max(Config.SplitImpulse, cell.r * Config.SplitImpulsePerRadius) * (0.6 + math.random() * 0.4)
 		piece.ix = dx * kick
 		piece.iy = dy * kick
 	end

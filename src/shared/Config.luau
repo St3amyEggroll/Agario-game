@@ -52,7 +52,9 @@ local Config = {
 	MaxCells = 32, -- max simultaneous cells per player
 	MinCellMass = 100, -- a cell can never be smaller than this (split/pop keep every piece >= this)
 	SplitMinMass = 200, -- a cell needs at least this much mass to split (so both halves stay >= MinCellMass)
-	SplitImpulse = 936, -- launch speed of the new half (1.2x faster split)
+	SplitImpulse = 936, -- base launch speed of the new half...
+	SplitImpulsePerRadius = 9, -- ...scaled up by cell radius so BIG cells launch pieces fast enough to
+	-- clear their (larger) radius quickly - otherwise big split halves overlap in a blob for too long
 	ImpulseDamping = 4, -- exponential damping rate for split/pop impulses
 	-- merge timer scales with cell mass: little cells ~MergeTimeBase, growing
 	-- with mass, capped at MergeTimeMax. (base 4s, +0.006/mass, cap 10s => a
@@ -92,7 +94,7 @@ local Config = {
 	-- that reads as a teleport/blink. Capping makes separation a smooth push
 	-- over a few ticks while still keeping cells solid. High enough that fast
 	-- small cells can't overlap through it.
-	SeparationMaxSpeed = 1000,
+	SeparationMaxSpeed = 1500,
 	SplitCooldown = 0.1, -- server-side rate limit on split actions (1.2x faster)
 	MultiSplitCooldown = 0.15, -- multi/triple split rate limit (faster)
 
