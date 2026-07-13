@@ -88,7 +88,7 @@ right services automatically (`default.project.json` defines the mapping).
 | D | Double split (2 split passes) |
 | R | Triple split (3 split passes) |
 | W | Feed — eject a mass pellet (hold to stream; feeds players, viruses, experimentals) |
-| F | Freeze your cells (toggle — you can still creep slowly) |
+| F | Freeze (toggle) — you creep slowly; splitting while frozen launches the piece out then it re-freezes |
 | T | Pull Together — yank all your cells into one and merge |
 | E | Speed — temporary movement boost |
 | B | Respawn |

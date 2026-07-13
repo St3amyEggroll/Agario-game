@@ -55,12 +55,15 @@ local Config = {
 	ImpulseDamping = 4, -- exponential damping rate for split/pop impulses
 	MergeTimeBase = 1, -- seconds before split halves may re-merge...
 	MergeTimePerMass = 0.001, -- ...plus this many seconds per point of mass (kept tiny so big cells still merge fast)
-	MergeOverlap = 1.3, -- merge when centers are closer than max(r1, r2) * this (looser = merges sooner)
-	-- Once mergeable, cells GLIDE together with an exponential ease (higher =
-	-- quicker glide) so they visibly come together over the split gap instead
-	-- of snapping/instantly merging. This is a VISUAL glide only; the time
-	-- before cells become mergeable is the MergeTime formula above.
-	MergeEaseRate = 3.5,
+	-- merge only once the small cell is deep INSIDE the big one (center within
+	-- this fraction of the big radius). Small value = you actually see the cell
+	-- slide in before it combines, instead of it vanishing on first contact.
+	MergeOverlap = 0.5,
+	-- Once mergeable, cells GLIDE together with an exponential ease (LOWER =
+	-- slower, more visible slide-in). This is a VISUAL glide only; the time
+	-- before cells become mergeable is the MergeTime formula above. The lighter
+	-- cell moves more (it slides into the heavier one).
+	MergeEaseRate = 2,
 
 	------------------------------------------------------------------ Abilities
 	-- Pull Together: force all your cells mergeable and glide them into one.
@@ -116,7 +119,7 @@ local Config = {
 	------------------------------------------------------------------ Client rendering
 	-- render this far behind the newest snapshot. Keep >= 2 snapshot intervals
 	-- (2 / SnapshotRate): lower feels snappier but stutters on network jitter.
-	InterpolationDelay = 0.09,
+	InterpolationDelay = 0.11,
 	ViewHeightBase = 1200, -- world units visible vertically at minimum size...
 	ViewHeightPerRadius = 9, -- ...plus this per unit of your largest cell's radius (zoom out as you grow)
 	ViewHeightMin = 1000,
@@ -134,8 +137,9 @@ local Config = {
 	CullMargin = 120, -- extra world units around the view rect before culling
 	-- Skip drawing anything smaller than this many pixels on screen. When
 	-- zoomed out, orbs/pellets become sub-pixel dots that cost draw calls for
-	-- nothing; skipping them keeps far-zoom smooth no matter how much you zoom.
-	MinRenderPixels = 2.5,
+	-- nothing; skipping them keeps far-zoom smooth. Kept low (1.5) + a wide
+	-- hysteresis band (see Renderer) so entities don't blink near the cutoff.
+	MinRenderPixels = 1.5,
 
 	------------------------------------------------------------------ Colors
 	Palette = {
@@ -159,6 +163,9 @@ local Config = {
 	------------------------------------------------------------------ Debug / testing
 	Debug = true, -- shows testing helpers (+/- mass buttons) and lets the server accept them. Turn OFF for release!
 	DebugMassPercent = 10, -- percent of current mass added/removed per debug button click
+
+	------------------------------------------------------------------ Names
+	MaxNameLength = 16, -- custom names are clamped to this many characters
 
 	------------------------------------------------------------------ Default keybinds (remappable in Settings)
 	DefaultKeybinds = {

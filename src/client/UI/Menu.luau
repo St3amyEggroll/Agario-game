@@ -16,7 +16,17 @@ local overlay: Frame
 local bar: Frame
 local titleLabel: TextLabel
 local subtitleLabel: TextLabel
+local nameBox: TextBox
 local onShopToggle: (() -> ())? = nil
+
+-- send the typed name to the server (filtered + saved there)
+local function submitName()
+	local text = nameBox and nameBox.Text or ""
+	text = text:gsub("^%s+", ""):gsub("%s+$", "")
+	if #text > 0 then
+		Remotes.Action:FireServer("setname", text)
+	end
+end
 
 function Menu.init(parent: Instance, shopToggle: () -> ())
 	onShopToggle = shopToggle
@@ -28,21 +38,53 @@ function Menu.init(parent: Instance, shopToggle: () -> ())
 	overlay.BorderSizePixel = 0
 	overlay.Parent = parent
 
-	titleLabel = Theme.label(overlay, "AGARIO 2D", UDim2.fromScale(0.5, 0.3), UDim2.fromScale(0.6, 0.1))
+	titleLabel = Theme.label(overlay, "AGARIO 2D", UDim2.fromScale(0.5, 0.28), UDim2.fromScale(0.6, 0.1))
 	titleLabel.AnchorPoint = Vector2.new(0.5, 0.5)
 	Theme.capText(titleLabel, 64)
 	subtitleLabel = Theme.label(
 		overlay,
 		"Eat orbs, avoid bigger cells, pop nothing green.",
-		UDim2.fromScale(0.5, 0.39),
+		UDim2.fromScale(0.5, 0.37),
 		UDim2.fromScale(0.6, 0.04)
 	)
 	subtitleLabel.AnchorPoint = Vector2.new(0.5, 0.5)
 	subtitleLabel.TextColor3 = Theme.MutedText
 	Theme.capText(subtitleLabel, 22)
 
+	-- custom name entry (prefilled from the server via the Name remote)
+	nameBox = Instance.new("TextBox")
+	nameBox.AnchorPoint = Vector2.new(0.5, 0.5)
+	nameBox.Position = UDim2.fromScale(0.5, 0.45)
+	nameBox.Size = UDim2.fromScale(0.24, 0.06)
+	nameBox.BackgroundColor3 = Color3.fromRGB(45, 50, 64)
+	nameBox.BorderSizePixel = 0
+	nameBox.Font = Theme.Font
+	nameBox.PlaceholderText = "Enter a name..."
+	nameBox.Text = ""
+	nameBox.TextColor3 = Theme.TextColor
+	nameBox.PlaceholderColor3 = Theme.MutedText
+	nameBox.TextScaled = false
+	nameBox.TextSize = 20
+	nameBox.ClearTextOnFocus = false
+	Theme.round(nameBox, 8)
+	Theme.capText(nameBox, 22)
+	nameBox.Parent = overlay
+	-- committing the field (Enter) submits the name immediately
+	nameBox.FocusLost:Connect(function(enter)
+		if enter then
+			submitName()
+		end
+	end)
+	-- prefill with the server's saved/current name (unless mid-typing)
+	Remotes.Name.OnClientEvent:Connect(function(name)
+		if typeof(name) == "string" and not nameBox:IsFocused() then
+			nameBox.Text = name
+		end
+	end)
+
 	bar = Theme.panel(parent, UDim2.fromScale(0.5, 0.985), UDim2.fromScale(0.34, 0.075), Vector2.new(0.5, 1))
 	local play = Theme.button(bar, "Play", UDim2.fromScale(0.03, 0.14), UDim2.fromScale(0.29, 0.72), function()
+		submitName() -- apply the chosen name before spawning
 		Remotes.Action:FireServer("play")
 	end)
 	play.BackgroundColor3 = Color3.fromRGB(60, 150, 90)

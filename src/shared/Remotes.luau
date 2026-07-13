@@ -25,6 +25,7 @@ local DEFS: { [string]: string } = {
 	Leaderboard = "RemoteEvent", -- server -> client: top players, 1 Hz
 	Ping = "RemoteEvent", -- round-trip echo for the HUD ping display
 	Keybinds = "RemoteEvent", -- keybind save (c->s) / load (s->c)
+	Name = "RemoteEvent", -- server -> client: your saved/current display name (prefills the menu box)
 	PlayerState = "RemoteEvent", -- server -> client: "spawned" / "died"
 }
 

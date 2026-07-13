@@ -15,6 +15,7 @@ local World = require(script.Parent.World)
 local Simulation = require(script.Parent.Simulation)
 local Snapshots = require(script.Parent.Snapshots)
 local Keybinds = require(script.Parent.Keybinds)
+local Names = require(script.Parent.Names)
 
 local Network = {}
 
@@ -31,6 +32,7 @@ local ACTION_COOLDOWN: { [string]: number } = {
 	play = 0.5,
 	spectate = 0.25,
 	setskin = 0.2,
+	setname = 0.5,
 	debugmass = 0.05,
 }
 
@@ -81,6 +83,11 @@ local function onAction(player, action, arg)
 			return
 		end
 		arg = arg >= 0 and 1 or -1
+	elseif action == "setname" then
+		-- names are filtered + persisted asynchronously, not run through the
+		-- simulation queue
+		Names.setName(player, arg)
+		return
 	end
 	Simulation.enqueue(player, action, arg)
 end
@@ -106,11 +113,13 @@ local function onPlayerAdded(player)
 	World.broadcastRosterUpdate(info)
 	Snapshots.sendFullOrbs(player)
 	Keybinds.onPlayerAdded(player)
+	Names.onPlayerAdded(player) -- async: loads saved name, then prefills the client box
 end
 
 local function onPlayerRemoving(player)
 	local info = World.players[player]
 	Keybinds.onPlayerRemoving(player)
+	Names.onPlayerRemoving(player)
 	World.removePlayer(player)
 	if info then
 		Remotes.Roster:FireAllClients("remove", info.slot)

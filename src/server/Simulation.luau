@@ -49,14 +49,12 @@ local function splitPass(info, now: number)
 			local half = cell.m / 2
 			World.setMass(cell, half)
 			cell.mergeAt = now + Util.mergeDelay(half)
-			-- splitting while frozen keeps the pieces stacked on the parent
-			-- (agar-style freeze-split); normal splits launch toward the aim
-			local offset = info.frozen and 1 or cell.r * 0.4
-			local piece = World.spawnCell(cell.player, cell.x + dx * offset, cell.y + dy * offset, half)
-			if not info.frozen then
-				piece.ix = dx * Config.SplitImpulse
-				piece.iy = dy * Config.SplitImpulse
-			end
+			-- the split piece always LAUNCHES out toward the aim. When frozen
+			-- the parent stays put (frozen) while the piece flies off and then
+			-- settles/re-freezes - the classic freeze-split.
+			local piece = World.spawnCell(cell.player, cell.x + dx * cell.r * 0.4, cell.y + dy * cell.r * 0.4, half)
+			piece.ix = dx * Config.SplitImpulse
+			piece.iy = dy * Config.SplitImpulse
 		end
 	end
 end
@@ -297,16 +295,20 @@ local function resolveOwnCells(now: number, dt: number)
 						local small = big == a and b or a
 						merged = merged or {}
 						table.insert(merged, { big = big, small = small })
-					elseif d > 1e-3 then
+					elseif d > 1e-3 and (pulling or not info.frozen) then
 						-- ...otherwise GLIDE together with an exponential ease so
 						-- they visibly come together over the gap instead of
-						-- snapping. Each cell moves half the closing distance.
+						-- snapping. Weighted by mass: the total closing is d*ease
+						-- per tick, but the LIGHTER cell moves more, so it slides
+						-- into the heavier one (looks like absorption).
 						local ux, uy = dx / d, dy / d
-						local close = d * 0.5 * ease
-						a.x = math.clamp(a.x + ux * close, 0, Config.MapWidth)
-						a.y = math.clamp(a.y + uy * close, 0, Config.MapHeight)
-						b.x = math.clamp(b.x - ux * close, 0, Config.MapWidth)
-						b.y = math.clamp(b.y - uy * close, 0, Config.MapHeight)
+						local close = d * ease
+						local wa = b.m / (a.m + b.m) -- a moves by the other's mass share
+						local wb = 1 - wa
+						a.x = math.clamp(a.x + ux * close * wa, 0, Config.MapWidth)
+						a.y = math.clamp(a.y + uy * close * wa, 0, Config.MapHeight)
+						b.x = math.clamp(b.x - ux * close * wb, 0, Config.MapWidth)
+						b.y = math.clamp(b.y - uy * close * wb, 0, Config.MapHeight)
 					end
 				elseif d >= sum then
 					-- not overlapping and not mergeable: nothing to resolve

@@ -33,7 +33,12 @@ local TICK = 1 / Config.TickRate
 local SNAP_INTERVAL = 1 / Config.SnapshotRate
 local LB_INTERVAL = 1 / Config.LeaderboardRate
 
-local startClock = os.clock()
+-- simClock advances by EXACTLY one TICK per simulation step. Snapshots are
+-- stamped with it (via World.now), so the timestamp on a snapshot matches the
+-- fixed-step time its positions were computed at. Stamping with real wall-clock
+-- time instead (which drifts against the fixed step) made the client
+-- interpolation stutter.
+local simClock = 0
 local simAccumulator = 0
 local snapAccumulator = 0
 local lbAccumulator = 0
@@ -45,7 +50,8 @@ RunService.Heartbeat:Connect(function(dt)
 	simAccumulator += dt
 	local steps = 0
 	while simAccumulator >= TICK and steps < 5 do
-		Simulation.step(TICK, os.clock() - startClock)
+		simClock += TICK
+		Simulation.step(TICK, simClock)
 		simAccumulator -= TICK
 		steps += 1
 	end

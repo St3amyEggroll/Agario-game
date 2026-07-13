@@ -345,7 +345,7 @@ function Renderer.render(cam)
 	-- frame-to-frame while zooming - the "glitch". An already-drawn entity
 	-- (its id is in the active map) uses the lower threshold.
 	local minPx = Config.MinRenderPixels
-	local minPxLow = minPx * 0.5
+	local minPxLow = minPx * 0.3 -- wide hysteresis: once shown, keep drawing well below the show threshold so nothing blinks near the cutoff
 
 	generation += 1
 	local gen = generation
@@ -426,6 +426,7 @@ function Renderer.render(cam)
 			end
 			place(w, ox + v.x * scale, oy + v.y * scale, px)
 			w.r = v.r
+			w.zid = 100000 + id -- stable z tiebreaker (viruses sit above equal-size cells)
 			table.insert(visibleCellList, w)
 			w.gen = gen
 		end
@@ -501,6 +502,7 @@ function Renderer.render(cam)
 
 			w.gen = gen
 			w.r = c.r
+			w.zid = id -- stable z tiebreaker so equal-size overlapping cells don't flip order (flicker)
 			table.insert(visibleCellList, w)
 		end
 	end
@@ -511,8 +513,13 @@ function Renderer.render(cam)
 		end
 	end
 	-- bigger draws over smaller, cells and viruses together: you can hide
-	-- under a bigger virus, and you cover a virus you're big enough to eat
+	-- under a bigger virus, and you cover a virus you're big enough to eat.
+	-- Tiebreak equal radii by a stable id so the draw order can't flip
+	-- frame-to-frame (that flip is a real flicker when equal cells overlap).
 	table.sort(visibleCellList, function(a, b)
+		if a.r == b.r then
+			return a.zid < b.zid
+		end
 		return a.r < b.r
 	end)
 	for i, w in visibleCellList do
