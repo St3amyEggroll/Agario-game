@@ -96,6 +96,7 @@ local Config = {
 	EjectCostsMass = false, -- if false, feeding/ejecting does NOT shrink your own cell (free pellets)
 	EjectMassLoss = 13, -- mass the cell loses per eject (only applied when EjectCostsMass)
 	EjectPelletMass = 10, -- mass the pellet actually carries (difference is "wasted", like agar)
+	SelfFeedMassFactor = 0.6, -- eating your OWN pellet gives this fraction of its mass (self-feed is less efficient)
 	PelletSpeed = 640,
 	PelletFriction = 3.2, -- exponential slowdown rate; pellets come to rest
 	PelletSelfEatDelay = 0.2, -- seconds before you can re-eat your own pellet (self-feed to grow, any size)

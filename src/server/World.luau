@@ -156,6 +156,8 @@ function World.spawnCell(player, x: number, y: number, mass: number)
 		ix = 0,
 		iy = 0,
 		mergeAt = World.now + Util.mergeDelay(mass),
+		born = World.now, -- cells created THIS tick don't move yet, so a split piece first
+		-- appears AT the parent and launches next tick (no pop-in offset)
 		dead = false,
 	}
 	World.setMass(cell, mass)

@@ -37,7 +37,11 @@ function Camera.update(dt: number)
 
 	if WorldState.status == "alive" and WorldState.own.count > 0 then
 		targetX, targetY = WorldState.own.x, WorldState.own.y
-		autoViewHeight = Config.ViewHeightBase + WorldState.own.maxR * Config.ViewHeightPerRadius
+		-- zoom is based on TOTAL mass, not the largest cell - total mass is
+		-- conserved when you split/merge, so the camera doesn't zoom in/out on
+		-- split or merge (only when you actually gain/lose mass)
+		local effR = math.sqrt(math.max(WorldState.own.mass, 1)) * Config.RadiusPerSqrtMass
+		autoViewHeight = Config.ViewHeightBase + effR * Config.ViewHeightPerRadius
 	else
 		-- menu / dead / spectate: follow the leader if we can see them
 		autoViewHeight = Config.SpectateViewHeight

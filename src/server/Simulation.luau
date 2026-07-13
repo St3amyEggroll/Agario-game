@@ -49,10 +49,11 @@ local function splitPass(info, now: number)
 			local half = cell.m / 2
 			World.setMass(cell, half)
 			cell.mergeAt = now + Util.mergeDelay(half)
-			-- the split piece always LAUNCHES out toward the aim. When frozen
-			-- the parent stays put (frozen) while the piece flies off and then
-			-- settles/re-freezes - the classic freeze-split.
-			local piece = World.spawnCell(cell.player, cell.x + dx * cell.r * 0.4, cell.y + dy * cell.r * 0.4, half)
+			-- the split piece spawns basically AT the parent (small offset just
+			-- to define the launch direction) and holds there for one tick, then
+			-- launches out toward the aim via its impulse - so it emerges from
+			-- the parent instead of popping in offset.
+			local piece = World.spawnCell(cell.player, cell.x + dx * cell.r * 0.15, cell.y + dy * cell.r * 0.15, half)
 			piece.ix = dx * Config.SplitImpulse
 			piece.iy = dy * Config.SplitImpulse
 		end
@@ -187,6 +188,12 @@ end
 
 local function moveCells(dt: number)
 	for _, cell in World.cells do
+		-- a cell born THIS tick (a fresh split piece) holds at its spawn point
+		-- for one tick, so it first appears AT the parent and launches next
+		-- tick - no pop-in offset / teleport on the client
+		if cell.born == World.now then
+			continue
+		end
 		local info = World.players[cell.player]
 		local vx, vy = 0, 0
 		if info then
@@ -302,6 +309,11 @@ local function resolveOwnCells(now: number, dt: number)
 				if a.dead or b.dead then
 					continue
 				end
+				-- freshly-split pieces hold at the parent for one tick (see
+				-- moveCells): don't separate/merge them yet
+				if a.born == now or b.born == now then
+					continue
+				end
 				local dx, dy = b.x - a.x, b.y - a.y
 				local d = math.sqrt(dx * dx + dy * dy)
 				local sum = a.r + b.r
@@ -388,7 +400,7 @@ local function popCell(cell, virus, now: number)
 	for _ = 1, pieces do
 		local angle = math.random() * math.pi * 2
 		local dx, dy = math.cos(angle), math.sin(angle)
-		local piece = World.spawnCell(cell.player, cell.x + dx * cell.r * 0.4, cell.y + dy * cell.r * 0.4, chunk)
+		local piece = World.spawnCell(cell.player, cell.x + dx * cell.r * 0.15, cell.y + dy * cell.r * 0.15, chunk)
 		local kick = Config.SplitImpulse * (0.6 + math.random() * 0.4)
 		piece.ix = dx * kick
 		piece.iy = dy * kick
@@ -474,7 +486,12 @@ local function eatPass(now: number)
 				grew = true
 				World.removeCell(e)
 			elseif e.kind == "pellet" then
-				cell.m += e.m
+				-- your OWN pellets give less mass back (self-feed is inefficient)
+				if e.slot == cell.slot then
+					cell.m += e.m * Config.SelfFeedMassFactor
+				else
+					cell.m += e.m
+				end
 				grew = true
 				World.removePellet(e)
 			else
