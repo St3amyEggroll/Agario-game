@@ -53,8 +53,8 @@ local Config = {
 	SplitMinMass = 36, -- a cell needs at least this much mass to split
 	SplitImpulse = 780, -- launch speed of the new half
 	ImpulseDamping = 4, -- exponential damping rate for split/pop impulses
-	MergeTimeBase = 4, -- flat seconds before split halves may re-merge...
-	MergeTimePerMass = 0, -- ...+ per-mass (0 = every cell waits exactly MergeTimeBase = 4s)
+	MergeTimeBase = 10, -- flat seconds before split halves may re-merge...
+	MergeTimePerMass = 0, -- ...+ per-mass (0 = every cell waits exactly MergeTimeBase = 10s)
 	-- merge only once the small cell is deep INSIDE the big one (center within
 	-- this fraction of the big radius). Small value = you actually see the cell
 	-- slide in before it combines, instead of it vanishing on first contact.
@@ -63,7 +63,7 @@ local Config = {
 	-- close from touching takes ~MergeAnimTime seconds (higher = slower, more
 	-- visible slide-in). Visual glide only; the wait before cells CAN merge is
 	-- the MergeTime above. The lighter cell moves more (slides into the heavier).
-	MergeAnimTime = 2.0,
+	MergeAnimTime = 5.0, -- ~4s for the actual slide-in from touching (raise for a slower merge animation)
 
 	------------------------------------------------------------------ Abilities
 	-- Pull Together: force all your cells mergeable and glide them into one.
