@@ -534,12 +534,16 @@ function Renderer.render(cam)
 		if w.frame.ZIndex ~= z then
 			w.frame.ZIndex = z
 		end
-		-- the skin is a child but ZIndexBehavior is Sibling (global z), so it
-		-- must track its cell's z or it'd render under other cells' bodies.
-		-- Equal z + child-after-parent tree order keeps it above its own body.
-		if w.skin and w.lastZ ~= z then
+		-- the overlay child (a cell's SKIN, or a virus's SPRITE) tracks its body's
+		-- z: with global Sibling z-order it must, or it renders at its fixed
+		-- creation z while the body moves through the stack - the virus sprite
+		-- (z=201) then flickers above/below your cell as the sort shifts when you
+		-- overlap a virus (the "flashing"). Child-after-parent tree order at equal
+		-- z keeps the overlay just above its own body.
+		local overlay = w.skin or w.image
+		if overlay and w.lastZ ~= z then
 			w.lastZ = z
-			w.skin.ZIndex = z
+			overlay.ZIndex = z
 		end
 	end
 end
