@@ -259,6 +259,17 @@ end
 
 --------------------------------------------------- same-player collide/merge
 
+-- Move a cell toward (tx, ty) by at most maxStep units this tick (never overshoot).
+local function moveToward(cell, tx: number, ty: number, maxStep: number)
+	local dx, dy = tx - cell.x, ty - cell.y
+	local d = math.sqrt(dx * dx + dy * dy)
+	if d > 1e-4 then
+		local step = math.min(maxStep, d)
+		cell.x = math.clamp(cell.x + dx / d * step, 0, Config.MapWidth)
+		cell.y = math.clamp(cell.y + dy / d * step, 0, Config.MapHeight)
+	end
+end
+
 -- Split halves stay separate until a merge timer expires, then glide toward a
 -- shared meeting point (their midpoint, leaned toward the mouse) and combine
 -- THERE - they merge into each other rather than one absorbing the other in
@@ -273,9 +284,9 @@ local function resolveOwnCells(now: number, dt: number)
 		-- The "Pull Together" ability: while active, ALL cells are forced
 		-- mergeable and glide together much faster (regroup on demand).
 		local pulling = info.pullUntil and now < info.pullUntil
-		-- constant-speed glide: a full close from touching takes ~animTime
-		-- seconds (Pull ability divides that time for a quick regroup)
-		local animTime = pulling and (Config.MergeAnimTime / Config.PullEaseMult) or Config.MergeAnimTime
+		-- each cell glides at its own size-based speed * this multiplier (the
+		-- Pull ability speeds it up)
+		local speedMult = (pulling and Config.PullEaseMult or 1) * Config.MergeSpeedFactor
 
 		local merged = nil -- collect merges, apply after the pair loop
 		for i = 1, n - 1 do
@@ -288,8 +299,9 @@ local function resolveOwnCells(now: number, dt: number)
 				local dx, dy = b.x - a.x, b.y - a.y
 				local d = math.sqrt(dx * dx + dy * dy)
 				local sum = a.r + b.r
-				-- EITHER timer being up is enough to merge (not both).
-				local mergeable = pulling or now >= a.mergeAt or now >= b.mergeAt
+				-- BOTH cells must have finished their merge timer (or the Pull
+				-- ability is active).
+				local mergeable = pulling or (now >= a.mergeAt and now >= b.mergeAt)
 				if mergeable then
 					-- merge once the two are basically on top of each other...
 					if d < math.max(a.r, b.r) * Config.MergeOverlap then
@@ -306,32 +318,21 @@ local function resolveOwnCells(now: number, dt: number)
 							my = (a.y + b.y) * 0.5,
 						})
 					elseif d > 1e-3 and (pulling or not info.frozen) then
-						-- ...otherwise GLIDE together. Two parts:
-						-- 1) close toward EACH OTHER at constant speed (~animTime
-						--    for a full slide), weighted so the LIGHTER cell moves
-						--    more. This guarantees they converge and merge.
-						-- 2) drift the whole pair toward the aim by the SAME vector
-						--    (doesn't change their separation), leaning the meeting
-						--    point toward where the mouse is pointing.
-						local ux, uy = dx / d, dy / d
-						local close = math.min(sum / animTime * dt, d)
-						local wa = b.m / (a.m + b.m) -- lighter cell -> larger share of the move
-						a.x = math.clamp(a.x + ux * close * wa, 0, Config.MapWidth)
-						a.y = math.clamp(a.y + uy * close * wa, 0, Config.MapHeight)
-						b.x = math.clamp(b.x - ux * close * (1 - wa), 0, Config.MapWidth)
-						b.y = math.clamp(b.y - uy * close * (1 - wa), 0, Config.MapHeight)
-
+						-- ...otherwise GLIDE toward a shared meeting point: the
+						-- pair's midpoint leaned toward the aim (mouse), so they
+						-- combine where you're pointing. Each cell travels at ITS
+						-- OWN size-based speed, so a small cell darts in while a
+						-- big one lumbers (they move at their natural speeds).
 						local mx, my = (a.x + b.x) * 0.5, (a.y + b.y) * 0.5
-						local aimdx, aimdy = info.aimX - mx, info.aimY - my
-						local ad = math.sqrt(aimdx * aimdx + aimdy * aimdy)
-						if ad > 1 then
-							local drift = math.min(close, ad) * Config.MergeAimBias
-							local ddx, ddy = aimdx / ad * drift, aimdy / ad * drift
-							a.x = math.clamp(a.x + ddx, 0, Config.MapWidth)
-							a.y = math.clamp(a.y + ddy, 0, Config.MapHeight)
-							b.x = math.clamp(b.x + ddx, 0, Config.MapWidth)
-							b.y = math.clamp(b.y + ddy, 0, Config.MapHeight)
+						local odx = (info.aimX - mx) * Config.MergeAimBias
+						local ody = (info.aimY - my) * Config.MergeAimBias
+						local od = math.sqrt(odx * odx + ody * ody)
+						if od > sum then
+							odx, ody = odx / od * sum, ody / od * sum
 						end
+						local tx, ty = mx + odx, my + ody
+						moveToward(a, tx, ty, Util.speedFromMass(a.m) * speedMult * dt)
+						moveToward(b, tx, ty, Util.speedFromMass(b.m) * speedMult * dt)
 					end
 				elseif d >= sum then
 					-- not overlapping and not mergeable: nothing to resolve

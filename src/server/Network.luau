@@ -76,6 +76,7 @@ local function onAction(player, action, arg)
 		if arg < 0 or arg > 1e12 then
 			return
 		end
+		Names.saveSkin(player, arg) -- persist the equipped skin across sessions
 	elseif action == "debugmass" then
 		-- testing helper: only a direction is accepted (the server owns the
 		-- step size), and only while Config.Debug is on

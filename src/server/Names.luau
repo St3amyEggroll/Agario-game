@@ -38,7 +38,8 @@ do
 	end
 end
 
-local savePending = {} -- [Player] = true while a debounced save is scheduled
+local savePending = {} -- [Player] = true while a debounced NAME save is scheduled
+local skinSavePending = {} -- [Player] = true while a debounced SKIN save is scheduled
 
 -- Clamp length and strip control characters / leading-trailing spaces. Returns
 -- nil for an empty result.
@@ -79,27 +80,70 @@ local function saveNow(player, name: string)
 	end
 end
 
+local function saveSkinNow(player, skinId: number)
+	if not store then
+		return
+	end
+	local ok, err = pcall(function()
+		store:SetAsync("skin_" .. player.UserId, skinId)
+	end)
+	if not ok then
+		warn("[Agar] skin save failed:", err)
+	end
+end
+
 function Names.onPlayerAdded(player)
 	task.spawn(function()
-		local saved = nil
+		local savedName, savedSkin = nil, nil
 		if store then
 			local ok, result = pcall(function()
 				return store:GetAsync("name_" .. player.UserId)
 			end)
 			if ok and typeof(result) == "string" then
-				saved = result
+				savedName = result
+			end
+			local ok2, result2 = pcall(function()
+				return store:GetAsync("skin_" .. player.UserId)
+			end)
+			if ok2 and typeof(result2) == "number" then
+				savedSkin = result2
 			end
 		end
 		local info = World.players[player]
 		if not info then
 			return -- left before the async load finished
 		end
-		if saved and #saved > 0 then
-			info.name = saved
+		local changed = false
+		if savedName and #savedName > 0 then
+			info.name = savedName
+			changed = true
+		end
+		if savedSkin and savedSkin > 0 then
+			info.skinId = savedSkin -- restore the equipped skin from last session
+			changed = true
+		end
+		if changed then
 			World.broadcastRosterUpdate(info)
 		end
 		-- prefill the client's menu box with whatever name is now in effect
 		Remotes.Name:FireClient(player, info.name)
+	end)
+end
+
+-- Persist the equipped skin (debounced). Called from Network on a valid setskin.
+function Names.saveSkin(player, skinId: number)
+	if not store or skinSavePending[player] then
+		return
+	end
+	skinSavePending[player] = true
+	task.delay(SAVE_DEBOUNCE, function()
+		if skinSavePending[player] then
+			skinSavePending[player] = nil
+			local info = World.players[player]
+			if info then
+				saveSkinNow(player, info.skinId)
+			end
+		end
 	end)
 end
 
@@ -136,11 +180,17 @@ function Names.setName(player, raw)
 end
 
 function Names.onPlayerRemoving(player)
+	local info = World.players[player]
 	if savePending[player] then
 		savePending[player] = nil
-		local info = World.players[player]
 		if info then
 			saveNow(player, info.name)
+		end
+	end
+	if skinSavePending[player] then
+		skinSavePending[player] = nil
+		if info then
+			saveSkinNow(player, info.skinId)
 		end
 	end
 end

@@ -59,11 +59,11 @@ local Config = {
 	-- this fraction of the big radius). Small value = you actually see the cell
 	-- slide in before it combines, instead of it vanishing on first contact.
 	MergeOverlap = 0.45,
-	-- Once mergeable, cells GLIDE together at a CONSTANT speed sized so a full
-	-- close from touching takes ~MergeAnimTime seconds (higher = slower, more
-	-- visible slide-in). Visual glide only; the wait before cells CAN merge is
-	-- the MergeTime above. The lighter cell moves more (slides into the heavier).
-	MergeAnimTime = 5.0, -- ~4s for the actual slide-in from touching (raise for a slower merge animation)
+	-- Once mergeable, each cell GLIDES toward the meeting point at ITS OWN
+	-- size-based movement speed (small cells fast, big cells lumber) times this
+	-- factor. Lower = slower, more visible merge. Visual glide only; the wait
+	-- before cells CAN merge is the MergeTime above.
+	MergeSpeedFactor = 0.8,
 	-- Merging cells meet at their midpoint, leaned this fraction toward the aim
 	-- (mouse) so they combine where you're pointing. 0 = pure midpoint.
 	MergeAimBias = 0.4,
@@ -71,7 +71,7 @@ local Config = {
 	------------------------------------------------------------------ Abilities
 	-- Pull Together: force all your cells mergeable and glide them into one.
 	PullDuration = 1.4, -- seconds the forced-merge glide stays active
-	PullEaseMult = 5, -- Pull ability glides this many times faster (divides MergeAnimTime)
+	PullEaseMult = 5, -- Pull ability glides this many times faster (multiplies merge glide speed)
 	PullCooldown = 5, -- min seconds between uses (server-enforced)
 	-- Speed: temporary movement boost.
 	SpeedBoostMult = 1.7, -- movement speed multiplier while active
