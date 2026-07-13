@@ -55,16 +55,18 @@ local Config = {
 	ImpulseDamping = 4, -- exponential damping rate for split/pop impulses
 	MergeTimeBase = 10, -- flat seconds before split halves may re-merge...
 	MergeTimePerMass = 0, -- ...+ per-mass (0 = every cell waits exactly MergeTimeBase = 10s)
-	-- Merge only once the SMALLER cell's center is within this fraction of the
-	-- BIGGER cell's radius (nearly concentric). Small so big cells don't snap
-	-- together from a visible gap. Only the smaller cell moves (into the big);
-	-- the big one stays put (see Simulation), so merges never jump.
-	MergeOverlap = 0.2,
+	-- Merge once the SMALLER cell's center is within this fraction of the BIGGER
+	-- cell's radius - i.e. the small cell has entered halfway into the big one
+	-- (0.5 = halfway to the big's center). Only the smaller cell moves into the
+	-- big; the big one stays put (see Simulation).
+	MergeOverlap = 0.5,
 
 	------------------------------------------------------------------ Abilities
 	-- Pull Together: force all your cells mergeable and glide them into one.
 	PullDuration = 1.4, -- seconds the forced-merge glide stays active
-	PullEaseMult = 5, -- Pull ability glides this many times faster (multiplies merge glide speed)
+	-- (Pull Together no longer auto-moves cells - it only makes them mergeable
+	-- early; you still steer them together. PullEaseMult kept for reference.)
+	PullEaseMult = 5,
 	PullCooldown = 5, -- min seconds between uses (server-enforced)
 	-- Speed: temporary movement boost.
 	SpeedBoostMult = 1.7, -- movement speed multiplier while active

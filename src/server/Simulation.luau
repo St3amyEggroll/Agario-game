@@ -271,17 +271,6 @@ end
 
 --------------------------------------------------- same-player collide/merge
 
--- Move a cell toward (tx, ty) by at most maxStep units this tick (never overshoot).
-local function moveToward(cell, tx: number, ty: number, maxStep: number)
-	local dx, dy = tx - cell.x, ty - cell.y
-	local d = math.sqrt(dx * dx + dy * dy)
-	if d > 1e-4 then
-		local step = math.min(maxStep, d)
-		cell.x = math.clamp(cell.x + dx / d * step, 0, Config.MapWidth)
-		cell.y = math.clamp(cell.y + dy / d * step, 0, Config.MapHeight)
-	end
-end
-
 -- Split halves stay separate until a merge timer expires, then glide toward a
 -- shared meeting point (their midpoint, leaned toward the mouse) and combine
 -- THERE - they merge into each other rather than one absorbing the other in
@@ -311,23 +300,18 @@ local function resolveOwnCells(now: number, dt: number)
 				local sum = a.r + b.r
 				-- BOTH cells must have finished their merge timer (or the Pull
 				-- ability is active).
+				-- Pull Together just makes cells ELIGIBLE early (skips the timer);
+				-- it no longer pulls them - you always steer cells together yourself.
 				local mergeable = pulling or (now >= a.mergeAt and now >= b.mergeAt)
 				if mergeable then
 					local big = a.m >= b.m and a or b
 					local small = big == a and b or a
-					-- merge once the SMALLER cell is basically on top of the
-					-- bigger's center (MergeOverlap is small, so no snap-from-afar
-					-- at big sizes)
+					-- merge once the SMALLER cell has entered halfway into the
+					-- bigger one. NO auto-movement anywhere - the player must move
+					-- the cells together to merge them.
 					if d < big.r * Config.MergeOverlap then
 						merged = merged or {}
 						table.insert(merged, { big = big, small = small }) -- big keeps its spot
-					elseif pulling and d > 1e-3 then
-						-- ONLY the Pull Together ability adds movement: it yanks the
-						-- smaller cell into the bigger one for a quick regroup.
-						-- NORMAL merging adds NO movement at all - your cells come
-						-- together purely from your own steering (moveCells), so
-						-- they travel at exactly their normal speed, never faster.
-						moveToward(small, big.x, big.y, Util.speedFromMass(small.m) * Config.PullEaseMult * dt)
 					end
 				elseif d >= sum then
 					-- not overlapping and not mergeable: nothing to resolve
