@@ -41,7 +41,7 @@ local Config = {
 	-- and radius ~ sqrt(mass), so the MASS exponent is ~-0.22 (the old -0.44
 	-- punished size twice as hard as agar and made everything feel slow):
 	-- small cells dart around, big cells crawl but stay playable
-	SpeedBase = 1120,
+	SpeedBase = 1344, -- 1.2x faster overall pace (also speeds up manual merging, which is movement-driven)
 	SpeedExponent = -0.22,
 	MassDecayRate = 0.002, -- fraction of mass lost per second, only above MassDecayMin
 	MassDecayMin = 1100, -- above the 1000 spawn mass so fresh spawns don't immediately bleed
@@ -51,7 +51,7 @@ local Config = {
 	------------------------------------------------------------------ Split / merge
 	MaxCells = 32, -- max simultaneous cells per player
 	SplitMinMass = 36, -- a cell needs at least this much mass to split
-	SplitImpulse = 780, -- launch speed of the new half
+	SplitImpulse = 936, -- launch speed of the new half (1.2x faster split)
 	ImpulseDamping = 4, -- exponential damping rate for split/pop impulses
 	-- merge timer scales with cell mass: little cells ~MergeTimeBase, growing
 	-- with mass, capped at MergeTimeMax. (base 4s, +0.006/mass, cap 10s => a
@@ -59,11 +59,12 @@ local Config = {
 	MergeTimeBase = 4,
 	MergeTimePerMass = 0.006,
 	MergeTimeMax = 10,
-	-- Merge once the SMALLER cell's center is within this fraction of the BIGGER
-	-- cell's radius - i.e. the small cell has entered halfway into the big one
-	-- (0.5 = halfway to the big's center). Only the smaller cell moves into the
-	-- big; the big one stays put (see Simulation).
-	MergeOverlap = 0.5,
+	-- Merge once the SMALLER cell's center crosses INTO the bigger cell
+	-- (d < big.r * this). 1.0 = the moment the small cell's center is inside the
+	-- big one's edge, so it merges as soon as it's overlapping - it does NOT have
+	-- to travel deep to the big cell's center (which happened at big sizes with a
+	-- smaller fraction).
+	MergeOverlap = 1.0,
 
 	------------------------------------------------------------------ Abilities
 	-- Pull Together: force all your cells mergeable and glide them into one.
@@ -80,8 +81,8 @@ local Config = {
 	-- impulses still apply, so freeze-split pieces still launch out and settle.
 	FreezeMoveFactor = 0,
 	SeparationSoftness = 1.0, -- how solid same-player cells are before they can merge (1 = fully solid, never overlap)
-	SplitCooldown = 0.12, -- server-side rate limit on split actions
-	MultiSplitCooldown = 0.25,
+	SplitCooldown = 0.1, -- server-side rate limit on split actions (1.2x faster)
+	MultiSplitCooldown = 0.21,
 
 	------------------------------------------------------------------ Feed / ejected pellets
 	EjectMinMass = 1, -- cell must have at least this much mass to eject (1 = W works at any size)
