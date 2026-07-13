@@ -84,11 +84,20 @@ local Config = {
 	-- impulses still apply, so freeze-split pieces still launch out and settle.
 	FreezeMoveFactor = 0,
 	-- How much of the overlap same-player cells resolve per tick before they can
-	-- merge. 1.0 (fully solid) over-corrects and makes packed cells jitter, so
-	-- this is damped; SeparationSlop is a small dead-zone so a barely-overlapping
-	-- cell settles instead of constantly re-separating (also anti-jitter).
-	SeparationSoftness = 0.6,
-	SeparationSlop = 0.05, -- allow up to this fraction of overlap without pushing (cells settle, no jitter)
+	-- merge. Higher = firmer, less "cramming" (cells piling through each other in
+	-- a moving pack); too high used to make packed cells jitter, but that's now
+	-- absorbed by SeparationSmoothing below, so we can afford a firm value.
+	-- SeparationSlop is a small dead-zone so a barely-overlapping cell settles
+	-- instead of constantly re-separating (also anti-jitter).
+	SeparationSoftness = 0.85,
+	SeparationSlop = 0.03, -- allow up to this fraction of overlap without pushing (cells settle, no jitter)
+	-- Low-pass on the applied separation push (0..1; higher = snappier/less
+	-- smoothing). In a dense pack the net push direction flips frame-to-frame
+	-- for a wedged middle cell - blending with the previous tick's push averages
+	-- that oscillation toward zero (no jitter) while a cell genuinely being
+	-- squeezed out - a consistent push direction - still slides free in a few
+	-- ticks. This is what lets SeparationSoftness be firm without jitter.
+	SeparationSmoothing = 0.5,
 	-- Cap how fast cells push apart (units/s). Without this, a deep overlap (a
 	-- fresh split, or cells piling up) resolves in ONE tick = a big instant jump
 	-- that reads as a teleport/blink. Capping makes separation a smooth push

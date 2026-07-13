@@ -516,12 +516,18 @@ function Renderer.render(cam)
 	-- bigger draws over smaller, cells and viruses together: you can hide
 	-- under a bigger virus, and you cover a virus you're big enough to eat.
 	-- Tiebreak equal radii by a stable id so the draw order can't flip
-	-- frame-to-frame (that flip is a real flicker when equal cells overlap).
+	-- frame-to-frame. Radii here are INTERPOLATED floats, so two cells that are
+	-- physically the same size (the two halves right after a split) almost
+	-- never compare exactly equal - their epsilon difference flips sign each
+	-- frame and swaps their draw order = the flicker on a big split. Quantize
+	-- to whole world units so equal-size cells fall in one bucket and the
+	-- stable zid tiebreaker actually engages.
 	table.sort(visibleCellList, function(a, b)
-		if a.r == b.r then
+		local ra, rb = math.floor(a.r), math.floor(b.r)
+		if ra == rb then
 			return a.zid < b.zid
 		end
-		return a.r < b.r
+		return ra < rb
 	end)
 	for i, w in visibleCellList do
 		local z = math.min(10 + i, 240)

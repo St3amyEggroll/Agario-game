@@ -367,15 +367,30 @@ local function resolveOwnCells(now: number, dt: number)
 		end
 
 		-- apply each cell's TOTAL accumulated push this tick, capped to a max
-		-- speed so it's always a smooth slide, never a teleport
+		-- speed so it's always a smooth slide, never a teleport. The capped push
+		-- is then LOW-PASS smoothed against the previous tick's applied push
+		-- (c._px/_py persist between ticks): a cell wedged in a dense pack gets a
+		-- net push whose direction flips frame-to-frame, and averaging that toward
+		-- zero stops the middle-of-the-pack jitter; a cell being genuinely squeezed
+		-- out has a consistent push direction, so the blend still slides it free.
 		local maxStep = Config.SeparationMaxSpeed * dt
+		local smooth = Config.SeparationSmoothing
 		for _, c in cells do
 			local sx, sy = c._sx, c._sy
 			local mag = math.sqrt(sx * sx + sy * sy)
+			local tx, ty = 0, 0
 			if mag > 1e-4 then
 				local step = math.min(mag, maxStep)
-				c.x = math.clamp(c.x + sx / mag * step, 0, Config.MapWidth)
-				c.y = math.clamp(c.y + sy / mag * step, 0, Config.MapHeight)
+				tx, ty = sx / mag * step, sy / mag * step
+			end
+			-- blend toward this tick's target push (target is 0 when not overlapping,
+			-- so a settled cell's smoothed push decays to nothing)
+			local px = (c._px or 0) + (tx - (c._px or 0)) * smooth
+			local py = (c._py or 0) + (ty - (c._py or 0)) * smooth
+			c._px, c._py = px, py
+			if px * px + py * py > 1e-6 then
+				c.x = math.clamp(c.x + px, 0, Config.MapWidth)
+				c.y = math.clamp(c.y + py, 0, Config.MapHeight)
 			end
 		end
 
