@@ -49,12 +49,16 @@ local Config = {
 	EatDepth = 0.33, -- prey center must be inside eater radius minus prey radius * this
 
 	------------------------------------------------------------------ Split / merge
-	MaxCells = 16, -- max simultaneous cells per player
+	MaxCells = 32, -- max simultaneous cells per player
 	SplitMinMass = 36, -- a cell needs at least this much mass to split
 	SplitImpulse = 780, -- launch speed of the new half
 	ImpulseDamping = 4, -- exponential damping rate for split/pop impulses
-	MergeTimeBase = 10, -- flat seconds before split halves may re-merge...
-	MergeTimePerMass = 0, -- ...+ per-mass (0 = every cell waits exactly MergeTimeBase = 10s)
+	-- merge timer scales with cell mass: little cells ~MergeTimeBase, growing
+	-- with mass, capped at MergeTimeMax. (base 4s, +0.006/mass, cap 10s => a
+	-- ~60-mass sliver ~4s, a ~1000-mass cell 10s.)
+	MergeTimeBase = 4,
+	MergeTimePerMass = 0.006,
+	MergeTimeMax = 10,
 	-- Merge once the SMALLER cell's center is within this fraction of the BIGGER
 	-- cell's radius - i.e. the small cell has entered halfway into the big one
 	-- (0.5 = halfway to the big's center). Only the smaller cell moves into the

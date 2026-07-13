@@ -22,7 +22,8 @@ end
 
 -- How long a freshly-split cell must wait before it can merge back.
 function Util.mergeDelay(mass: number): number
-	return Config.MergeTimeBase + mass * Config.MergeTimePerMass
+	-- scales from MergeTimeBase (little) up with mass, capped at MergeTimeMax (big)
+	return math.min(Config.MergeTimeBase + mass * Config.MergeTimePerMass, Config.MergeTimeMax)
 end
 
 function Util.dist2(ax: number, ay: number, bx: number, by: number): number
