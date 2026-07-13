@@ -101,8 +101,12 @@ local Config = {
 	PelletFriction = 3.2, -- exponential slowdown rate; pellets come to rest
 	PelletSelfEatDelay = 0.2, -- seconds before you can re-eat your own pellet (self-feed to grow, any size)
 	FeedCooldown = 0.06, -- server-side rate limit on feed actions
-	MaxPellets = 110, -- hard cap on live pellets (oldest recycled); bounds render/snapshot cost
-	PelletLifetime = 12, -- seconds before an un-eaten pellet despawns (server deletes to stay light)
+	-- Hard cap on live pellets. Was 110 - way too low: heavy feeding hit it in
+	-- ~1s and the OLDEST pellets (the ones behind you as you move) got recycled
+	-- and vanished. Raised so pellets normally live out their lifetime instead
+	-- of being recycled out from under you. Recycling is now a rare last resort.
+	MaxPellets = 260,
+	PelletLifetime = 14, -- seconds before an un-eaten pellet despawns (the normal cleanup path)
 
 	------------------------------------------------------------------ Viruses / Experimentals
 	VirusCount = 28,
