@@ -53,8 +53,8 @@ local Config = {
 	SplitMinMass = 36, -- a cell needs at least this much mass to split
 	SplitImpulse = 780, -- launch speed of the new half
 	ImpulseDamping = 4, -- exponential damping rate for split/pop impulses
-	MergeTimeBase = 10, -- flat seconds before split halves may re-merge...
-	MergeTimePerMass = 0, -- ...+ per-mass (0 = every cell waits exactly MergeTimeBase = 10s)
+	MergeTimeBase = 4, -- flat seconds before split halves may re-merge...
+	MergeTimePerMass = 0, -- ...+ per-mass (0 = every cell waits exactly MergeTimeBase = 4s)
 	-- merge only once the small cell is deep INSIDE the big one (center within
 	-- this fraction of the big radius). Small value = you actually see the cell
 	-- slide in before it combines, instead of it vanishing on first contact.
