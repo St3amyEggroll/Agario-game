@@ -273,8 +273,9 @@ local function resolveOwnCells(now: number, dt: number)
 		-- The "Pull Together" ability: while active, ALL cells are forced
 		-- mergeable and glide together much faster (regroup on demand).
 		local pulling = info.pullUntil and now < info.pullUntil
-		local easeRate = pulling and (Config.MergeEaseRate * Config.PullEaseMult) or Config.MergeEaseRate
-		local ease = 1 - math.exp(-easeRate * dt) -- fraction of the gap closed this tick
+		-- constant-speed glide: a full close from touching takes ~animTime
+		-- seconds (Pull ability divides that time for a quick regroup)
+		local animTime = pulling and (Config.MergeAnimTime / Config.PullEaseMult) or Config.MergeAnimTime
 
 		local merged = nil -- collect merges, apply after the pair loop
 		for i = 1, n - 1 do
@@ -296,13 +297,13 @@ local function resolveOwnCells(now: number, dt: number)
 						merged = merged or {}
 						table.insert(merged, { big = big, small = small })
 					elseif d > 1e-3 and (pulling or not info.frozen) then
-						-- ...otherwise GLIDE together with an exponential ease so
-						-- they visibly come together over the gap instead of
-						-- snapping. Weighted by mass: the total closing is d*ease
-						-- per tick, but the LIGHTER cell moves more, so it slides
-						-- into the heavier one (looks like absorption).
+						-- ...otherwise GLIDE together at a CONSTANT speed sized so
+						-- the full close takes ~animTime seconds - a slow, visible
+						-- 1-2s slide-in instead of a fast exponential snap.
+						-- Weighted by mass: the LIGHTER cell moves more, so it
+						-- slides into the heavier one (looks like absorption).
 						local ux, uy = dx / d, dy / d
-						local close = d * ease
+						local close = math.min(sum / animTime * dt, d) -- constant speed, never overshoot
 						local wa = b.m / (a.m + b.m) -- a moves by the other's mass share
 						local wb = 1 - wa
 						a.x = math.clamp(a.x + ux * close * wa, 0, Config.MapWidth)

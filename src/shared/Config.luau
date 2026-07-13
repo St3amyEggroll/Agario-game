@@ -53,30 +53,30 @@ local Config = {
 	SplitMinMass = 36, -- a cell needs at least this much mass to split
 	SplitImpulse = 780, -- launch speed of the new half
 	ImpulseDamping = 4, -- exponential damping rate for split/pop impulses
-	MergeTimeBase = 1, -- seconds before split halves may re-merge...
-	MergeTimePerMass = 0.001, -- ...plus this many seconds per point of mass (kept tiny so big cells still merge fast)
+	MergeTimeBase = 10, -- flat seconds before split halves may re-merge...
+	MergeTimePerMass = 0, -- ...+ per-mass (0 = every cell waits exactly MergeTimeBase = 10s)
 	-- merge only once the small cell is deep INSIDE the big one (center within
 	-- this fraction of the big radius). Small value = you actually see the cell
 	-- slide in before it combines, instead of it vanishing on first contact.
-	MergeOverlap = 0.5,
-	-- Once mergeable, cells GLIDE together with an exponential ease (LOWER =
-	-- slower, more visible slide-in). This is a VISUAL glide only; the time
-	-- before cells become mergeable is the MergeTime formula above. The lighter
-	-- cell moves more (it slides into the heavier one).
-	MergeEaseRate = 2,
+	MergeOverlap = 0.45,
+	-- Once mergeable, cells GLIDE together at a CONSTANT speed sized so a full
+	-- close from touching takes ~MergeAnimTime seconds (higher = slower, more
+	-- visible slide-in). Visual glide only; the wait before cells CAN merge is
+	-- the MergeTime above. The lighter cell moves more (slides into the heavier).
+	MergeAnimTime = 2.0,
 
 	------------------------------------------------------------------ Abilities
 	-- Pull Together: force all your cells mergeable and glide them into one.
 	PullDuration = 1.4, -- seconds the forced-merge glide stays active
-	PullEaseMult = 5, -- glide is this many times faster than the passive MergeEaseRate
+	PullEaseMult = 5, -- Pull ability glides this many times faster (divides MergeAnimTime)
 	PullCooldown = 5, -- min seconds between uses (server-enforced)
 	-- Speed: temporary movement boost.
 	SpeedBoostMult = 1.7, -- movement speed multiplier while active
 	SpeedBoostDuration = 3, -- seconds
 	SpeedBoostCooldown = 7, -- min seconds between uses (server-enforced)
-	-- Freeze no longer locks you solid - you can still creep at this fraction of
-	-- normal speed.
-	FreezeMoveFactor = 0.25,
+	-- Freeze fully locks your aim movement (0 = can't steer while frozen). Split
+	-- impulses still apply, so freeze-split pieces still launch out and settle.
+	FreezeMoveFactor = 0,
 	SeparationSoftness = 0.45, -- how hard same-player cells push apart pre-merge (0..1)
 	SplitCooldown = 0.12, -- server-side rate limit on split actions
 	MultiSplitCooldown = 0.25,
