@@ -98,6 +98,8 @@ local function dispatch(action: string)
 		fireAction("speedboost")
 	elseif action == "Respawn" then
 		fireAction("respawn")
+	elseif action == "ToMenu" then
+		fireAction("tomenu")
 	elseif action == "FixedMouse" then
 		Input.fixedMouse = not Input.fixedMouse
 		if Input.fixedMouse then

@@ -90,6 +90,8 @@ Remotes.PlayerState.OnClientEvent:Connect(function(event, arg)
 		WorldState.status = "alive"
 	elseif event == "died" then
 		WorldState.status = "dead"
+	elseif event == "menu" then
+		WorldState.status = "menu"
 	elseif event == "coins" then
 		WorldState.coins = arg
 		return -- coins is a lightweight update; no menu/status refresh needed

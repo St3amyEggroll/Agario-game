@@ -20,9 +20,10 @@ local ROWS = {
 	{ "Freeze", "Freeze cells (toggle)" },
 	{ "PullTogether", "Pull Together (merge)" },
 	{ "Speed", "Speed boost" },
-	{ "Respawn", "Respawn" },
+	{ "Respawn", "Respawn (instant)" },
+	{ "ToMenu", "Back to Menu" },
 	{ "FixedMouse", "Fixed Mouse (toggle)" },
-	{ "Menu", "Menu / Settings" },
+	{ "Menu", "Settings panel" },
 }
 
 local Settings = {}
@@ -55,11 +56,11 @@ function Settings.init(parent: Instance)
 
 	for i, row in ROWS do
 		local action, display = row[1], row[2]
-		local y = 0.15 + (i - 1) * 0.07
-		local nameLabel = Theme.label(panel, display, UDim2.fromScale(0.05, y), UDim2.fromScale(0.55, 0.055))
+		local y = 0.135 + (i - 1) * 0.062
+		local nameLabel = Theme.label(panel, display, UDim2.fromScale(0.05, y), UDim2.fromScale(0.55, 0.05))
 		nameLabel.TextXAlignment = Enum.TextXAlignment.Left
-		Theme.capText(nameLabel, 17)
-		local keyButton = Theme.button(panel, "?", UDim2.fromScale(0.64, y), UDim2.fromScale(0.31, 0.058), function()
+		Theme.capText(nameLabel, 16)
+		local keyButton = Theme.button(panel, "?", UDim2.fromScale(0.64, y), UDim2.fromScale(0.31, 0.052), function()
 			keyButtons[action].Text = "press key..."
 			Input.captureNext(action)
 		end)

@@ -125,6 +125,9 @@ function Menu.refresh()
 		if status == "dead" then
 			titleLabel.Text = "You were eaten!"
 			subtitleLabel.Text = "Press Play to try again."
+		else
+			titleLabel.Text = "AGARIO 2D"
+			subtitleLabel.Text = "Eat orbs, avoid bigger cells, pop nothing green."
 		end
 	end
 end

@@ -37,12 +37,23 @@ function UI.init(playerGui: PlayerGui)
 	Settings.init(gui)
 	Shop.init(gui)
 
-	-- top-left menu (settings) button; the Menu keybind mirrors it
-	local menuButton = Theme.button(gui, "\u{2630} Menu", UDim2.fromScale(0.01, 0.015), UDim2.fromScale(0.075, 0.05), function()
+	-- top-left settings button; the Menu keybind (M) mirrors it
+	local menuButton = Theme.button(gui, "\u{2630} Settings", UDim2.fromScale(0.01, 0.015), UDim2.fromScale(0.075, 0.05), function()
 		Settings.toggle()
 	end)
 	Theme.capText(menuButton, 18)
 	Input.onMenuToggle = Settings.toggle
+
+	-- instant Respawn (also the B key) + back-to-Menu (also the N key), top-center
+	local respawnButton = Theme.button(gui, "Respawn", UDim2.fromScale(0.4, 0.015), UDim2.fromScale(0.09, 0.05), function()
+		Remotes.Action:FireServer("respawn")
+	end)
+	respawnButton.BackgroundColor3 = Color3.fromRGB(60, 150, 90)
+	Theme.capText(respawnButton, 17)
+	local toMenuButton = Theme.button(gui, "Menu", UDim2.fromScale(0.505, 0.015), UDim2.fromScale(0.09, 0.05), function()
+		Remotes.Action:FireServer("tomenu")
+	end)
+	Theme.capText(toMenuButton, 17)
 
 	-- debug testing buttons (below the HUD panel); remove by setting
 	-- Config.Debug = false - the server also refuses these when it's off

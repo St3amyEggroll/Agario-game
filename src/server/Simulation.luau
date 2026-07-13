@@ -110,13 +110,20 @@ local function drainActions(now: number)
 				info.spectating = true
 			end
 		elseif action == "respawn" then
-			-- suicide-respawn: drop everything and start fresh
-			if info.alive then
-				for _, cell in table.clone(info.cells) do
-					World.removeCell(cell)
-				end
-				spawnPlayer(info)
+			-- INSTANT respawn: drop everything and start fresh from any state
+			-- (alive or dead), no trip through the menu
+			for _, cell in table.clone(info.cells) do
+				World.removeCell(cell)
 			end
+			spawnPlayer(info)
+		elseif action == "tomenu" then
+			-- leave the game and go back to the menu (play screen)
+			for _, cell in table.clone(info.cells) do
+				World.removeCell(cell)
+			end
+			info.alive = false
+			info.spectating = false
+			Remotes.PlayerState:FireClient(info.player, "menu")
 		elseif action == "split" then
 			if info.alive then
 				splitPass(info, now)
@@ -328,10 +335,15 @@ local function resolveOwnCells(now: number, dt: number)
 					end
 					local overlap = (sum - d) * Config.SeparationSoftness
 					local wa = b.m / (a.m + b.m) -- lighter cell (a) -> larger share of the push
-					a.x = math.clamp(a.x - ux * overlap * wa, 0, Config.MapWidth)
-					a.y = math.clamp(a.y - uy * overlap * wa, 0, Config.MapHeight)
-					b.x = math.clamp(b.x + ux * overlap * (1 - wa), 0, Config.MapWidth)
-					b.y = math.clamp(b.y + uy * overlap * (1 - wa), 0, Config.MapHeight)
+					-- cap each cell's push this tick so deep overlaps resolve
+					-- smoothly over several ticks instead of teleporting apart
+					local maxStep = Config.SeparationMaxSpeed * dt
+					local aStep = math.min(overlap * wa, maxStep)
+					local bStep = math.min(overlap * (1 - wa), maxStep)
+					a.x = math.clamp(a.x - ux * aStep, 0, Config.MapWidth)
+					a.y = math.clamp(a.y - uy * aStep, 0, Config.MapHeight)
+					b.x = math.clamp(b.x + ux * bStep, 0, Config.MapWidth)
+					b.y = math.clamp(b.y + uy * bStep, 0, Config.MapHeight)
 				end
 			end
 		end

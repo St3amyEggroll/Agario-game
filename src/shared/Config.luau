@@ -82,6 +82,12 @@ local Config = {
 	-- impulses still apply, so freeze-split pieces still launch out and settle.
 	FreezeMoveFactor = 0,
 	SeparationSoftness = 1.0, -- how solid same-player cells are before they can merge (1 = fully solid, never overlap)
+	-- Cap how fast cells push apart (units/s). Without this, a deep overlap (a
+	-- fresh split, or cells piling up) resolves in ONE tick = a big instant jump
+	-- that reads as a teleport/blink. Capping makes separation a smooth push
+	-- over a few ticks while still keeping cells solid. High enough that fast
+	-- small cells can't overlap through it.
+	SeparationMaxSpeed = 1000,
 	SplitCooldown = 0.1, -- server-side rate limit on split actions (1.2x faster)
 	MultiSplitCooldown = 0.21,
 
@@ -183,9 +189,10 @@ local Config = {
 		Freeze = "F", -- implemented as a toggle (hold-mode would just be InputBegan/Ended around the same remote)
 		PullTogether = "T", -- ability: yank all your cells into one
 		Speed = "E", -- ability: temporary speed boost
-		Respawn = "B",
+		Respawn = "B", -- instant respawn (drop everything, start fresh)
+		ToMenu = "N", -- leave the game, back to the play menu
 		FixedMouse = "C",
-		Menu = "M",
+		Menu = "M", -- opens the settings panel
 	},
 }
 
