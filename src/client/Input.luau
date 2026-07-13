@@ -92,10 +92,6 @@ local function dispatch(action: string)
 		lastFeed = 0 -- fire immediately on next tick
 	elseif action == "Freeze" then
 		fireAction("freeze")
-	elseif action == "PullTogether" then
-		fireAction("pulltogether")
-	elseif action == "Speed" then
-		fireAction("speedboost")
 	elseif action == "Respawn" then
 		fireAction("respawn")
 	elseif action == "ToMenu" then
@@ -113,6 +109,12 @@ local function dispatch(action: string)
 			Input.onMenuToggle()
 		end
 	end
+end
+
+-- Public: fire an action by its bind name (e.g. "Split", "Feed"), exactly as if
+-- the key were pressed. Used by the on-screen ability dock (and mobile taps).
+function Input.trigger(action: string)
+	dispatch(action)
 end
 
 --------------------------------------------------------------------- wiring

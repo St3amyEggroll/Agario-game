@@ -18,8 +18,6 @@ local ROWS = {
 	{ "TripleSplit", "Triple Split" },
 	{ "Feed", "Feed (eject mass)" },
 	{ "Freeze", "Freeze cells (toggle)" },
-	{ "PullTogether", "Pull Together (merge)" },
-	{ "Speed", "Speed boost" },
 	{ "Respawn", "Respawn (instant)" },
 	{ "ToMenu", "Back to Menu" },
 	{ "FixedMouse", "Fixed Mouse (toggle)" },

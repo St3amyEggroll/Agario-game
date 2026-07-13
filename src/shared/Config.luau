@@ -69,17 +69,7 @@ local Config = {
 	-- smaller fraction).
 	MergeOverlap = 1.0,
 
-	------------------------------------------------------------------ Abilities
-	-- Pull Together: force all your cells mergeable and glide them into one.
-	PullDuration = 1.4, -- seconds the forced-merge glide stays active
-	-- (Pull Together no longer auto-moves cells - it only makes them mergeable
-	-- early; you still steer them together. PullEaseMult kept for reference.)
-	PullEaseMult = 5,
-	PullCooldown = 5, -- min seconds between uses (server-enforced)
-	-- Speed: temporary movement boost.
-	SpeedBoostMult = 1.7, -- movement speed multiplier while active
-	SpeedBoostDuration = 3, -- seconds
-	SpeedBoostCooldown = 7, -- min seconds between uses (server-enforced)
+	------------------------------------------------------------------ Freeze
 	-- Freeze fully locks your aim movement (0 = can't steer while frozen). Split
 	-- impulses still apply, so freeze-split pieces still launch out and settle.
 	FreezeMoveFactor = 0,
@@ -217,8 +207,6 @@ local Config = {
 		TripleSplit = "R", -- performs 3 splits back-to-back
 		Feed = "W",
 		Freeze = "F", -- implemented as a toggle (hold-mode would just be InputBegan/Ended around the same remote)
-		PullTogether = "T", -- ability: yank all your cells into one
-		Speed = "E", -- ability: temporary speed boost
 		Respawn = "B", -- instant respawn (drop everything, start fresh)
 		ToMenu = "N", -- leave the game, back to the play menu
 		FixedMouse = "C",

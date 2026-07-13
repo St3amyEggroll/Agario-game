@@ -262,8 +262,6 @@ function World.addPlayer(player)
 		coins = 0, -- currency collected from gold coins
 		xp = 0, -- lifetime XP (from consumed food mass); drives level, saved across sessions
 		xpSent = -1, -- last XP value pushed to this client (avoids re-sending unchanged XP)
-		pullUntil = 0, -- Pull Together ability active until this server time
-		speedUntil = 0, -- Speed ability active until this server time
 		cells = {},
 		aimX = Config.MapWidth / 2,
 		aimY = Config.MapHeight / 2,

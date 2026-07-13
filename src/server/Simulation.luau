@@ -147,17 +147,6 @@ local function drainActions(now: number)
 			if info.alive then
 				feed(info, now)
 			end
-		elseif action == "pulltogether" then
-			-- ability: force all cells mergeable + strong glide for a moment,
-			-- yanking them into one (see resolveOwnCells)
-			if info.alive then
-				info.pullUntil = now + Config.PullDuration
-			end
-		elseif action == "speedboost" then
-			-- ability: temporary movement speed multiplier (see moveCells)
-			if info.alive then
-				info.speedUntil = now + Config.SpeedBoostDuration
-			end
 		elseif action == "freeze" then
 			-- Freeze is a toggle (spec allows toggle or hold; toggle chosen so
 			-- it works the same on any input device)
@@ -207,13 +196,9 @@ local function moveCells(dt: number)
 				-- speed falls off with mass; also scales down as the cursor
 				-- gets inside the cell so you can hover to stop (agar feel)
 				local speed = Util.speedFromMass(cell.m) * math.clamp(d / cell.r, 0, 1)
-				-- freeze now only SLOWS you (you can still kinda move), and the
-				-- Speed ability temporarily boosts you
+				-- freeze only SLOWS you (you can still kinda move)
 				if info.frozen then
 					speed *= Config.FreezeMoveFactor
-				end
-				if info.speedUntil and World.now < info.speedUntil then
-					speed *= Config.SpeedBoostMult
 				end
 				vx = dx / d * speed
 				vy = dy / d * speed
@@ -299,10 +284,6 @@ local function resolveOwnCells(now: number, dt: number)
 		if n < 2 then
 			continue
 		end
-		-- The "Pull Together" ability: while active, ALL cells are forced
-		-- mergeable and actively yanked together (regroup on demand). Normal
-		-- merging has NO artificial pull - see below.
-		local pulling = info.pullUntil and now < info.pullUntil
 
 		-- reset per-cell separation accumulators (see below)
 		for _, c in cells do
@@ -326,11 +307,9 @@ local function resolveOwnCells(now: number, dt: number)
 				local dx, dy = b.x - a.x, b.y - a.y
 				local d = math.sqrt(dx * dx + dy * dy)
 				local sum = a.r + b.r
-				-- BOTH cells must have finished their merge timer (or the Pull
-				-- ability is active).
-				-- Pull Together just makes cells ELIGIBLE early (skips the timer);
-				-- it no longer pulls them - you always steer cells together yourself.
-				local mergeable = pulling or (now >= a.mergeAt and now >= b.mergeAt)
+				-- BOTH cells must have finished their merge timer to combine; you
+				-- always steer them together yourself (no auto-pull).
+				local mergeable = now >= a.mergeAt and now >= b.mergeAt
 				if mergeable then
 					local big = a.m >= b.m and a or b
 					local small = big == a and b or a

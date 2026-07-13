@@ -13,6 +13,8 @@ local HUD = require(script.HUD)
 local Menu = require(script.Menu)
 local Settings = require(script.Settings)
 local Shop = require(script.Shop)
+local AbilityDock = require(script.AbilityDock)
+local Minimap = require(script.Minimap)
 local Input = require(script.Parent.Input)
 local WorldState = require(script.Parent.WorldState)
 
@@ -32,6 +34,8 @@ function UI.init(playerGui: PlayerGui)
 
 	Menu.init(gui, Shop.toggle) -- overlay first so panels draw above it
 	HUD.init(gui)
+	AbilityDock.init(gui) -- bottom-center on-screen action buttons (also touch controls)
+	Minimap.init(gui) -- bottom-right corner map
 	-- (custom leaderboard panel removed - the Roblox player list is the
 	-- leaderboard now, driven by leaderstats/Mass)
 	Settings.init(gui)
@@ -83,6 +87,8 @@ end
 
 function UI.update(dt: number)
 	HUD.update(dt)
+	AbilityDock.update(dt)
+	Minimap.update(dt)
 end
 
 return UI
