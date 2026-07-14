@@ -285,6 +285,7 @@ function World.addPlayer(player)
 		name = player.DisplayName,
 		colorIdx = math.random(#Config.Palette),
 		skinId = 0, -- 0 = no skin (plain colored circle); else an image/decal asset id
+		accessoryId = 0, -- 0 = none; else an image/decal asset id layered over the cell
 		coins = 0, -- currency collected from gold coins
 		xp = 0, -- lifetime XP (from consumed food mass); drives level, saved across sessions
 		xpSent = -1, -- last XP value pushed to this client (avoids re-sending unchanged XP)
@@ -326,7 +327,7 @@ function World.removePlayer(player)
 		-- flag the slot as a ghost in the roster: KEEP the dead player's colour AND
 		-- skin, mark it (g) so clients render the leftovers faded (transparent skin)
 		-- + nameless. Stored so late joiners get it in the full sync.
-		local entry = { n = info.name, c = info.colorIdx, k = info.skinId, g = true }
+		local entry = { n = info.name, c = info.colorIdx, k = info.skinId, a = info.accessoryId, g = true }
 		World.ghostRoster[info.slot] = entry
 		Remotes.Roster:FireAllClients("update", info.slot, entry)
 	else
@@ -375,7 +376,11 @@ function World.safeSpawnPos(): (number, number)
 end
 
 function World.broadcastRosterUpdate(info)
-	Remotes.Roster:FireAllClients("update", info.slot, { n = info.name, c = info.colorIdx, k = info.skinId })
+	Remotes.Roster:FireAllClients(
+		"update",
+		info.slot,
+		{ n = info.name, c = info.colorIdx, k = info.skinId, a = info.accessoryId }
+	)
 end
 
 function World.init()

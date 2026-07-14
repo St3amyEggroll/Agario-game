@@ -166,6 +166,9 @@ local function drainActions(now: number)
 			info.colorIdx = cmd.arg
 			info.skinId = 0
 			World.broadcastRosterUpdate(info)
+		elseif action == "setaccessory" then
+			info.accessoryId = cmd.arg -- image/decal id layered over the cell (0 = none)
+			World.broadcastRosterUpdate(info)
 		elseif action == "debugmass" then
 			-- testing helper (gated by Config.Debug in Network): +/- a percentage
 			-- of the largest cell's current mass (arg is +1 or -1)

@@ -348,6 +348,12 @@ function WorldState.skinForSlot(slot: number): number
 	return (entry and entry.k) or 0
 end
 
+-- Accessory image asset id for a slot (0 / nil = none).
+function WorldState.accessoryForSlot(slot: number): number
+	local entry = WorldState.roster[slot]
+	return (entry and entry.a) or 0
+end
+
 -- True if the slot belongs to a disconnected player's ghost cells (faded,
 -- nameless). The server flags the slot's roster entry with g=true.
 function WorldState.isGhostSlot(slot: number): boolean

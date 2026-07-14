@@ -37,6 +37,7 @@ local ACTION_COOLDOWN: { [string]: number } = {
 	setskin = 0.2,
 	setavatar = 0.2,
 	setcolor = 0.2,
+	setaccessory = 0.2,
 	setname = 0.5,
 	debugmass = 0.05,
 }
@@ -124,6 +125,19 @@ local function onAction(player, action, arg)
 		Names.saveSkin(player, 0)
 		Simulation.enqueue(player, "setcolor", arg)
 		return
+	elseif action == "setaccessory" then
+		-- an image/decal id layered over the cell (0 clears it). Any non-negative
+		-- id is allowed (custom art), same as skins.
+		if not isFiniteNumber(arg) then
+			return
+		end
+		arg = math.floor(arg)
+		if arg < 0 or arg > 1e16 then
+			return
+		end
+		Names.saveAccessory(player, arg)
+		Simulation.enqueue(player, "setaccessory", arg)
+		return
 	elseif action == "debugmass" then
 		-- testing helper: only a direction is accepted (the server owns the
 		-- step size), and only while Config.Debug is on
@@ -145,7 +159,7 @@ local function sendFullRoster(player)
 	-- serialization reliably
 	local roster = {}
 	for slot, info in World.slotToInfo do
-		roster[tostring(slot)] = { n = info.name, c = info.colorIdx, k = info.skinId }
+		roster[tostring(slot)] = { n = info.name, c = info.colorIdx, k = info.skinId, a = info.accessoryId }
 	end
 	-- include lingering ghost slots so a late joiner renders them faded too
 	for slot, entry in World.ghostRoster do

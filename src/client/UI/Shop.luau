@@ -19,6 +19,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Remotes = require(Shared.Remotes)
 local Skins = require(Shared.Skins)
+local Accessories = require(Shared.Accessories)
 local LevelCurve = require(Shared.Levels)
 local Theme = require(script.Parent.Theme)
 local WorldState = require(script.Parent.Parent.WorldState)
@@ -50,11 +51,17 @@ local function currentColor(): number
 	return entry and entry.c or 0
 end
 
+local function currentAccessory(): number
+	return WorldState.accessoryForSlot(WorldState.mySlot or -1)
+end
+
 -- Is this card the look currently equipped? A colour only counts as equipped
 -- when no skin is on (a skin covers the plain colour).
 local function isActive(card): boolean
 	if card.matchKind == "color" then
 		return currentSkin() == 0 and currentColor() == card.matchId
+	elseif card.matchKind == "accessory" then
+		return currentAccessory() == card.matchId
 	end
 	return currentSkin() == card.matchId
 end
@@ -71,6 +78,11 @@ end
 
 local function equipColor(idx: number)
 	Remotes.Action:FireServer("setcolor", idx)
+	Sounds.play("equip")
+end
+
+local function equipAccessory(id: number)
+	Remotes.Action:FireServer("setaccessory", id)
 	Sounds.play("equip")
 end
 
@@ -188,6 +200,30 @@ local function build()
 		})
 	end
 
+	-- ACCESSORIES: a "None" card + one per catalog accessory (layered over the cell)
+	makeCard({
+		category = "accessory",
+		name = "None",
+		swatchColor = Theme.Panel2Color,
+		matchKind = "accessory",
+		matchId = 0,
+		onEquip = function()
+			equipAccessory(0)
+		end,
+	})
+	for _, acc in Accessories.List do
+		makeCard({
+			category = "accessory",
+			name = acc.name,
+			thumb = Accessories.thumb(acc.id),
+			matchKind = "accessory",
+			matchId = acc.id,
+			onEquip = function()
+				equipAccessory(acc.id)
+			end,
+		})
+	end
+
 	Shop.refreshButtons()
 end
 
@@ -258,14 +294,15 @@ function Shop.init(parent: Instance)
 		panel.Visible = false
 	end)
 
-	-- tab bar: Avatar | Color | Custom | Level
-	local tabDefs = { { "avatar", "Avatar" }, { "color", "Color" }, { "custom", "Custom" }, { "level", "Level" } }
+	-- tab bar: Avatar | Color | Skins | Level | Accessory
+	local tabDefs =
+		{ { "avatar", "Avatar" }, { "color", "Color" }, { "custom", "Skins" }, { "level", "Level" }, { "accessory", "Accessory" } }
 	for i, def in tabDefs do
-		local x = 0.02 + (i - 1) * 0.245
-		local btn = Theme.button(panel, def[2], UDim2.fromScale(x, 0.075), UDim2.fromScale(0.23, 0.058), function()
+		local x = 0.02 + (i - 1) * 0.196
+		local btn = Theme.button(panel, def[2], UDim2.fromScale(x, 0.075), UDim2.fromScale(0.185, 0.058), function()
 			selectTab(def[1])
 		end)
-		Theme.capText(btn, 15)
+		Theme.capText(btn, 13)
 		tabButtons[def[1]] = btn
 	end
 
@@ -369,14 +406,14 @@ end
 
 -- Keep buttons live while open: refresh only when the level / equipped look
 -- actually changes (cheap - no per-frame work otherwise).
-local lastLevel, lastSkin, lastColor = -1, math.huge, -1
+local lastLevel, lastSkin, lastColor, lastAcc = -1, math.huge, -1, math.huge
 function Shop.update(_dt: number)
 	if not panel.Visible or not built then
 		return
 	end
-	local lvl, skin, color = currentLevel(), currentSkin(), currentColor()
-	if lvl ~= lastLevel or skin ~= lastSkin or color ~= lastColor then
-		lastLevel, lastSkin, lastColor = lvl, skin, color
+	local lvl, skin, color, acc = currentLevel(), currentSkin(), currentColor(), currentAccessory()
+	if lvl ~= lastLevel or skin ~= lastSkin or color ~= lastColor or acc ~= lastAcc then
+		lastLevel, lastSkin, lastColor, lastAcc = lvl, skin, color, acc
 		Shop.refreshButtons()
 	end
 end

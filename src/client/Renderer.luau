@@ -32,6 +32,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Util = require(Shared.Util)
 local Skins = require(Shared.Skins)
+local Accessories = require(Shared.Accessories)
 local WorldState = require(script.Parent.WorldState)
 
 local MAP_W = Config.MapWidth
@@ -157,9 +158,21 @@ local function buildPools()
 		massLabel.Position = UDim2.fromScale(0.5, 0.66)
 		massLabel.Size = UDim2.fromScale(1.2, 0.22)
 		massLabel.Parent = f
+		-- accessory: an image layered OVER the cell, sized a bit larger so hats/ears
+		-- overhang the edges. Hidden until the player has one.
+		local accessory = Instance.new("ImageLabel")
+		accessory.AnchorPoint = Vector2.new(0.5, 0.5)
+		accessory.Position = UDim2.fromScale(0.5, 0.5)
+		accessory.Size = UDim2.fromScale(1.5, 1.5)
+		accessory.BackgroundTransparency = 1
+		accessory.ScaleType = Enum.ScaleType.Fit
+		accessory.Visible = false
+		accessory.ZIndex = 11
+		accessory.Parent = f
 		return {
 			frame = f,
 			skin = skin,
+			accessory = accessory,
 			stroke = stroke,
 			nameLabel = nameLabel,
 			massLabel = massLabel,
@@ -168,6 +181,7 @@ local function buildPools()
 			lastNameSize = -1,
 			lastMassSize = -1,
 			lastSkin = -1,
+			lastAccessory = -1,
 			lastZ = -1,
 			lastGhost = false,
 			slot = -1,
@@ -476,6 +490,17 @@ function Renderer.render(cam)
 					w.skin.Visible = false
 				end
 			end
+			-- accessory: an image layered over the cell (ears / hat / halo / ...)
+			local accId = WorldState.accessoryForSlot(c.slot)
+			if w.lastAccessory ~= accId then
+				w.lastAccessory = accId
+				if accId ~= 0 then
+					w.accessory.Image = Accessories.thumb(accId)
+					w.accessory.Visible = true
+				else
+					w.accessory.Visible = false
+				end
+			end
 			place(w, ox + c.x * scale, oy + c.y * scale, math.max(pixels, 2))
 
 			-- dead (ghost) cells keep the dead player's LOOK - their skin, or just
@@ -491,6 +516,7 @@ function Renderer.render(cam)
 				w.frame.BackgroundTransparency = t
 				w.stroke.Transparency = t
 				w.skin.ImageTransparency = t
+				w.accessory.ImageTransparency = t
 			end
 
 			-- labels only when big enough on screen AND not a dead cell (dead cells
@@ -572,6 +598,9 @@ function Renderer.render(cam)
 			local overlay = w.skin or w.image
 			if overlay then
 				overlay.ZIndex = z
+			end
+			if w.accessory then
+				w.accessory.ZIndex = z -- drawn over the skin (later sibling wins the tie)
 			end
 			if w.nameLabel then
 				w.nameLabel.ZIndex = z
