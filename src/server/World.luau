@@ -5,7 +5,8 @@
 	  cell   = {id, kind="cell",  player, slot, x, y, m, r, ix, iy, mergeAt, dead}
 	           ix/iy = decaying impulse velocity from splits / virus pops
 	  orb    = {id, x, y, m, r, color, respawns}
-	  virus  = {id, kind="virus"|"exp", kindId=1|2, x, y, m, r, feeds, vx, vy, dead}
+	  virus  = {id, kind="virus"|"exp", kindId=1|2, x, y, m, r, feeds, vx, vy, ejectAt?, dead}
+	           ejectAt = next server time an Experimental spews food (exp only)
 	  pellet = {id, kind="pellet", slot, x, y, m, r, vx, vy, born, dead}
 
 	Ids are u16 wrap-around counters (orbs and dynamic entities use separate
@@ -181,10 +182,11 @@ function World.spawnVirus(kind: string, x: number?, y: number?)
 	if not x then
 		x, y = World.randomPos(120)
 	end
+	local isExp = kind == "exp"
 	local virus = {
 		id = nextVirusId(),
 		kind = kind, -- "virus" | "exp"
-		kindId = kind == "exp" and 2 or 1,
+		kindId = isExp and 2 or 1,
 		x = x,
 		y = y :: any,
 		m = 0,
@@ -192,9 +194,12 @@ function World.spawnVirus(kind: string, x: number?, y: number?)
 		feeds = 0,
 		vx = 0,
 		vy = 0,
+		-- Experimentals (mothercells) autonomously eject food; stagger the first
+		-- ejection so they don't all fire on the same tick.
+		ejectAt = isExp and (World.now + math.random() * Config.ExperimentalEjectInterval) or nil,
 		dead = false,
 	}
-	World.setMass(virus, Config.VirusMass)
+	World.setMass(virus, isExp and Config.ExperimentalMass or Config.VirusMass)
 	table.insert(World.viruses, virus)
 	return virus
 end

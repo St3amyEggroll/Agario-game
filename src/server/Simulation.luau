@@ -565,7 +565,12 @@ local function feedViruses(now: number)
 			else
 				dx, dy = Util.unit(virus.x - pellet.x, virus.y - pellet.y)
 			end
-			World.setMass(virus, virus.m + pellet.m)
+			-- feeding grows the virus; an Experimental grows only up to its cap
+			local newMass = virus.m + pellet.m
+			if virus.kind == "exp" then
+				newMass = math.min(newMass, Config.ExperimentalMaxMass)
+			end
+			World.setMass(virus, newMass)
 			virus.feeds += 1
 			virus.vx = dx * Config.VirusPushSpeed
 			virus.vy = dy * Config.VirusPushSpeed
@@ -585,7 +590,9 @@ local function feedViruses(now: number)
 				end
 			end
 
-			if virus.feeds >= Config.VirusFeedsToSplit then
+			-- only regular viruses shoot a child virus once fed enough; an
+			-- Experimental keeps its grown mass and just spews food instead
+			if virus.kind == "virus" and virus.feeds >= Config.VirusFeedsToSplit then
 				virus.feeds = 0
 				World.setMass(virus, Config.VirusMass)
 				if #World.viruses < Config.MaxViruses then
@@ -598,6 +605,32 @@ local function feedViruses(now: number)
 		end
 	end
 	local _ = now
+end
+
+-- Experimentals (mothercells) autonomously spew food orbs around themselves on a
+-- timer - a food fountain that lures players into virus range. The orbs are
+-- non-respawning bonus orbs, globally capped (MaxExtraOrbs), so fountains can't
+-- flood the map.
+local function ejectExperimentals(now: number)
+	for _, virus in World.viruses do
+		if virus.kind ~= "exp" or virus.dead or not virus.ejectAt or now < virus.ejectAt then
+			continue
+		end
+		virus.ejectAt = now + Config.ExperimentalEjectInterval
+		for _ = 1, Config.ExperimentalEjectCount do
+			if World.extraOrbCount >= Config.MaxExtraOrbs then
+				break
+			end
+			local angle = math.random() * math.pi * 2
+			local dist = virus.r + 15 + math.random() * 70
+			World.spawnOrb(
+				math.clamp(virus.x + math.cos(angle) * dist, 10, Config.MapWidth - 10),
+				math.clamp(virus.y + math.sin(angle) * dist, 10, Config.MapHeight - 10),
+				false
+			)
+			World.extraOrbCount += 1
+		end
+	end
 end
 
 --------------------------------------------------------------------- deaths
@@ -623,6 +656,7 @@ function Simulation.step(dt: number, now: number)
 	resolveOwnCells(now, dt)
 	eatPass(now)
 	feedViruses(now)
+	ejectExperimentals(now)
 	deathCheck()
 end
 

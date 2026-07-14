@@ -132,6 +132,13 @@ local Config = {
 	VirusFriction = 2.5,
 	MaxViruses = 50, -- global cap so fed viruses can't overrun the map
 	ExperimentalOrbsPerFeed = 2, -- bonus orbs an Experimental spits out per pellet fed
+	-- Experimental (mothercell): a big spiky cell that autonomously spews food
+	-- around itself and pops big cells. Bigger than a virus, so you must be large
+	-- to pop one - but it rewards you with its (large) mass when you do.
+	ExperimentalMass = 1200, -- base mass (radius ~138 vs a virus's ~42)
+	ExperimentalMaxMass = 4200, -- feeding grows it up to here (a bigger, riskier pop target)
+	ExperimentalEjectInterval = 0.9, -- seconds between autonomous food ejections
+	ExperimentalEjectCount = 2, -- bonus orbs spat out per autonomous ejection
 
 	------------------------------------------------------------------ Levels / XP
 	-- XP is earned from the MASS of food you consume (orbs + enemy cells + enemy
