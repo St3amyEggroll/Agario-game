@@ -187,10 +187,14 @@ end
 
 -- Called every frame from the client bootstrap.
 function Input.tick(dt: number, now: number)
-	-- held-feed auto repeat
-	if feeding and WorldState.status == "alive" and now - lastFeed >= FEED_REPEAT then
-		lastFeed = now
-		fireAction("feed")
+	-- held-feed auto repeat; smaller you are, the faster it repeats (matches the
+	-- server's size-scaled feed cooldown, so small cells shoot viruses quicker)
+	if feeding and WorldState.status == "alive" then
+		local interval = FEED_REPEAT * math.clamp(WorldState.own.mass / Config.StartMass, 0.4, 1.6)
+		if now - lastFeed >= interval then
+			lastFeed = now
+			fireAction("feed")
+		end
 	end
 
 	-- throttled aim updates

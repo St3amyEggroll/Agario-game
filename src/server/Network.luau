@@ -76,6 +76,16 @@ local function onAction(player, action, arg)
 		-- smaller cells split faster; even big cells get a slight speed-up (cap
 		-- at 0.85 instead of 1.0) so splitting stays snappy at big sizes
 		cooldown = cooldown * math.clamp(maxMass / Config.StartMass, 0.65, 0.85)
+	elseif action == "feed" then
+		local maxMass = 0
+		for _, cell in info.cells do
+			if cell.m > maxMass then
+				maxMass = cell.m
+			end
+		end
+		-- the smaller you are, the FASTER you feed (so small cells shoot viruses
+		-- quicker); big cells feed a bit slower
+		cooldown = cooldown * math.clamp(maxMass / Config.StartMass, 0.4, 1.6)
 	end
 	local now = os.clock()
 	local last = info.lastAction[action]
