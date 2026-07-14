@@ -92,7 +92,8 @@ function Snapshots.sendLeaderboard()
 			end
 		end
 		if info.alive then
-			table.insert(entries, { s = info.slot, n = info.name, m = mass })
+			-- k/p ride along so the Hiscores live fallback can rank by Kills / Playtime
+			table.insert(entries, { s = info.slot, n = info.name, m = mass, k = info.kills, p = math.floor(info.playSeconds) })
 		end
 	end
 	-- still broadcast the top list: the client uses it to pick the spectate/menu

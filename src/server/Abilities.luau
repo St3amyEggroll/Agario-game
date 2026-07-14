@@ -41,6 +41,9 @@ do
 end
 
 local savePending = {} -- [Player] = true while a debounced save is scheduled
+local loaded = {} -- [Player] = true once the owned set has finished loading (buying is
+-- blocked until then, so a returning player can't be re-charged for an ability they
+-- already own but whose record hasn't loaded yet)
 
 local function ownedArray(info): { string }
 	local out = {}
@@ -120,11 +123,13 @@ function Abilities.onPlayerAdded(player)
 				end
 			end
 		end
+		loaded[player] = true -- ownership is now known: purchases are safe
 		Abilities.sync(player)
 	end)
 end
 
 function Abilities.onPlayerRemoving(player)
+	loaded[player] = nil
 	if savePending[player] then
 		savePending[player] = nil
 		local info = World.players[player]
@@ -138,8 +143,8 @@ end
 -- that the player can afford it; then deducts and grants.
 function Abilities.buy(player, id)
 	local info = World.players[player]
-	if not info then
-		return
+	if not info or not loaded[player] then
+		return -- ignore buys until the owned set has loaded (avoids a re-charge race)
 	end
 	local def = BY_ID[id]
 	if not def or info.abilities[id] then

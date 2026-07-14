@@ -603,6 +603,10 @@ local function eatPass(now: number)
 				World.removeCell(e)
 				if victim and #victim.cells == 0 then
 					-- that was their LAST cell: you eliminated them
+					local killer = World.players[cell.player]
+					if killer then
+						killer.kills += 1 -- Hiscores: Kills
+					end
 					Remotes.Feedback:FireClient(cell.player, "kill", victim.name)
 				end
 			elseif e.kind == "pellet" then
@@ -803,6 +807,11 @@ end
 function Simulation.step(dt: number, now: number)
 	World.now = now
 	drainActions(now)
+	for _, info in World.players do
+		if info.alive then
+			info.playSeconds += dt -- Hiscores: Playtime (seconds spent alive)
+		end
+	end
 	moveCells(dt)
 	movePellets(dt)
 	moveViruses(dt)

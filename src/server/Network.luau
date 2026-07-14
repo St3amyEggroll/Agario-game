@@ -283,7 +283,8 @@ end
 local function onPlayerRemoving(player)
 	local info = World.players[player]
 	if info then
-		Records.submit(player.UserId, info.name, info.bestMass or 0) -- final all-time record
+		-- final all-time record: best mass + this session's kills + playtime
+		Records.submit(player.UserId, info.name, info.bestMass or 0, info.kills or 0, info.playSeconds or 0)
 	end
 	Keybinds.onPlayerRemoving(player)
 	Names.onPlayerRemoving(player)
