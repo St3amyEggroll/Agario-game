@@ -22,6 +22,7 @@ end
 -- (reused catalog art so the layer is visible) - send real accessory art ids and
 -- I'll swap them in.
 Accessories.List = {
+	{ name = "Test Decal", id = 1619290961, price = 0 }, -- your decal - equip it to check it renders
 	{ name = "Bread", id = 11988231187, price = 400000 },
 	{ name = "Leafy Hat", id = 11759293347, price = 750000 },
 	{ name = "Angel Halo", id = 11759193017, price = 1000000 },
