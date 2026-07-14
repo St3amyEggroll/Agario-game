@@ -1,19 +1,13 @@
 --[[
-	UI - assembles the interface (Agma-style layout, minimal look):
+	UI - assembles the interface (minimal look):
 	  top-left   = stats bar (Lv/XP, Mass, Coins, FPS/Ping/Cells) + ☰ pause
-	  top-right  = custom leaderboard
-	  center     = play card (menu)
-	  bottom-left  = chat
+	  center     = play card (menu); Shop pops in to its LEFT, Hiscores to its RIGHT
 	  bottom-center = ability dock (in-game)
-	  bottom-right = minimap
+	  bottom-right  = minimap
+	Roblox's native player list (leaderboard) and chat are left on.
 	World rendering lives in a separate, lower ScreenGui (Renderer).
 ]]
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Shared = ReplicatedStorage:WaitForChild("Shared")
-local Config = require(Shared.Config)
-local Remotes = require(Shared.Remotes)
-local Theme = require(script.Theme)
 local HUD = require(script.HUD)
 local Menu = require(script.Menu)
 local Settings = require(script.Settings)
@@ -49,19 +43,6 @@ function UI.init(playerGui: PlayerGui)
 	Shop.init(gui) -- left-side pop-up
 
 	Input.onMenuToggle = Settings.toggle -- the M keybind mirrors the settings panel
-
-	-- debug testing buttons (bottom-left); gated by Config.Debug
-	if Config.Debug then
-		local pctLabel = ("%d%%"):format(Config.DebugMassPercent)
-		local addMass = Theme.outlineButton(gui, "+" .. pctLabel, UDim2.fromScale(0.012, 0.9), UDim2.fromScale(0.055, 0.04), Theme.Green, function()
-			Remotes.Action:FireServer("debugmass", 1)
-		end)
-		Theme.capText(addMass, 14)
-		local subMass = Theme.outlineButton(gui, "-" .. pctLabel, UDim2.fromScale(0.072, 0.9), UDim2.fromScale(0.055, 0.04), Theme.Danger, function()
-			Remotes.Action:FireServer("debugmass", -1)
-		end)
-		Theme.capText(subMass, 14)
-	end
 
 	WorldState.onPlayerState = function(event)
 		Menu.refresh()

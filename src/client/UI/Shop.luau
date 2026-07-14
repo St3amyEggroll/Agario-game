@@ -88,8 +88,8 @@ local function applyFilter(query: string)
 end
 
 function Shop.init(parent: Instance)
-	-- left-side panel (Agma-style), pops in when opened
-	panel = Theme.panel(parent, UDim2.fromScale(0.015, 0.5), UDim2.fromScale(0.44, 0.84), Vector2.new(0, 0.5))
+	-- sits just LEFT of the center play card (its right edge ~0.36), pops in
+	panel = Theme.panel(parent, UDim2.fromScale(0.36, 0.54), UDim2.fromScale(0.3, 0.56), Vector2.new(1, 0.5))
 	panel.Visible = false
 
 	local title = Theme.label(panel, "Shop - Skins", UDim2.fromScale(0.03, 0.02), UDim2.fromScale(0.5, 0.07))

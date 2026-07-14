@@ -24,7 +24,8 @@ local function commaMass(m: number): string
 end
 
 function Hiscores.init(parent: Instance)
-	panel = Theme.panel(parent, UDim2.fromScale(0.985, 0.5), UDim2.fromScale(0.26, 0.74), Vector2.new(1, 0.5))
+	-- sits just RIGHT of the center play card (its left edge ~0.64), pops in
+	panel = Theme.panel(parent, UDim2.fromScale(0.64, 0.54), UDim2.fromScale(0.3, 0.56), Vector2.new(0, 0.5))
 	panel.Visible = false
 
 	local title = Theme.label(panel, "Hiscores", UDim2.fromScale(0.06, 0.02), UDim2.fromScale(0.6, 0.06))
