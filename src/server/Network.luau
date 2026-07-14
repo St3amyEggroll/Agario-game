@@ -36,6 +36,7 @@ local ACTION_COOLDOWN: { [string]: number } = {
 	spectate = 0.25,
 	setskin = 0.2,
 	setavatar = 0.2,
+	setcolor = 0.2,
 	setname = 0.5,
 	debugmass = 0.05,
 }
@@ -108,6 +109,20 @@ local function onAction(player, action, arg)
 		local skinId = -player.UserId
 		Names.saveSkin(player, skinId)
 		Simulation.enqueue(player, "setskin", skinId)
+		return
+	elseif action == "setcolor" then
+		-- pick your cell colour (palette index). Clears any skin so the plain
+		-- coloured cell shows. Persisted like the skin.
+		if not isFiniteNumber(arg) then
+			return
+		end
+		arg = math.floor(arg)
+		if arg < 1 or arg > #Config.Palette then
+			return
+		end
+		Names.saveColor(player, arg)
+		Names.saveSkin(player, 0)
+		Simulation.enqueue(player, "setcolor", arg)
 		return
 	elseif action == "debugmass" then
 		-- testing helper: only a direction is accepted (the server owns the

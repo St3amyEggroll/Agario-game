@@ -19,6 +19,7 @@ local Hiscores = require(script.Hiscores)
 local Spectate = require(script.Spectate)
 local Input = require(script.Parent.Input)
 local WorldState = require(script.Parent.WorldState)
+local Sounds = require(script.Parent.Sounds)
 
 local UI = {}
 UI.HUD = HUD
@@ -27,6 +28,8 @@ UI.Settings = Settings
 UI.Shop = Shop
 
 function UI.init(playerGui: PlayerGui)
+	Sounds.init() -- build the reusable SFX (click, equip, ...) before any button exists
+
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "AgarUI"
 	gui.IgnoreGuiInset = true

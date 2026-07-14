@@ -67,11 +67,9 @@ function Settings.init(parent: Instance)
 		keyButtons[action] = keyButton
 	end
 
-	local closeButton = Theme.button(panel, "Close", UDim2.fromScale(0.5, 0.97), UDim2.fromScale(0.3, 0.07), function()
+	Theme.closeButton(panel, UDim2.fromScale(0.9, 0.02), UDim2.fromScale(0.08, 0.06), function()
 		Settings.setVisible(false)
 	end)
-	closeButton.AnchorPoint = Vector2.new(0.5, 1)
-	Theme.capText(closeButton, 18)
 
 	-- reserved-for-future note: defaults come from Config.DefaultKeybinds
 	local _ = Config

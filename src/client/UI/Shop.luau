@@ -1,27 +1,28 @@
 --[[
-	Shop - the skin picker, split into three tabs:
-	  FREE   - your default look: the plain cell + your Roblox avatar (headshot).
+	Shop - the customize panel, split into four tabs:
+	  AVATAR - your Roblox avatar (headshot) as a cell skin.
+	  COLOR  - pick your plain-cell colour from the palette (clears any skin).
 	  CUSTOM - the whole meme/skin catalog + a "paste any image id" box.
-	  LEVEL  - the level-locked progression skins (a Lv badge + a locked Equip
-	           button until you reach the required level).
+	  LEVEL  - the level-locked progression skins (locked until you hit the level).
 
-	Equipping fires "setskin" (an image/decal id) or "setavatar" (your avatar);
-	the server stores it on your roster slot and the renderer draws it on your cell.
+	The card you currently have on reads "Equipped"; the rest read "Equip".
+	Equipping fires "setskin" / "setavatar" / "setcolor"; the server stores it on
+	your roster slot and the renderer draws it on your cell.
 
-	PERF: every card is built ONCE, on a deferred task the first time the shop
-	opens (not on the click frame). Switching tabs / searching just toggles
-	card.Visible - the UIGridLayout skips invisible children, so no rebuild and no
-	gaps. rbxthumb thumbnails stream in on demand as cards scroll into view.
+	PERF: every card is built ONCE, on a deferred task the first time the panel
+	opens. Switching tabs / searching just toggles card.Visible.
 ]]
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared.Config)
 local Remotes = require(Shared.Remotes)
 local Skins = require(Shared.Skins)
 local LevelCurve = require(Shared.Levels)
 local Theme = require(script.Parent.Theme)
 local WorldState = require(script.Parent.Parent.WorldState)
+local Sounds = require(script.Parent.Parent.Sounds)
 
 local Shop = {}
 
@@ -31,20 +32,51 @@ local search: TextBox
 local idBox: TextBox
 local tabButtons: { [string]: TextButton } = {}
 local currentTab = "custom"
-local cards: { { frame: Frame, lname: string, category: string, level: number, equipButton: TextButton } } = {}
+local cards: {
+	{ frame: Frame, lname: string, category: string, level: number, equipButton: TextButton, matchKind: string, matchId: number }
+} = {}
 local built = false
 
 local function currentLevel(): number
 	return LevelCurve.levelForXp(WorldState.xp)
 end
 
-local function equip(id: number)
-	Remotes.Action:FireServer("setskin", id)
+local function currentSkin(): number
+	return WorldState.skinForSlot(WorldState.mySlot or -1)
 end
 
--- Build one card into the scroll grid. `thumb` may be "" (blank swatch, used for
--- the "Default" free card). `reqLevel` > 0 adds a Lv badge + lock behaviour.
-local function makeCard(category: string, name: string, thumb: string, reqLevel: number, onEquip: () -> ())
+local function currentColor(): number
+	local entry = WorldState.roster[WorldState.mySlot or -1]
+	return entry and entry.c or 0
+end
+
+-- Is this card the look currently equipped? A colour only counts as equipped
+-- when no skin is on (a skin covers the plain colour).
+local function isActive(card): boolean
+	if card.matchKind == "color" then
+		return currentSkin() == 0 and currentColor() == card.matchId
+	end
+	return currentSkin() == card.matchId
+end
+
+local function equipSkin(id: number)
+	Remotes.Action:FireServer("setskin", id)
+	Sounds.play("equip")
+end
+
+local function equipAvatar()
+	Remotes.Action:FireServer("setavatar")
+	Sounds.play("equip")
+end
+
+local function equipColor(idx: number)
+	Remotes.Action:FireServer("setcolor", idx)
+	Sounds.play("equip")
+end
+
+-- Build one card. opts: category, name, thumb (string?), swatchColor (Color3?),
+-- reqLevel, matchKind ("skin"|"color"), matchId, onEquip.
+local function makeCard(opts)
 	local card = Instance.new("Frame")
 	card.BackgroundColor3 = Theme.Panel2Color
 	card.BorderSizePixel = 0
@@ -57,19 +89,28 @@ local function makeCard(category: string, name: string, thumb: string, reqLevel:
 	img.Position = UDim2.fromScale(0.5, 0.06)
 	img.Size = UDim2.fromScale(0.72, 0.58)
 	img.SizeConstraint = Enum.SizeConstraint.RelativeYY
-	img.BackgroundColor3 = Color3.fromRGB(60, 65, 80)
 	img.BorderSizePixel = 0
 	img.ScaleType = Enum.ScaleType.Fit
-	img.Image = thumb
-	Theme.round(img, 6)
+	if opts.swatchColor then
+		img.Image = ""
+		img.BackgroundColor3 = opts.swatchColor
+		local rc = Instance.new("UICorner") -- round swatch: reads as a cell
+		rc.CornerRadius = UDim.new(0.5, 0)
+		rc.Parent = img
+	else
+		img.Image = opts.thumb or ""
+		img.BackgroundColor3 = Color3.fromRGB(60, 65, 80)
+		Theme.round(img, 6)
+	end
 	img.Parent = card
 
-	local nameLabel = Theme.label(card, name, UDim2.fromScale(0.03, 0.66), UDim2.fromScale(0.94, 0.16))
+	local nameLabel = Theme.label(card, opts.name, UDim2.fromScale(0.03, 0.66), UDim2.fromScale(0.94, 0.16))
 	nameLabel.TextScaled = false
 	nameLabel.TextSize = 13
 	nameLabel.TextWrapped = true
 	Theme.capText(nameLabel, 14)
 
+	local reqLevel = opts.reqLevel or 0
 	if reqLevel > 0 then
 		local badge = Theme.label(card, "Lv " .. reqLevel, UDim2.fromScale(0.04, 0.04), UDim2.fromScale(0.5, 0.12))
 		badge.BackgroundColor3 = Theme.AccentColor
@@ -81,16 +122,23 @@ local function makeCard(category: string, name: string, thumb: string, reqLevel:
 	end
 
 	local equipButton = Theme.button(card, "Equip", UDim2.fromScale(0.5, 0.97), UDim2.fromScale(0.86, 0.2), function()
-		-- locked level skins do nothing on click (the server would reject it anyway)
 		if reqLevel > 0 and currentLevel() < reqLevel then
-			return
+			return -- locked
 		end
-		onEquip()
+		opts.onEquip()
 	end)
 	equipButton.AnchorPoint = Vector2.new(0.5, 1)
 	Theme.capText(equipButton, 14)
 
-	table.insert(cards, { frame = card, lname = name:lower(), category = category, level = reqLevel, equipButton = equipButton })
+	table.insert(cards, {
+		frame = card,
+		lname = opts.name:lower(),
+		category = opts.category,
+		level = reqLevel,
+		equipButton = equipButton,
+		matchKind = opts.matchKind,
+		matchId = opts.matchId,
+	})
 end
 
 -- Create every card once, on first open.
@@ -100,45 +148,71 @@ local function build()
 	end
 	built = true
 
-	-- FREE: the plain default cell + your Roblox avatar
-	makeCard("free", "Default", "", 0, function()
-		equip(0)
-	end)
-	makeCard("free", "My Avatar", Skins.thumb(-Players.LocalPlayer.UserId), 0, function()
-		Remotes.Action:FireServer("setavatar")
-	end)
+	-- AVATAR: your Roblox avatar (headshot reflects your current character)
+	makeCard({
+		category = "avatar",
+		name = "My Avatar",
+		thumb = Skins.thumb(-Players.LocalPlayer.UserId),
+		matchKind = "skin",
+		matchId = -Players.LocalPlayer.UserId,
+		onEquip = equipAvatar,
+	})
 
-	-- CUSTOM (free catalog skins) + LEVEL (level-locked). Skins.List holds both;
-	-- entries with a `level` go in the Level tab.
-	for _, skin in Skins.List do
-		local reqLevel = skin.level or 0
-		local category = reqLevel > 0 and "level" or "custom"
-		makeCard(category, skin.name, Skins.thumb(skin.id), reqLevel, function()
-			equip(skin.id)
-		end)
+	-- COLOR: one swatch per palette colour (equipping clears any skin)
+	for i, col in Config.Palette do
+		makeCard({
+			category = "color",
+			name = "Color " .. i,
+			swatchColor = col,
+			matchKind = "color",
+			matchId = i,
+			onEquip = function()
+				equipColor(i)
+			end,
+		})
 	end
 
-	Shop.refreshLocks()
+	-- CUSTOM (free catalog) + LEVEL (level-locked). Skins.List holds both.
+	for _, skin in Skins.List do
+		local reqLevel = skin.level or 0
+		makeCard({
+			category = reqLevel > 0 and "level" or "custom",
+			name = skin.name,
+			thumb = Skins.thumb(skin.id),
+			reqLevel = reqLevel,
+			matchKind = "skin",
+			matchId = skin.id,
+			onEquip = function()
+				equipSkin(skin.id)
+			end,
+		})
+	end
+
+	Shop.refreshButtons()
 end
 
--- Update every level-skin's Equip button to reflect the player's current level:
--- unlocked shows "Equip", locked shows a lock + the required level.
-function Shop.refreshLocks()
+-- Set each card's button to reflect state: locked level skins show a lock, the
+-- currently-worn look shows "Equipped" (green), everything else shows "Equip".
+function Shop.refreshButtons()
 	if not built then
 		return
 	end
 	local lvl = currentLevel()
 	for _, card in cards do
-		if card.level > 0 then
-			local locked = lvl < card.level
-			local txt = locked and ("\u{1F512} Lv " .. card.level) or "Equip"
-			if card.equipButton.Text ~= txt then
-				card.equipButton.Text = txt
-			end
-			local col = locked and Theme.MutedText or Theme.TextColor
-			if card.equipButton.TextColor3 ~= col then
-				card.equipButton.TextColor3 = col
-			end
+		local btn = card.equipButton
+		local txt, col
+		if card.level > 0 and lvl < card.level then
+			txt, col = "\u{1F512} Lv " .. card.level, Theme.MutedText
+		elseif isActive(card) then
+			txt, col = "Equipped", Theme.Green
+		else
+			txt, col = "Equip", Theme.TextColor
+		end
+		if btn.Text ~= txt then
+			btn.Text = txt
+		end
+		if btn.TextColor3 ~= col then
+			btn.TextColor3 = col
 		end
 	end
 end
@@ -162,15 +236,12 @@ local function selectTab(tab: string)
 		btn.TextColor3 = active and Theme.AccentColor or Theme.MutedText
 		btn.BackgroundTransparency = active and 0.15 or 0.55
 	end
-	-- search applies to Custom + Level; the paste-id box is Custom-only; neither
-	-- makes sense on Free (2 fixed cards)
-	search.Visible = tab ~= "free"
+	-- search applies to Custom + Level; the paste-id box is Custom-only
+	search.Visible = tab == "custom" or tab == "level"
 	idBox.Visible = tab == "custom"
 	search.Text = "" -- reset the filter so each tab opens showing everything
 	applyFilter()
-	if tab == "level" then
-		Shop.refreshLocks()
-	end
+	Shop.refreshButtons()
 end
 
 function Shop.init(parent: Instance)
@@ -178,24 +249,23 @@ function Shop.init(parent: Instance)
 	panel = Theme.panel(parent, UDim2.fromScale(0.36, 0.54), UDim2.fromScale(0.3, 0.56), Vector2.new(1, 0.5))
 	panel.Visible = false
 
-	local title = Theme.label(panel, "Skins", UDim2.fromScale(0.03, 0.01), UDim2.fromScale(0.5, 0.055))
+	local title = Theme.label(panel, "Customize", UDim2.fromScale(0.03, 0.01), UDim2.fromScale(0.5, 0.055))
 	title.TextColor3 = Theme.AccentColor
 	title.TextXAlignment = Enum.TextXAlignment.Left
 	Theme.capText(title, 24)
 
-	local closeBtn = Theme.button(panel, "\u{2715}", UDim2.fromScale(0.9, 0.01), UDim2.fromScale(0.08, 0.055), function()
+	Theme.closeButton(panel, UDim2.fromScale(0.9, 0.01), UDim2.fromScale(0.08, 0.055), function()
 		panel.Visible = false
 	end)
-	Theme.capText(closeBtn, 16)
 
-	-- tab bar: Free | Custom | Level
-	local tabDefs = { { "free", "Free" }, { "custom", "Custom" }, { "level", "Level" } }
+	-- tab bar: Avatar | Color | Custom | Level
+	local tabDefs = { { "avatar", "Avatar" }, { "color", "Color" }, { "custom", "Custom" }, { "level", "Level" } }
 	for i, def in tabDefs do
-		local x = 0.03 + (i - 1) * 0.32
-		local btn = Theme.button(panel, def[2], UDim2.fromScale(x, 0.075), UDim2.fromScale(0.30, 0.058), function()
+		local x = 0.02 + (i - 1) * 0.245
+		local btn = Theme.button(panel, def[2], UDim2.fromScale(x, 0.075), UDim2.fromScale(0.23, 0.058), function()
 			selectTab(def[1])
 		end)
-		Theme.capText(btn, 16)
+		Theme.capText(btn, 15)
 		tabButtons[def[1]] = btn
 	end
 
@@ -239,10 +309,9 @@ function Shop.init(parent: Instance)
 		if not enter then
 			return
 		end
-		-- accept a raw id or a full rbxassetid://<id> paste
 		local id = tonumber((idBox.Text:gsub("%D", "")))
 		if id and id > 0 then
-			equip(id)
+			equipSkin(id)
 		end
 	end)
 
@@ -261,7 +330,6 @@ function Shop.init(parent: Instance)
 	grid.SortOrder = Enum.SortOrder.LayoutOrder
 	grid.Parent = scroll
 
-	-- recompute pixel cell size from the scroll width so the grid is responsive
 	local function resizeCells()
 		local w = scroll.AbsoluteSize.X
 		if w <= 0 then
@@ -280,9 +348,6 @@ function Shop.close()
 	end
 end
 
--- Opened from the play-card Shop button. Pops the panel in and builds the card
--- grid ONCE, on a deferred task so the thumbnail frames aren't created on the
--- click frame itself.
 function Shop.toggle()
 	if panel.Visible then
 		panel.Visible = false
@@ -292,27 +357,27 @@ function Shop.toggle()
 	Theme.popIn(panel)
 	task.defer(function()
 		if not panel.Visible then
-			return -- closed again before the deferred build ran
+			return
 		end
 		build() -- guarded by `built`: only creates the cards the first time
-		selectTab(currentTab) -- apply the active tab's filter + level locks
+		selectTab(currentTab) -- apply the active tab's filter + button states
 		if Shop._resizeCells then
-			Shop._resizeCells() -- AbsoluteSize is valid now the panel is shown
+			Shop._resizeCells()
 		end
 	end)
 end
 
--- Keep the level-skin locks live while the shop is open: refresh only when the
--- player's level actually changes (cheap - no per-frame work otherwise).
-local lastShownLevel = -1
+-- Keep buttons live while open: refresh only when the level / equipped look
+-- actually changes (cheap - no per-frame work otherwise).
+local lastLevel, lastSkin, lastColor = -1, math.huge, -1
 function Shop.update(_dt: number)
 	if not panel.Visible or not built then
 		return
 	end
-	local lvl = currentLevel()
-	if lvl ~= lastShownLevel then
-		lastShownLevel = lvl
-		Shop.refreshLocks()
+	local lvl, skin, color = currentLevel(), currentSkin(), currentColor()
+	if lvl ~= lastLevel or skin ~= lastSkin or color ~= lastColor then
+		lastLevel, lastSkin, lastColor = lvl, skin, color
+		Shop.refreshButtons()
 	end
 end
 

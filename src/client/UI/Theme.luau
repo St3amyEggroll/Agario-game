@@ -10,6 +10,8 @@
 	Everything is Scale-based UDim2 + TextScaled so it holds up on any screen.
 ]]
 
+local Sounds = require(script.Parent.Parent.Sounds)
+
 local Theme = {
 	-- surfaces
 	PanelColor = Color3.fromRGB(18, 21, 29),
@@ -125,7 +127,38 @@ function Theme.button(parent: Instance, text: string, pos: UDim2, size: UDim2, o
 		b.BackgroundTransparency = 0.93
 	end)
 	b.Parent = parent
-	b.Activated:Connect(onClick)
+	b.Activated:Connect(function()
+		Sounds.play("click")
+		onClick()
+	end)
+	return b
+end
+
+-- red close (X) button: solid red fill, white X. Used for panel close buttons.
+function Theme.closeButton(parent: Instance, pos: UDim2, size: UDim2, onClick: () -> ()): TextButton
+	local b = Instance.new("TextButton")
+	b.Position = pos
+	b.Size = size
+	b.BackgroundColor3 = Theme.Danger
+	b.BackgroundTransparency = 0.1
+	b.BorderSizePixel = 0
+	b.Font = Theme.Font
+	b.Text = "\u{2715}"
+	b.TextColor3 = Color3.new(1, 1, 1)
+	b.TextScaled = true
+	b.AutoButtonColor = false
+	Theme.round(b)
+	b.MouseEnter:Connect(function()
+		b.BackgroundTransparency = 0
+	end)
+	b.MouseLeave:Connect(function()
+		b.BackgroundTransparency = 0.1
+	end)
+	b.Parent = parent
+	b.Activated:Connect(function()
+		Sounds.play("click")
+		onClick()
+	end)
 	return b
 end
 
@@ -161,7 +194,10 @@ function Theme.outlineButton(
 		b.BackgroundTransparency = 0.9
 	end)
 	b.Parent = parent
-	b.Activated:Connect(onClick)
+	b.Activated:Connect(function()
+		Sounds.play("click")
+		onClick()
+	end)
 	return b
 end
 

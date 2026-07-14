@@ -160,6 +160,12 @@ local function drainActions(now: number)
 		elseif action == "setskin" then
 			info.skinId = cmd.arg -- image/decal asset id (0 = none), validated in Network
 			World.broadcastRosterUpdate(info)
+		elseif action == "setcolor" then
+			-- pick your cell colour (palette index, validated in Network); clears
+			-- the skin so the plain coloured cell shows
+			info.colorIdx = cmd.arg
+			info.skinId = 0
+			World.broadcastRosterUpdate(info)
 		elseif action == "debugmass" then
 			-- testing helper (gated by Config.Debug in Network): +/- a percentage
 			-- of the largest cell's current mass (arg is +1 or -1)

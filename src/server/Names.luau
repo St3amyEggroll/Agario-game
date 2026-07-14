@@ -40,6 +40,7 @@ end
 
 local savePending = {} -- [Player] = true while a debounced NAME save is scheduled
 local skinSavePending = {} -- [Player] = true while a debounced SKIN save is scheduled
+local colorSavePending = {} -- [Player] = true while a debounced COLOR save is scheduled
 
 -- Clamp length and strip control characters / leading-trailing spaces. Returns
 -- nil for an empty result.
@@ -92,9 +93,21 @@ local function saveSkinNow(player, skinId: number)
 	end
 end
 
+local function saveColorNow(player, colorIdx: number)
+	if not store then
+		return
+	end
+	local ok, err = pcall(function()
+		store:SetAsync("color_" .. player.UserId, colorIdx)
+	end)
+	if not ok then
+		warn("[Agar] color save failed:", err)
+	end
+end
+
 function Names.onPlayerAdded(player)
 	task.spawn(function()
-		local savedName, savedSkin = nil, nil
+		local savedName, savedSkin, savedColor = nil, nil, nil
 		if store then
 			local ok, result = pcall(function()
 				return store:GetAsync("name_" .. player.UserId)
@@ -108,6 +121,12 @@ function Names.onPlayerAdded(player)
 			if ok2 and typeof(result2) == "number" then
 				savedSkin = result2
 			end
+			local ok3, result3 = pcall(function()
+				return store:GetAsync("color_" .. player.UserId)
+			end)
+			if ok3 and typeof(result3) == "number" then
+				savedColor = result3
+			end
 		end
 		local info = World.players[player]
 		if not info then
@@ -120,6 +139,10 @@ function Names.onPlayerAdded(player)
 		end
 		if savedSkin and savedSkin ~= 0 then
 			info.skinId = savedSkin -- restore the equipped skin (negative = avatar) from last session
+			changed = true
+		end
+		if savedColor and savedColor >= 1 and savedColor <= #Config.Palette then
+			info.colorIdx = savedColor -- restore the chosen cell colour
 			changed = true
 		end
 		if changed then
@@ -142,6 +165,23 @@ function Names.saveSkin(player, skinId: number)
 			local info = World.players[player]
 			if info then
 				saveSkinNow(player, info.skinId)
+			end
+		end
+	end)
+end
+
+-- Persist the chosen cell colour (debounced). Called from Network on setcolor.
+function Names.saveColor(player, colorIdx: number)
+	if not store or colorSavePending[player] then
+		return
+	end
+	colorSavePending[player] = true
+	task.delay(SAVE_DEBOUNCE, function()
+		if colorSavePending[player] then
+			colorSavePending[player] = nil
+			local info = World.players[player]
+			if info then
+				saveColorNow(player, info.colorIdx)
 			end
 		end
 	end)
@@ -191,6 +231,12 @@ function Names.onPlayerRemoving(player)
 		skinSavePending[player] = nil
 		if info then
 			saveSkinNow(player, info.skinId)
+		end
+	end
+	if colorSavePending[player] then
+		colorSavePending[player] = nil
+		if info then
+			saveColorNow(player, info.colorIdx)
 		end
 	end
 end
