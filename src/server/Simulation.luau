@@ -167,7 +167,21 @@ local function drainActions(now: number)
 			info.skinId = 0
 			World.broadcastRosterUpdate(info)
 		elseif action == "setaccessory" then
-			info.accessoryId = cmd.arg -- image/decal id layered over the cell (0 = none)
+			-- toggle an overlay layer: +id accessory, -id avatar, 0 = clear all
+			local id = cmd.arg
+			if id == 0 then
+				table.clear(info.overlays)
+			elseif info.overlays[id] then
+				info.overlays[id] = nil -- unequip
+			else
+				local count = 0
+				for _ in info.overlays do
+					count += 1
+				end
+				if count < Config.MaxOverlays then
+					info.overlays[id] = true
+				end
+			end
 			World.broadcastRosterUpdate(info)
 		elseif action == "debugmass" then
 			-- testing helper (gated by Config.Debug in Network): +/- a percentage

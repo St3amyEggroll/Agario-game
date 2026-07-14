@@ -41,7 +41,7 @@ end
 local savePending = {} -- [Player] = true while a debounced NAME save is scheduled
 local skinSavePending = {} -- [Player] = true while a debounced SKIN save is scheduled
 local colorSavePending = {} -- [Player] = true while a debounced COLOR save is scheduled
-local accSavePending = {} -- [Player] = true while a debounced ACCESSORY save is scheduled
+local overlaysSavePending = {} -- [Player] = true while a debounced OVERLAYS save is scheduled
 
 -- Clamp length and strip control characters / leading-trailing spaces. Returns
 -- nil for an empty result.
@@ -106,21 +106,21 @@ local function saveColorNow(player, colorIdx: number)
 	end
 end
 
-local function saveAccessoryNow(player, accId: number)
+local function saveOverlaysNow(player, overlays: { number })
 	if not store then
 		return
 	end
 	local ok, err = pcall(function()
-		store:SetAsync("acc_" .. player.UserId, accId)
+		store:SetAsync("overlays_" .. player.UserId, overlays)
 	end)
 	if not ok then
-		warn("[Agar] accessory save failed:", err)
+		warn("[Agar] overlays save failed:", err)
 	end
 end
 
 function Names.onPlayerAdded(player)
 	task.spawn(function()
-		local savedName, savedSkin, savedColor, savedAccessory = nil, nil, nil, nil
+		local savedName, savedSkin, savedColor, savedOverlays = nil, nil, nil, nil
 		if store then
 			local ok, result = pcall(function()
 				return store:GetAsync("name_" .. player.UserId)
@@ -141,10 +141,10 @@ function Names.onPlayerAdded(player)
 				savedColor = result3
 			end
 			local ok4, result4 = pcall(function()
-				return store:GetAsync("acc_" .. player.UserId)
+				return store:GetAsync("overlays_" .. player.UserId)
 			end)
-			if ok4 and typeof(result4) == "number" then
-				savedAccessory = result4
+			if ok4 and typeof(result4) == "table" then
+				savedOverlays = result4
 			end
 		end
 		local info = World.players[player]
@@ -156,16 +156,20 @@ function Names.onPlayerAdded(player)
 			info.name = savedName
 			changed = true
 		end
-		if savedSkin and savedSkin ~= 0 then
-			info.skinId = savedSkin -- restore the equipped skin (negative = avatar) from last session
+		if savedSkin and savedSkin > 0 then
+			info.skinId = savedSkin -- restore the BASE skin (positive only; avatar is an overlay now)
 			changed = true
 		end
 		if savedColor and savedColor >= 1 and savedColor <= #Config.Palette then
 			info.colorIdx = savedColor -- restore the chosen cell colour
 			changed = true
 		end
-		if savedAccessory and savedAccessory ~= 0 then
-			info.accessoryId = savedAccessory -- restore the equipped accessory
+		if savedOverlays then
+			for _, id in savedOverlays do
+				if typeof(id) == "number" then
+					info.overlays[id] = true -- restore worn layers (accessories + avatar)
+				end
+			end
 			changed = true
 		end
 		if changed then
@@ -210,18 +214,18 @@ function Names.saveColor(player, colorIdx: number)
 	end)
 end
 
--- Persist the equipped accessory (debounced). Called from Network on setaccessory.
-function Names.saveAccessory(player, accId: number)
-	if not store or accSavePending[player] then
+-- Persist the worn overlay set (debounced). Called from Network on set(accessory|avatar).
+function Names.saveOverlays(player)
+	if not store or overlaysSavePending[player] then
 		return
 	end
-	accSavePending[player] = true
+	overlaysSavePending[player] = true
 	task.delay(SAVE_DEBOUNCE, function()
-		if accSavePending[player] then
-			accSavePending[player] = nil
+		if overlaysSavePending[player] then
+			overlaysSavePending[player] = nil
 			local info = World.players[player]
 			if info then
-				saveAccessoryNow(player, info.accessoryId)
+				saveOverlaysNow(player, World.overlaysArray(info))
 			end
 		end
 	end)
@@ -279,10 +283,10 @@ function Names.onPlayerRemoving(player)
 			saveColorNow(player, info.colorIdx)
 		end
 	end
-	if accSavePending[player] then
-		accSavePending[player] = nil
+	if overlaysSavePending[player] then
+		overlaysSavePending[player] = nil
 		if info then
-			saveAccessoryNow(player, info.accessoryId)
+			saveOverlaysNow(player, World.overlaysArray(info))
 		end
 	end
 end

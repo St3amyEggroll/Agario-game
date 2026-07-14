@@ -284,8 +284,8 @@ function World.addPlayer(player)
 		slot = findFreeSlot(),
 		name = player.DisplayName,
 		colorIdx = math.random(#Config.Palette),
-		skinId = 0, -- 0 = no skin (plain colored circle); else an image/decal asset id
-		accessoryId = 0, -- 0 = none; else an image/decal asset id layered over the cell
+		skinId = 0, -- BASE layer: 0 = plain colored circle; positive = image/decal skin
+		overlays = {}, -- SET {[id]=true} of layers over the skin: +id = accessory, -id = avatar(UserId)
 		coins = 0, -- currency collected from gold coins
 		xp = 0, -- lifetime XP (from consumed food mass); drives level, saved across sessions
 		xpSent = -1, -- last XP value pushed to this client (avoids re-sending unchanged XP)
@@ -329,7 +329,7 @@ function World.removePlayer(player)
 		-- flag the slot as a ghost in the roster: KEEP the dead player's colour AND
 		-- skin, mark it (g) so clients render the leftovers faded (transparent skin)
 		-- + nameless. Stored so late joiners get it in the full sync.
-		local entry = { n = info.name, c = info.colorIdx, k = info.skinId, a = info.accessoryId, g = true }
+		local entry = { n = info.name, c = info.colorIdx, k = info.skinId, a = World.overlaysArray(info), g = true }
 		World.ghostRoster[info.slot] = entry
 		Remotes.Roster:FireAllClients("update", info.slot, entry)
 	else
@@ -377,11 +377,20 @@ function World.safeSpawnPos(): (number, number)
 	return World.randomPos(150)
 end
 
+-- Flatten the overlay SET into an array of ids for the wire/roster.
+function World.overlaysArray(info): { number }
+	local out = {}
+	for id in info.overlays do
+		table.insert(out, id)
+	end
+	return out
+end
+
 function World.broadcastRosterUpdate(info)
 	Remotes.Roster:FireAllClients(
 		"update",
 		info.slot,
-		{ n = info.name, c = info.colorIdx, k = info.skinId, a = info.accessoryId }
+		{ n = info.name, c = info.colorIdx, k = info.skinId, a = World.overlaysArray(info) }
 	)
 end
 

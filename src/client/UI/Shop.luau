@@ -51,17 +51,25 @@ local function currentColor(): number
 	return entry and entry.c or 0
 end
 
-local function currentAccessory(): number
-	return WorldState.accessoryForSlot(WorldState.mySlot or -1)
+local function overlayKey(): string
+	return table.concat(WorldState.overlaysForSlot(WorldState.mySlot or -1), ",")
 end
 
--- Is this card the look currently equipped? A colour only counts as equipped
--- when no skin is on (a skin covers the plain colour).
+-- Is this card the look currently equipped? Colour counts only when no skin is on;
+-- overlays (accessories/avatar) count if the id is in the worn set (None never does).
 local function isActive(card): boolean
 	if card.matchKind == "color" then
 		return currentSkin() == 0 and currentColor() == card.matchId
-	elseif card.matchKind == "accessory" then
-		return currentAccessory() == card.matchId
+	elseif card.matchKind == "overlay" then
+		if card.matchId == 0 then
+			return false
+		end
+		for _, id in WorldState.overlaysForSlot(WorldState.mySlot or -1) do
+			if id == card.matchId then
+				return true
+			end
+		end
+		return false
 	end
 	return currentSkin() == card.matchId
 end
@@ -160,12 +168,23 @@ local function build()
 	end
 	built = true
 
-	-- AVATAR: your Roblox avatar (headshot reflects your current character)
+	-- AVATAR: an overlay layer (over the skin) of your Roblox avatar. None clears
+	-- ALL worn layers. Toggle on/off (multiple layers allowed).
+	makeCard({
+		category = "avatar",
+		name = "None",
+		swatchColor = Theme.Panel2Color,
+		matchKind = "overlay",
+		matchId = 0,
+		onEquip = function()
+			equipAccessory(0)
+		end,
+	})
 	makeCard({
 		category = "avatar",
 		name = "My Avatar",
 		thumb = Skins.thumb(-Players.LocalPlayer.UserId),
-		matchKind = "skin",
+		matchKind = "overlay",
 		matchId = -Players.LocalPlayer.UserId,
 		onEquip = equipAvatar,
 	})
@@ -200,12 +219,13 @@ local function build()
 		})
 	end
 
-	-- ACCESSORIES: a "None" card + one per catalog accessory (layered over the cell)
+	-- ACCESSORIES: a "None" (clears all layers) + one per catalog accessory. Each
+	-- toggles on/off; you can wear several at once (up to Config.MaxOverlays).
 	makeCard({
 		category = "accessory",
 		name = "None",
 		swatchColor = Theme.Panel2Color,
-		matchKind = "accessory",
+		matchKind = "overlay",
 		matchId = 0,
 		onEquip = function()
 			equipAccessory(0)
@@ -216,7 +236,7 @@ local function build()
 			category = "accessory",
 			name = acc.name,
 			thumb = Accessories.thumb(acc.id),
-			matchKind = "accessory",
+			matchKind = "overlay",
 			matchId = acc.id,
 			onEquip = function()
 				equipAccessory(acc.id)
@@ -240,7 +260,12 @@ function Shop.refreshButtons()
 		if card.level > 0 and lvl < card.level then
 			txt, col = "\u{1F512} Lv " .. card.level, Theme.MutedText
 		elseif isActive(card) then
-			txt, col = "Equipped", Theme.Green
+			-- overlays toggle, so an active one shows "Unequip"; base looks show "Equipped"
+			if card.matchKind == "overlay" then
+				txt, col = "Unequip", Theme.Danger
+			else
+				txt, col = "Equipped", Theme.Green
+			end
 		else
 			txt, col = "Equip", Theme.TextColor
 		end
@@ -406,14 +431,14 @@ end
 
 -- Keep buttons live while open: refresh only when the level / equipped look
 -- actually changes (cheap - no per-frame work otherwise).
-local lastLevel, lastSkin, lastColor, lastAcc = -1, math.huge, -1, math.huge
+local lastLevel, lastSkin, lastColor, lastOKey = -1, math.huge, -1, "\0"
 function Shop.update(_dt: number)
 	if not panel.Visible or not built then
 		return
 	end
-	local lvl, skin, color, acc = currentLevel(), currentSkin(), currentColor(), currentAccessory()
-	if lvl ~= lastLevel or skin ~= lastSkin or color ~= lastColor or acc ~= lastAcc then
-		lastLevel, lastSkin, lastColor, lastAcc = lvl, skin, color, acc
+	local lvl, skin, color, okey = currentLevel(), currentSkin(), currentColor(), overlayKey()
+	if lvl ~= lastLevel or skin ~= lastSkin or color ~= lastColor or okey ~= lastOKey then
+		lastLevel, lastSkin, lastColor, lastOKey = lvl, skin, color, okey
 		Shop.refreshButtons()
 	end
 end

@@ -355,10 +355,10 @@ function WorldState.skinForSlot(slot: number): number
 	return (entry and entry.k) or 0
 end
 
--- Accessory image asset id for a slot (0 / nil = none).
-function WorldState.accessoryForSlot(slot: number): number
+-- Worn overlay layers for a slot: an array of ids (+id = accessory, -id = avatar).
+function WorldState.overlaysForSlot(slot: number): { number }
 	local entry = WorldState.roster[slot]
-	return (entry and entry.a) or 0
+	return (entry and entry.a) or {}
 end
 
 -- True if the slot belongs to a disconnected player's ghost cells (faded,

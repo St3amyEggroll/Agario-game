@@ -141,6 +141,24 @@ local function buildPools()
 		skinCorner.CornerRadius = UDim.new(0.5, 0)
 		skinCorner.Parent = skin
 		skin.Parent = f
+		-- overlay layers (accessories + avatar) over the skin, created BEFORE the
+		-- labels so name/mass text stays on top. Each round-clips (for the avatar).
+		local overlays = {}
+		for _ = 1, Config.MaxOverlays do
+			local ov = Instance.new("ImageLabel")
+			ov.AnchorPoint = Vector2.new(0.5, 0.5)
+			ov.Position = UDim2.fromScale(0.5, 0.5)
+			ov.Size = UDim2.fromScale(1.5, 1.5)
+			ov.BackgroundTransparency = 1
+			ov.ScaleType = Enum.ScaleType.Fit
+			ov.Visible = false
+			ov.ZIndex = 11
+			local oc = Instance.new("UICorner")
+			oc.CornerRadius = UDim.new(0.5, 0)
+			oc.Parent = ov
+			ov.Parent = f
+			overlays[#overlays + 1] = ov
+		end
 		local nameLabel = Instance.new("TextLabel")
 		nameLabel.AnchorPoint = Vector2.new(0.5, 0.5)
 		nameLabel.Position = UDim2.fromScale(0.5, 0.4)
@@ -158,21 +176,10 @@ local function buildPools()
 		massLabel.Position = UDim2.fromScale(0.5, 0.66)
 		massLabel.Size = UDim2.fromScale(1.2, 0.22)
 		massLabel.Parent = f
-		-- accessory: an image layered OVER the cell, sized a bit larger so hats/ears
-		-- overhang the edges. Hidden until the player has one.
-		local accessory = Instance.new("ImageLabel")
-		accessory.AnchorPoint = Vector2.new(0.5, 0.5)
-		accessory.Position = UDim2.fromScale(0.5, 0.5)
-		accessory.Size = UDim2.fromScale(1.5, 1.5)
-		accessory.BackgroundTransparency = 1
-		accessory.ScaleType = Enum.ScaleType.Fit
-		accessory.Visible = false
-		accessory.ZIndex = 11
-		accessory.Parent = f
 		return {
 			frame = f,
 			skin = skin,
-			accessory = accessory,
+			overlays = overlays,
 			stroke = stroke,
 			nameLabel = nameLabel,
 			massLabel = massLabel,
@@ -181,7 +188,7 @@ local function buildPools()
 			lastNameSize = -1,
 			lastMassSize = -1,
 			lastSkin = -1,
-			lastAccessory = -1,
+			lastOverlayKey = "\0",
 			lastZ = -1,
 			lastGhost = false,
 			slot = -1,
@@ -490,18 +497,32 @@ function Renderer.render(cam)
 					w.skin.Visible = false
 				end
 			end
-			-- accessory: an image layered over the cell (ears / hat / halo / ...)
-			local accId = WorldState.accessoryForSlot(c.slot)
-			if w.lastAccessory ~= accId then
-				w.lastAccessory = accId
-				if accId ~= 0 then
-					w.accessory.Image = Accessories.thumb(accId)
-					local ay, ascale = Accessories.placement(accId)
-					w.accessory.Position = UDim2.fromScale(0.5, ay)
-					w.accessory.Size = UDim2.fromScale(ascale, ascale)
-					w.accessory.Visible = true
-				else
-					w.accessory.Visible = false
+			-- overlay layers (accessories + avatar) over the skin
+			local overlayIds = WorldState.overlaysForSlot(c.slot)
+			local okey = table.concat(overlayIds, ",")
+			if w.lastOverlayKey ~= okey then
+				w.lastOverlayKey = okey
+				local sorted = table.clone(overlayIds)
+				table.sort(sorted) -- avatar (negative) first so accessories draw over it
+				for i, ov in w.overlays do
+					local id = sorted[i]
+					if id then
+						if id < 0 then
+							ov.Image = Skins.thumb(id) -- avatar headshot, fills the cell, round-clipped
+							ov.ScaleType = Enum.ScaleType.Crop
+							ov.Position = UDim2.fromScale(0.5, 0.5)
+							ov.Size = UDim2.fromScale(1, 1)
+						else
+							ov.Image = Accessories.thumb(id)
+							ov.ScaleType = Enum.ScaleType.Fit
+							local ay, ascale = Accessories.placement(id)
+							ov.Position = UDim2.fromScale(0.5, ay)
+							ov.Size = UDim2.fromScale(ascale, ascale)
+						end
+						ov.Visible = true
+					else
+						ov.Visible = false
+					end
 				end
 			end
 			place(w, ox + c.x * scale, oy + c.y * scale, math.max(pixels, 2))
@@ -519,7 +540,9 @@ function Renderer.render(cam)
 				w.frame.BackgroundTransparency = t
 				w.stroke.Transparency = t
 				w.skin.ImageTransparency = t
-				w.accessory.ImageTransparency = t
+				for _, ov in w.overlays do
+					ov.ImageTransparency = t
+				end
 			end
 
 			-- labels only when big enough on screen AND not a dead cell (dead cells
@@ -602,8 +625,10 @@ function Renderer.render(cam)
 			if overlay then
 				overlay.ZIndex = z
 			end
-			if w.accessory then
-				w.accessory.ZIndex = z -- drawn over the skin (later sibling wins the tie)
+			if w.overlays then
+				for _, ov in w.overlays do
+					ov.ZIndex = z
+				end
 			end
 			if w.nameLabel then
 				w.nameLabel.ZIndex = z

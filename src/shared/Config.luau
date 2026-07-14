@@ -50,6 +50,7 @@ local Config = {
 
 	------------------------------------------------------------------ Split / merge
 	MaxCells = 32, -- max simultaneous cells per player
+	MaxOverlays = 6, -- max cosmetic layers worn at once (accessories + avatar), over the base skin
 	MinCellMass = 100, -- a cell can never be smaller than this (split/pop keep every piece >= this)
 	SplitMinMass = 200, -- a cell needs at least this much mass to split (so both halves stay >= MinCellMass)
 	-- Split launch: a piece leaves at max(SplitImpulse, r * SplitImpulsePerRadius)

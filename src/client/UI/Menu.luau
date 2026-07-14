@@ -9,6 +9,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared.Config)
 local Remotes = require(Shared.Remotes)
 local Skins = require(Shared.Skins)
 local Accessories = require(Shared.Accessories)
@@ -21,7 +22,7 @@ local overlay: Frame
 local nameBox: TextBox
 local skinPreview: Frame
 local skinImage: ImageLabel
-local previewAccessory: ImageLabel
+local previewOverlays: { ImageLabel } = {}
 local previewName: TextLabel
 local deathLabel: TextLabel
 local onShopToggle: (() -> ())? = nil
@@ -29,7 +30,7 @@ local onSettings: (() -> ())? = nil
 local onHiscores: (() -> ())? = nil
 local lastSkin = -1
 local lastColor: Color3? = nil
-local lastAccessory = -1
+local lastOverlayKey = ""
 
 local function commas(n: number): string
 	local out = tostring(n):reverse():gsub("(%d%d%d)", "%1,")
@@ -111,16 +112,22 @@ function Menu.init(parent: Instance, shopToggle: () -> (), settingsToggle: () ->
 	Theme.capText(previewName, 22)
 	previewName.Parent = skinPreview
 
-	-- accessory layered over the skin in the preview (matches your in-game cell)
-	previewAccessory = Instance.new("ImageLabel")
-	previewAccessory.AnchorPoint = Vector2.new(0.5, 0.5)
-	previewAccessory.Position = UDim2.fromScale(0.5, 0.5)
-	previewAccessory.Size = UDim2.fromScale(1.5, 1.5)
-	previewAccessory.BackgroundTransparency = 1
-	previewAccessory.ScaleType = Enum.ScaleType.Fit
-	previewAccessory.Visible = false
-	previewAccessory.ZIndex = 4
-	previewAccessory.Parent = skinPreview
+	-- overlay layers over the skin in the preview (accessories + avatar)
+	for _ = 1, Config.MaxOverlays do
+		local ov = Instance.new("ImageLabel")
+		ov.AnchorPoint = Vector2.new(0.5, 0.5)
+		ov.Position = UDim2.fromScale(0.5, 0.5)
+		ov.Size = UDim2.fromScale(1.5, 1.5)
+		ov.BackgroundTransparency = 1
+		ov.ScaleType = Enum.ScaleType.Fit
+		ov.Visible = false
+		ov.ZIndex = 4
+		local oc = Instance.new("UICorner")
+		oc.CornerRadius = UDim.new(0.5, 0)
+		oc.Parent = ov
+		ov.Parent = skinPreview
+		previewOverlays[#previewOverlays + 1] = ov
+	end
 
 	-- nickname
 	nameBox = Instance.new("TextBox")
@@ -235,16 +242,32 @@ function Menu.update(_dt: number)
 			skinPreview.BackgroundColor3 = color
 		end
 	end
-	-- accessory layered over the preview (live when you equip one)
-	local accId = WorldState.accessoryForSlot(mySlot)
-	if accId ~= lastAccessory then
-		lastAccessory = accId
-		previewAccessory.Visible = accId ~= 0
-		if accId ~= 0 then
-			previewAccessory.Image = Accessories.thumb(accId)
-			local ay, ascale = Accessories.placement(accId)
-			previewAccessory.Position = UDim2.fromScale(0.5, ay)
-			previewAccessory.Size = UDim2.fromScale(ascale, ascale)
+	-- overlay layers over the preview (accessories + avatar), live on equip
+	local overlayIds = WorldState.overlaysForSlot(mySlot)
+	local okey = table.concat(overlayIds, ",")
+	if okey ~= lastOverlayKey then
+		lastOverlayKey = okey
+		local sorted = table.clone(overlayIds)
+		table.sort(sorted)
+		for i, ov in previewOverlays do
+			local id = sorted[i]
+			if id then
+				if id < 0 then
+					ov.Image = Skins.thumb(id)
+					ov.ScaleType = Enum.ScaleType.Crop
+					ov.Position = UDim2.fromScale(0.5, 0.5)
+					ov.Size = UDim2.fromScale(1, 1)
+				else
+					ov.Image = Accessories.thumb(id)
+					ov.ScaleType = Enum.ScaleType.Fit
+					local ay, ascale = Accessories.placement(id)
+					ov.Position = UDim2.fromScale(0.5, ay)
+					ov.Size = UDim2.fromScale(ascale, ascale)
+				end
+				ov.Visible = true
+			else
+				ov.Visible = false
+			end
 		end
 	end
 end

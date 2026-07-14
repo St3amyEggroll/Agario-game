@@ -115,12 +115,11 @@ local function onAction(player, action, arg)
 		end
 		Names.saveSkin(player, arg) -- persist the equipped skin across sessions
 	elseif action == "setavatar" then
-		-- "your avatar" free skin: encode -UserId so ANY client renders this
-		-- player's Roblox avatar headshot (Skins.thumb handles negatives). The
-		-- server sets it from the real UserId, so it can't be spoofed.
-		local skinId = -player.UserId
-		Names.saveSkin(player, skinId)
-		Simulation.enqueue(player, "setskin", skinId)
+		-- toggle your avatar as an OVERLAY layer (over the skin). Encoded as
+		-- -UserId so any client renders this player's headshot; server-set from the
+		-- real UserId so it can't be spoofed.
+		Simulation.enqueue(player, "setaccessory", -player.UserId)
+		Names.saveOverlays(player)
 		return
 	elseif action == "setcolor" then
 		-- pick your cell colour (palette index). Clears any skin so the plain
@@ -137,8 +136,7 @@ local function onAction(player, action, arg)
 		Simulation.enqueue(player, "setcolor", arg)
 		return
 	elseif action == "setaccessory" then
-		-- an image/decal id layered over the cell (0 clears it). Any non-negative
-		-- id is allowed (custom art), same as skins.
+		-- toggle an accessory overlay id (0 clears ALL overlays). Positive id.
 		if not isFiniteNumber(arg) then
 			return
 		end
@@ -146,8 +144,8 @@ local function onAction(player, action, arg)
 		if arg < 0 or arg > 1e16 then
 			return
 		end
-		Names.saveAccessory(player, arg)
 		Simulation.enqueue(player, "setaccessory", arg)
+		Names.saveOverlays(player)
 		return
 	elseif action == "debugmass" then
 		-- testing helper: only a direction is accepted (the server owns the
@@ -170,7 +168,7 @@ local function sendFullRoster(player)
 	-- serialization reliably
 	local roster = {}
 	for slot, info in World.slotToInfo do
-		roster[tostring(slot)] = { n = info.name, c = info.colorIdx, k = info.skinId, a = info.accessoryId }
+		roster[tostring(slot)] = { n = info.name, c = info.colorIdx, k = info.skinId, a = World.overlaysArray(info) }
 	end
 	-- include lingering ghost slots so a late joiner renders them faded too
 	for slot, entry in World.ghostRoster do
