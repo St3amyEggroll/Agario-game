@@ -77,6 +77,13 @@ function Minimap.init(parent: Instance)
 	end
 end
 
+-- Match the minimap surface to the chosen map background.
+function Minimap.setBackground(base: Color3)
+	if field then
+		field.BackgroundColor3 = base
+	end
+end
+
 function Minimap.update(dt: number)
 	acc += dt
 	if acc < 0.1 then

@@ -11,6 +11,20 @@ local Config = require(Shared.Config)
 local Theme = require(script.Parent.Theme)
 local Input = require(script.Parent.Parent.Input)
 local Sounds = require(script.Parent.Parent.Sounds)
+local Renderer = require(script.Parent.Parent.Renderer)
+local Minimap = require(script.Parent.Minimap)
+
+-- map background presets (first is the default blackish)
+local BG_PRESETS = {
+	Color3.fromRGB(18, 20, 26), -- default
+	Color3.fromRGB(6, 7, 10), -- near black
+	Color3.fromRGB(12, 18, 34), -- navy
+	Color3.fromRGB(12, 26, 20), -- forest
+	Color3.fromRGB(26, 15, 30), -- plum
+	Color3.fromRGB(30, 18, 18), -- maroon
+	Color3.fromRGB(20, 24, 30), -- slate
+	Color3.fromRGB(44, 48, 56), -- light gray
+}
 
 -- fixed display order + friendly names
 local ROWS = {
@@ -87,6 +101,28 @@ function Settings.init(parent: Instance)
 	sfxBtn.Text = on and "On" or "Off"
 	sfxBtn.TextColor3 = on and Theme.Green or Theme.MutedText
 	Theme.capText(sfxBtn, 16)
+
+	-- Map Background: a row of colour swatches (applies to the world + minimap)
+	local bgLabel = Theme.label(panel, "Map Background", UDim2.fromScale(0.05, 0.86), UDim2.fromScale(0.5, 0.045))
+	bgLabel.TextXAlignment = Enum.TextXAlignment.Left
+	Theme.capText(bgLabel, 16)
+	for i, color in BG_PRESETS do
+		local sw = Instance.new("TextButton")
+		sw.Position = UDim2.fromScale(0.05 + (i - 1) * 0.117, 0.915)
+		sw.Size = UDim2.fromScale(0.1, 0.05)
+		sw.BackgroundColor3 = color
+		sw.BorderSizePixel = 0
+		sw.Text = ""
+		sw.AutoButtonColor = true
+		Theme.round(sw, 6)
+		Theme.stroke(sw)
+		sw.Parent = panel
+		sw.Activated:Connect(function()
+			Sounds.play("click")
+			Renderer.setBackground(color)
+			Minimap.setBackground(color)
+		end)
+	end
 
 	-- reserved-for-future note: defaults come from Config.DefaultKeybinds
 	local _ = Config

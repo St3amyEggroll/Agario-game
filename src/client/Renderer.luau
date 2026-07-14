@@ -581,4 +581,20 @@ function Renderer.render(cam)
 	end
 end
 
+-- Player-customizable map background: the backdrop uses `base`, the map surface
+-- a slightly lighter shade so it still reads as a distinct rectangle. (A local,
+-- per-player visual - not synced to anyone else.)
+function Renderer.mapSurface(base: Color3): Color3
+	return Color3.new(math.min(base.R + 0.04, 1), math.min(base.G + 0.04, 1), math.min(base.B + 0.04, 1))
+end
+
+function Renderer.setBackground(base: Color3)
+	if backdrop then
+		backdrop.BackgroundColor3 = base
+	end
+	if mapRect then
+		mapRect.BackgroundColor3 = Renderer.mapSurface(base)
+	end
+end
+
 return Renderer
