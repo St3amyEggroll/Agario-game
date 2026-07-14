@@ -27,7 +27,7 @@ function Pause.init(parent: Instance, settingsToggle: () -> (), menuOpen: () -> 
 	hamb.Visible = false
 	Theme.capText(hamb, 20)
 
-	popup = Theme.panel(parent, UDim2.fromScale(0.008, 0.11), UDim2.fromScale(0.16, 0.42))
+	popup = Theme.panel(parent, UDim2.fromScale(0.008, 0.11), UDim2.fromScale(0.16, 0.36))
 	popup.Visible = false
 	local pad = Instance.new("UIPadding")
 	pad.PaddingTop = UDim.new(0.04, 0)
@@ -44,9 +44,9 @@ function Pause.init(parent: Instance, settingsToggle: () -> (), menuOpen: () -> 
 	local function item(order: number, text: string, color: Color3?, onClick: () -> ())
 		local b
 		if color then
-			b = Theme.outlineButton(popup, text, UDim2.new(), UDim2.fromScale(1, 0.14), color, onClick)
+			b = Theme.outlineButton(popup, text, UDim2.new(), UDim2.fromScale(1, 0.16), color, onClick)
 		else
-			b = Theme.button(popup, text, UDim2.new(), UDim2.fromScale(1, 0.14), onClick)
+			b = Theme.button(popup, text, UDim2.new(), UDim2.fromScale(1, 0.16), onClick)
 		end
 		b.LayoutOrder = order
 		Theme.capText(b, 15)
@@ -57,8 +57,8 @@ function Pause.init(parent: Instance, settingsToggle: () -> (), menuOpen: () -> 
 		Remotes.Action:FireServer("respawn")
 		close()
 	end)
-	item(3, "\u{1F3A8} Menu", nil, function()
-		menuOpen() -- open the play card over the game to customize (change skin, etc.)
+	item(3, "View Menu", nil, function()
+		menuOpen() -- open the play card OVER the game to customize (change skin, etc.); never respawns
 		close()
 	end)
 	item(4, "\u{1F3C6} Scores", nil, function()
@@ -67,10 +67,6 @@ function Pause.init(parent: Instance, settingsToggle: () -> (), menuOpen: () -> 
 	end)
 	item(5, "\u{2699} Settings", nil, function()
 		settingsToggle()
-		close()
-	end)
-	item(6, "Leave to menu", Theme.Danger, function()
-		Remotes.Action:FireServer("tomenu")
 		close()
 	end)
 end

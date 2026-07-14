@@ -219,19 +219,19 @@ local function onPlayerAdded(player)
 	if player.Character then
 		player.Character:Destroy()
 	end
-	-- Roblox native player list: Level + Mass columns (updated each leaderboard
-	-- tick in Snapshots.sendLeaderboard). Level is added first so it sits in the
-	-- leftmost column.
+	-- Roblox native player list: Mass + Level columns (updated each leaderboard
+	-- tick in Snapshots.sendLeaderboard). The native list sorts players by the
+	-- FIRST numeric leaderstat, so Mass is added first (and kept an IntValue) to
+	-- rank everyone by current size - biggest on top.
 	local ls = Instance.new("Folder")
 	ls.Name = "leaderstats"
+	local mass = Instance.new("IntValue")
+	mass.Name = "Mass"
+	mass.Value = 0
+	mass.Parent = ls
 	local level = Instance.new("IntValue")
 	level.Name = "Level"
 	level.Parent = ls
-	-- Mass is a StringValue so the native list can show abbreviated "1.2K"/"3.4M"
-	local mass = Instance.new("StringValue")
-	mass.Name = "Mass"
-	mass.Value = "0"
-	mass.Parent = ls
 	ls.Parent = player
 
 	local info = World.addPlayer(player)

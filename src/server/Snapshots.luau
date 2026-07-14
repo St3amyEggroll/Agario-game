@@ -20,7 +20,6 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Codec = require(Shared.SnapshotCodec)
 local Remotes = require(Shared.Remotes)
 local LevelCurve = require(Shared.Levels)
-local Util = require(Shared.Util)
 local World = require(script.Parent.World)
 local Levels = require(script.Parent.Levels)
 
@@ -85,7 +84,7 @@ function Snapshots.sendLeaderboard()
 		if ls then
 			local massValue = ls:FindFirstChild("Mass")
 			if massValue then
-				massValue.Value = Util.abbrevMass(mass) -- abbreviated "1.2K" / "3.4M"
+				massValue.Value = mass -- raw number: the native list sorts by this (biggest on top)
 			end
 			local levelValue = ls:FindFirstChild("Level")
 			if levelValue then

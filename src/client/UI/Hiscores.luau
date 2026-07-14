@@ -1,7 +1,9 @@
 --[[
 	Hiscores - a right-side pop-up panel (Agma-style) showing your stats (Level,
-	Coins) and the current top-10 players by mass, from the leaderboard the server
-	already broadcasts. Toggled from the play card; pops in with a bounce.
+	Coins) and the top players. It prefers the persisted ALL-TIME records the
+	server broadcasts, and falls back to the LIVE top players by current mass when
+	there are no records yet (fresh universe / Studio without API access), so the
+	panel is never blank. Toggled from the play card; pops in with a bounce.
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -16,6 +18,7 @@ local Hiscores = {}
 local ROWS = 10
 local panel: Frame
 local statLine: TextLabel
+local hdr: TextLabel
 local rows = {}
 local acc = 0
 
@@ -38,7 +41,7 @@ function Hiscores.init(parent: Instance)
 	statLine.TextXAlignment = Enum.TextXAlignment.Left
 	Theme.capText(statLine, 14)
 
-	local hdr = Theme.caption(panel, "All-time records", UDim2.fromScale(0.06, 0.15), UDim2.fromScale(0.88, 0.04))
+	hdr = Theme.caption(panel, "All-time records", UDim2.fromScale(0.06, 0.15), UDim2.fromScale(0.88, 0.04))
 	hdr.TextXAlignment = Enum.TextXAlignment.Left
 	Theme.capText(hdr, 11)
 
@@ -81,7 +84,18 @@ function Hiscores.refresh()
 	local level = LevelCurve.levelForXp(WorldState.xp or 0)
 	statLine.Text = ("Lv %d   -   %s Gold"):format(level, Util.abbrevMass(WorldState.coins or 0))
 
+	-- Prefer the persisted ALL-TIME records; if there are none yet (a fresh
+	-- universe, or Studio without API access), fall back to the LIVE top players by
+	-- current mass so the panel always shows the biggest players. Both entry shapes
+	-- carry .n and .m, so the rows below render either one.
 	local board = WorldState.records or {}
+	if #board == 0 then
+		board = WorldState.leaderboard or {}
+		hdr.Text = string.upper("Top players now")
+	else
+		hdr.Text = string.upper("All-time records")
+	end
+
 	local myEntry = WorldState.roster[WorldState.mySlot or -1]
 	local myName = myEntry and myEntry.n
 	for i = 1, ROWS do
