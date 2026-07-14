@@ -118,8 +118,8 @@ function Names.onPlayerAdded(player)
 			info.name = savedName
 			changed = true
 		end
-		if savedSkin and savedSkin > 0 then
-			info.skinId = savedSkin -- restore the equipped skin from last session
+		if savedSkin and savedSkin ~= 0 then
+			info.skinId = savedSkin -- restore the equipped skin (negative = avatar) from last session
 			changed = true
 		end
 		if changed then

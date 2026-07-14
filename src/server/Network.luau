@@ -35,6 +35,7 @@ local ACTION_COOLDOWN: { [string]: number } = {
 	play = 0.5,
 	spectate = 0.25,
 	setskin = 0.2,
+	setavatar = 0.2,
 	setname = 0.5,
 	debugmass = 0.05,
 }
@@ -100,6 +101,14 @@ local function onAction(player, action, arg)
 			return
 		end
 		Names.saveSkin(player, arg) -- persist the equipped skin across sessions
+	elseif action == "setavatar" then
+		-- "your avatar" free skin: encode -UserId so ANY client renders this
+		-- player's Roblox avatar headshot (Skins.thumb handles negatives). The
+		-- server sets it from the real UserId, so it can't be spoofed.
+		local skinId = -player.UserId
+		Names.saveSkin(player, skinId)
+		Simulation.enqueue(player, "setskin", skinId)
+		return
 	elseif action == "debugmass" then
 		-- testing helper: only a direction is accepted (the server owns the
 		-- step size), and only while Config.Debug is on

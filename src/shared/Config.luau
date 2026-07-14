@@ -218,7 +218,7 @@ local Config = {
 		Color3.fromRGB(200, 235, 130),
 	},
 	VirusColor = Color3.fromRGB(70, 200, 80),
-	ExperimentalColor = Color3.fromRGB(70, 190, 170),
+	ExperimentalColor = Color3.fromRGB(255, 90, 190), -- pink mothercell (agma-style)
 	VirusImageId = "rbxassetid://105917001657812", -- virus sprite (ImageLabel)
 
 	------------------------------------------------------------------ Debug / testing

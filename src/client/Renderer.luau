@@ -418,13 +418,16 @@ function Renderer.render(cam)
 			end
 			if w.kind ~= v.kind then
 				w.kind = v.kind
-				-- experimentals get a teal tint (sprite + fallback disc);
-				-- regular viruses show the image untinted over a green disc
+				-- Experimental = a solid PINK mothercell. The virus sprite has green
+				-- baked in and can't be tinted pink (ImageColor3 only multiplies), so
+				-- for exps we HIDE the sprite and show the pink disc with a thicker
+				-- darker-pink ring. Regular viruses keep the green spiky sprite.
 				local isExp = v.kind == 2
-				w.image.ImageColor3 = isExp and Color3.fromRGB(150, 255, 225) or Color3.new(1, 1, 1)
+				w.image.Visible = not isExp
 				local discColor = isExp and Config.ExperimentalColor or Config.VirusColor
 				w.disc.BackgroundColor3 = discColor
 				w.stroke.Color = darker(discColor)
+				w.stroke.Thickness = isExp and 4 or 2
 			end
 			place(w, ox + v.x * scale, oy + v.y * scale, px)
 			w.r = v.r
@@ -463,7 +466,7 @@ function Renderer.render(cam)
 			local skinId = WorldState.skinForSlot(c.slot)
 			if w.lastSkin ~= skinId then
 				w.lastSkin = skinId
-				if skinId > 0 then
+				if skinId ~= 0 then -- 0 = no skin; negative = the player's Roblox avatar
 					w.skin.Image = Skins.thumb(skinId)
 					w.skin.Visible = true
 				else

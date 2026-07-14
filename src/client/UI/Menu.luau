@@ -186,7 +186,7 @@ function Menu.update(_dt: number)
 	local skinId = WorldState.skinForSlot(WorldState.mySlot or -1)
 	if skinId ~= lastSkin then
 		lastSkin = skinId
-		if skinId > 0 then
+		if skinId ~= 0 then -- 0 = no skin; negative = the player Roblox avatar
 			skinImage.Image = Skins.thumb(skinId)
 			skinImage.Visible = true
 		else

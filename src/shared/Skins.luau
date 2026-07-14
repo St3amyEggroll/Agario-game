@@ -13,8 +13,12 @@ local Skins = {}
 
 -- Build the content string the renderer/shop feed to ImageLabel.Image.
 -- rbxthumb renders decals AND images as a square thumbnail (perfect for a
--- circular cell - we just clip it round).
+-- circular cell - we just clip it round). A NEGATIVE id is the "your avatar"
+-- skin: it encodes -UserId and renders that player's Roblox avatar headshot.
 function Skins.thumb(id: number): string
+	if id < 0 then
+		return ("rbxthumb://type=AvatarHeadShot&id=%d&w=150&h=150"):format(-id)
+	end
 	return ("rbxthumb://type=Asset&id=%d&w=150&h=150"):format(id)
 end
 
