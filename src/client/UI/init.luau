@@ -13,10 +13,12 @@ local Remotes = require(ReplicatedStorage:WaitForChild("Shared").Remotes)
 local LevelCurve = require(ReplicatedStorage.Shared.Levels)
 local Config = require(ReplicatedStorage.Shared.Config)
 
--- ability id -> display name (for the use / cooldown cue toasts)
+-- ability id -> display name / kind (for the use / cooldown cue toasts)
 local ABILITY_NAME = {}
+local ABILITY_KIND = {}
 for _, a in Config.Abilities do
 	ABILITY_NAME[a.id] = a.name
+	ABILITY_KIND[a.id] = a.kind
 end
 
 local HUD = require(script.HUD)
@@ -84,10 +86,13 @@ function UI.init(playerGui: PlayerGui)
 
 	Input.onMenuToggle = Menu.toggleInGame -- the M key opens the in-game menu (customize); never kills
 
-	-- "place" ability armed: prompt the player to click the field to drop it
+	-- place/target ability armed: prompt the player where to click
 	Input.onPlaceStateChanged = function(id)
 		if id then
-			Notifications.show("Click the map to place " .. (ABILITY_NAME[id] or "it"), Theme.AccentColor)
+			local name = ABILITY_NAME[id] or "it"
+			local msg = ABILITY_KIND[id] == "target" and ("Click a player to use " .. name)
+				or ("Click the map to place " .. name)
+			Notifications.show(msg, Theme.AccentColor)
 		end
 	end
 

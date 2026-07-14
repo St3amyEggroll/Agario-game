@@ -123,10 +123,10 @@ local function makeAbilityButton(ab)
 		if WorldState.abilityCooldown(ab.id) > 0 then
 			return -- still cooling down
 		end
-		if ab.kind == "place" then
-			Input.armPlace(ab.id) -- next map click drops it
+		if ab.kind == "place" or ab.kind == "target" then
+			Input.armPlace(ab.id) -- next click drops it (place) / picks a target (target)
 		else
-			Input.useAbility(ab.id) -- "self" fires now; "target" replies "coming soon"
+			Input.useAbility(ab.id) -- "self" fires now
 		end
 	end)
 

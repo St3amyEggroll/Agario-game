@@ -33,6 +33,10 @@ local Config = {
 	-- drawn gold by the client and gives a coin on the server
 	CoinColorIndex = 255,
 	CoinColor = Color3.fromRGB(255, 205, 55),
+	-- Portals ride the same orb channel: color == PortalColorIndex draws purple
+	-- and, on touch, teleports the player instead of being eaten (Portal ability).
+	PortalColorIndex = 254,
+	PortalColor = Color3.fromRGB(170, 120, 255),
 
 	------------------------------------------------------------------ Mass / size / speed
 	RadiusPerSqrtMass = 4, -- radius = sqrt(mass) * this
@@ -241,6 +245,10 @@ local Config = {
 	SpeedAbilityMult = 2.4, -- movement speed multiplier while the Speed ability is active
 	SpeedAbilityDuration = 5, -- seconds the Speed boost lasts
 	Mass1000Amount = 1000, -- mass granted by the Mass 1000 ability
+	FreezeAbilityDuration = 3, -- seconds a FreezeFood target stays frozen
+	GoldBlockValue = 25, -- Gold paid out when a placed Gold Block is eaten
+	GoldBlockMass = 18, -- visual radius mass for a placed Gold Block
+	PortalMass = 18, -- visual radius mass for a placed Portal
 
 	------------------------------------------------------------------ Names / Chat
 	MaxNameLength = 16, -- custom names are clamped to this many characters

@@ -48,8 +48,10 @@ local ACTION_COOLDOWN: { [string]: number } = {
 	debugmass = 0.05,
 }
 
--- "place"-kind abilities that are actually implemented (others reply "coming soon")
-local PLACE_IMPL = { spike = true, spawner = true }
+-- ability ids that are actually implemented per interaction kind (others reply
+-- "coming soon"). Self-kind abilities are all implemented (handled in useability).
+local PLACE_IMPL = { spike = true, spawner = true, goldblock = true, portal = true }
+local TARGET_IMPL = { freezefood = true }
 
 local function isFiniteNumber(v): boolean
 	return typeof(v) == "number" and v == v and v ~= math.huge and v ~= -math.huge
@@ -199,7 +201,7 @@ local function onAction(player, action, arg)
 			return
 		end
 		local def = Abilities.byId[id]
-		if not def or def.kind ~= "place" then
+		if not def or (def.kind ~= "place" and def.kind ~= "target") then
 			return
 		end
 		if not isFiniteNumber(arg.x) or not isFiniteNumber(arg.y) then
@@ -207,9 +209,12 @@ local function onAction(player, action, arg)
 		end
 		local x = math.clamp(arg.x, 0, Config.MapWidth)
 		local y = math.clamp(arg.y, 0, Config.MapHeight)
-		if PLACE_IMPL[id] then
+		if def.kind == "place" and PLACE_IMPL[id] then
 			Abilities.startCooldown(player, info, id)
 			Simulation.enqueue(player, "abilityplace", { id = id, x = x, y = y })
+		elseif def.kind == "target" and TARGET_IMPL[id] then
+			Abilities.startCooldown(player, info, id)
+			Simulation.enqueue(player, "abilitytarget", { id = id, x = x, y = y })
 		else
 			Remotes.Feedback:FireClient(player, "soon", def.name)
 		end

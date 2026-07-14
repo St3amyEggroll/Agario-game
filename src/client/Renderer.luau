@@ -384,6 +384,8 @@ function Renderer.render(cam)
 				-- normal palette orb
 				if orb.color == Config.CoinColorIndex then
 					w.frame.BackgroundColor3 = Config.CoinColor
+				elseif orb.color == Config.PortalColorIndex then
+					w.frame.BackgroundColor3 = Config.PortalColor
 				else
 					w.frame.BackgroundColor3 = Config.Palette[orb.color] or Config.Palette[1]
 				end

@@ -130,6 +130,48 @@ function World.spawnCoin(x: number?, y: number?)
 	return coin
 end
 
+-- A player-placed Gold Block (ability): a coin worth more Gold, that does NOT
+-- respawn a replacement when eaten (`placed`).
+function World.spawnGoldBlock(x: number, y: number)
+	local block = {
+		id = nextOrbId(),
+		x = math.clamp(x, 10, Config.MapWidth - 10),
+		y = math.clamp(y, 10, Config.MapHeight - 10),
+		m = Config.GoldBlockMass,
+		r = Util.radiusFromMass(Config.GoldBlockMass),
+		color = Config.CoinColorIndex, -- drawn gold
+		respawns = false,
+		isCoin = true,
+		coinValue = Config.GoldBlockValue,
+		placed = true,
+	}
+	World.orbs[block.id] = block
+	World.orbHash:insert(block)
+	table.insert(World.pendingOrbSpawns, block)
+	return block
+end
+
+-- A player-placed Portal (ability): touch it to teleport across the map. Rides
+-- the orb channel with the Portal colour sentinel; `isPortal` makes it teleport
+-- instead of feed, and `placed` keeps it from decrementing the extra-orb count.
+function World.spawnPortal(x: number, y: number)
+	local portal = {
+		id = nextOrbId(),
+		x = math.clamp(x, 10, Config.MapWidth - 10),
+		y = math.clamp(y, 10, Config.MapHeight - 10),
+		m = Config.PortalMass,
+		r = Util.radiusFromMass(Config.PortalMass),
+		color = Config.PortalColorIndex, -- drawn purple
+		respawns = false,
+		isPortal = true,
+		placed = true,
+	}
+	World.orbs[portal.id] = portal
+	World.orbHash:insert(portal)
+	table.insert(World.pendingOrbSpawns, portal)
+	return portal
+end
+
 function World.removeOrb(orb)
 	World.orbs[orb.id] = nil
 	World.orbHash:remove(orb)
@@ -139,11 +181,13 @@ function World.removeOrb(orb)
 	Util.arrayRemove(World.pendingOrbSpawns, orb)
 	table.insert(World.pendingOrbRemovals, orb.id)
 	if orb.isCoin then
-		World.spawnCoin() -- keep the rare coin population stable
+		if not orb.placed then
+			World.spawnCoin() -- keep the rare coin population stable (placed Gold Blocks don't)
+		end
 	elseif orb.respawns then
 		-- keep the baseline population stable: eaten orbs pop up elsewhere
 		World.spawnOrb(nil, nil, true)
-	else
+	elseif not orb.placed then
 		World.extraOrbCount -= 1
 	end
 end
@@ -295,6 +339,7 @@ function World.addPlayer(player)
 		aimX = Config.MapWidth / 2,
 		aimY = Config.MapHeight / 2,
 		frozen = false,
+		frozenUntil = 0, -- World.now until which a FreezeFood target stays frozen
 		alive = false,
 		spectating = false,
 		autoRespawn = true, -- die -> instantly respawn instead of the death menu (Settings toggle, default on)

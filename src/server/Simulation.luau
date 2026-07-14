@@ -93,6 +93,26 @@ local function feed(info, now: number)
 	local _ = now
 end
 
+-- The other-player info whose cell the point (x,y) lands inside (nearest), for
+-- target abilities like FreezeFood. Ghost cells and your own cells are skipped.
+local function cellOwnerAt(x: number, y: number, exceptInfo)
+	local best, bestD2 = nil, math.huge
+	for _, cell in World.cells do
+		if cell.ghost then
+			continue
+		end
+		local ownerInfo = World.players[cell.player]
+		if not ownerInfo or ownerInfo == exceptInfo then
+			continue
+		end
+		local d2 = Util.dist2(x, y, cell.x, cell.y)
+		if d2 <= cell.r * cell.r and d2 < bestD2 then
+			best, bestD2 = ownerInfo, d2
+		end
+	end
+	return best
+end
+
 -- Recombine ability: instantly fuse all of a player's cells into ONE at their
 -- mass-weighted centroid (the biggest cell survives and absorbs the rest).
 local function recombineCells(info)
@@ -214,8 +234,24 @@ local function drainActions(now: number)
 					World.spawnVirus("virus", a.x, a.y)
 				elseif a.id == "spawner" then
 					World.spawnVirus("exp", a.x, a.y)
+				elseif a.id == "goldblock" then
+					World.spawnGoldBlock(a.x, a.y)
+				elseif a.id == "portal" then
+					World.spawnPortal(a.x, a.y)
 				end
 				Remotes.Feedback:FireClient(info.player, "ability", a.id)
+			end
+		elseif action == "abilitytarget" then
+			-- a "target"-kind ability aimed at a point (validated in Network)
+			if info.alive then
+				local a = cmd.arg
+				if a.id == "freezefood" then
+					local target = cellOwnerAt(a.x, a.y, info)
+					if target then
+						target.frozenUntil = now + Config.FreezeAbilityDuration
+						Remotes.Feedback:FireClient(info.player, "ability", a.id)
+					end
+				end
 			end
 		elseif action == "setskin" then
 			info.skinId = cmd.arg -- image/decal asset id (0 = none), validated in Network
@@ -284,7 +320,7 @@ local function moveCells(dt: number)
 				-- gets inside the cell so you can hover to stop (agar feel)
 				local speed = Util.speedFromMass(cell.m) * math.clamp(d / cell.r, 0, 1)
 				-- freeze only SLOWS you (you can still kinda move)
-				if info.frozen then
+				if info.frozen or World.now < info.frozenUntil then
 					speed *= Config.FreezeMoveFactor
 				end
 				if World.now < info.speedBoostUntil then
@@ -561,9 +597,22 @@ local function eatPass(now: number)
 			end
 		end)
 		for _, orb in scratchHits do
-			if orb.isCoin then
-				-- coins are granted + persisted + pushed to the client by Levels
-				Levels.addCoins(World.players[cell.player], 1)
+			if orb.isPortal then
+				-- Portal: teleport ALL of this player's cells (clustered) to a random
+				-- spot, instead of eating it
+				local pinfo = World.players[cell.player]
+				if pinfo then
+					local tx, ty = World.randomPos(150)
+					for _, c in pinfo.cells do
+						c.x = math.clamp(tx + (math.random() - 0.5) * 40, 0, Config.MapWidth)
+						c.y = math.clamp(ty + (math.random() - 0.5) * 40, 0, Config.MapHeight)
+						c.ix, c.iy = 0, 0
+					end
+					Remotes.Feedback:FireClient(cell.player, "ability", "portal")
+				end
+			elseif orb.isCoin then
+				-- coins (and Gold Blocks) are granted + persisted + pushed by Levels
+				Levels.addCoins(World.players[cell.player], orb.coinValue or 1)
 				if Config.CoinBonusMass > 0 then
 					cell.m += Config.CoinBonusMass
 					grew = true
