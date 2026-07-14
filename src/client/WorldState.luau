@@ -137,10 +137,14 @@ local function sampleMap(m1, m2, alpha: number, out, allowNew: boolean)
 			end
 			local dx, dy = e2.x - e1.x, e2.y - e1.y
 			if dx * dx + dy * dy > MAX_JUMP2 then
-				-- an implausibly large jump between two adjacent snapshots means
-				-- this id is NOT the same physical entity (id reuse) or it
-				-- teleported (respawn). Snap to the new value instead of
-				-- lerping, so no phantom streaks across the map.
+				-- a MAP-SCALE jump between two adjacent snapshots means this id is
+				-- NOT the same physical entity (id reuse) or corruption. Snap to the
+				-- new value instead of lerping, so no phantom streaks across the map.
+				-- The threshold sits well above any real split-launch (see
+				-- Config.MaxInterpJump): snapping a genuinely fast piece here was the
+				-- bug - it drew that one cell at the undelayed newest position while
+				-- its neighbours stayed ~InterpolationDelay behind, so it detached as
+				-- an after-image and snapped back. Fast pieces now lerp their true path.
 				t.x, t.y, t.r = e2.x, e2.y, e2.r
 			else
 				t.x = e1.x + dx * alpha

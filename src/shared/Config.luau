@@ -52,10 +52,14 @@ local Config = {
 	MaxCells = 32, -- max simultaneous cells per player
 	MinCellMass = 100, -- a cell can never be smaller than this (split/pop keep every piece >= this)
 	SplitMinMass = 200, -- a cell needs at least this much mass to split (so both halves stay >= MinCellMass)
-	SplitImpulse = 1350, -- base launch speed of the new half...
-	SplitImpulsePerRadius = 16, -- ...scaled up by cell radius so BIG cells launch pieces fast enough to
+	-- Split launch is tuned so a piece travels ~2-2.5 of its own radii and settles
+	-- just clear of the parent (distance ~= impulse / ImpulseDamping). It used to
+	-- fling pieces ~500 units (too far); now a base split spreads ~230, big cells
+	-- scale up proportionally so they still clear their larger radius.
+	SplitImpulse = 850, -- base launch speed of the new half...
+	SplitImpulsePerRadius = 11, -- ...scaled up by cell radius so BIG cells launch pieces fast enough to
 	-- clear their (larger) radius quickly - otherwise big split halves overlap in a blob for too long
-	ImpulseDamping = 2.7, -- exponential damping rate for split/pop impulses (lower = pieces carry further/faster)
+	ImpulseDamping = 4.2, -- exponential damping rate for split/pop impulses (higher = pieces settle sooner/closer)
 	-- merge timer scales with cell mass: little cells ~MergeTimeBase, growing
 	-- with mass, capped at MergeTimeMax. (base 4s, +0.006/mass, cap 10s => a
 	-- ~60-mass sliver ~4s, a ~1000-mass cell 10s.)
@@ -149,8 +153,15 @@ local Config = {
 	-- Snapshots send the ENTIRE world to every client (no interest culling - the
 	-- map is small). MaxInterpJump guards the interpolator: a per-snapshot
 	-- position jump larger than this (world units) is treated as id-reuse /
-	-- teleport and snapped instead of lerped, so no phantom entity streaks in.
-	MaxInterpJump = 900,
+	-- teleport and snapped instead of lerped. It must sit ABOVE any real motion:
+	-- a fast split piece launching toward you can move several hundred units
+	-- between two snapshots, and at 900 the guard used to snap THAT one cell to
+	-- the undelayed newest position while the rest of the world stayed ~90ms
+	-- behind - the "after-image next to me on splits" phantom. Per-type u16 ids
+	-- make in-buffer id reuse impossible and respawns get fresh ids, so a cell
+	-- never legitimately teleports; this only needs to catch map-scale (16000)
+	-- corruption, so it's set well above any launch but far below a map jump.
+	MaxInterpJump = 4000,
 	-- (Interest/byte-budget constants below are unused now that snapshots are
 	-- full-world + reliable; kept only for reference / a future large-map mode.)
 

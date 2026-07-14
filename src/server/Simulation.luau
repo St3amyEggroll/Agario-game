@@ -50,11 +50,13 @@ local function splitPass(info, now: number)
 			local half = cell.m / 2
 			World.setMass(cell, half)
 			cell.mergeAt = now + Util.mergeDelay(half)
-			-- the split piece spawns basically AT the parent (small offset just
-			-- to define the launch direction) and holds there for one tick, then
-			-- launches out toward the aim via its impulse - so it emerges from
-			-- the parent instead of popping in offset.
-			local piece = World.spawnCell(cell.player, cell.x + dx * cell.r * 0.15, cell.y + dy * cell.r * 0.15, half)
+			-- the split piece spawns just ahead of the parent ALONG the aim line
+			-- (a small offset in the aim direction, not centered) and holds there
+			-- for one tick, then launches out via its impulse. Offsetting along the
+			-- aim axis - plus the aim-axis separation in resolveOwnCells - is what
+			-- makes multi-split pieces stack into a straight line toward the cursor
+			-- instead of clumping into a blob.
+			local piece = World.spawnCell(cell.player, cell.x + dx * cell.r * 0.4, cell.y + dy * cell.r * 0.4, half)
 			-- launch faster the bigger the cell, so big halves clear each other quickly
 			local impulse = math.max(Config.SplitImpulse, cell.r * Config.SplitImpulsePerRadius)
 			piece.ix = dx * impulse
@@ -338,8 +340,16 @@ local function resolveOwnCells(now: number, dt: number)
 					-- one-tick jump/teleport.
 					local ux, uy = Util.unit(dx, dy)
 					if d < 1e-3 then
-						ux, uy = math.random() - 0.5, math.random() - 0.5
-						ux, uy = Util.unit(ux, uy)
+						-- two pieces landed exactly on top of each other (common in a
+						-- multi/triple split): separate them ALONG the aim axis, not a
+						-- random direction, so the stack resolves into a straight line
+						-- toward the cursor. a (lower index) is pushed back, b forward,
+						-- so the loop order lays the cells out along the line.
+						local ax, ay = Util.unit(info.aimX - a.x, info.aimY - a.y)
+						if ax == 0 and ay == 0 then
+							ax, ay = 1, 0
+						end
+						ux, uy = ax, ay
 					end
 					local overlap = (sum - d) * Config.SeparationSoftness
 					local wa = b.m / (a.m + b.m) -- lighter cell (a) -> larger share of the push
