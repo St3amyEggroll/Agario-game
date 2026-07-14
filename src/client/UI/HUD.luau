@@ -6,6 +6,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared.Config)
 local Theme = require(script.Parent.Theme)
 local LevelCurve = require(Shared.Levels)
 local WorldState = require(script.Parent.Parent.WorldState)
@@ -115,7 +116,7 @@ function HUD.update(dt: number)
 	setText(coinLabel, "coins", tostring(WorldState.coins or 0))
 	setText(fpsLabel, "fps", "FPS " .. math.floor(1 / smoothedDt + 0.5))
 	setText(pingLabel, "ping", pingMs >= 0 and ("PING " .. math.floor(pingMs + 0.5)) or "PING --")
-	setText(cellsLabel, "cells", "CELLS " .. (WorldState.own.count or 0))
+	setText(cellsLabel, "cells", "CELLS " .. (WorldState.own.count or 0) .. " / " .. Config.MaxCells)
 
 	local level, into, need = LevelCurve.progress(WorldState.xp or 0)
 	setText(lvLabel, "lv", "Lv " .. level)

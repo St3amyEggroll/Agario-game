@@ -1,8 +1,8 @@
 --[[
-	Pause - the in-game control menu. A single "hamburger" button top-left opens
-	a small popup with Resume / Respawn / Settings / Leave to menu, so those
-	controls live off the play field instead of floating over it. Only shown while
-	alive; the play menu handles everything else.
+	Pause - the in-game control menu. A single "hamburger" button top-left opens a
+	popup with Resume / Respawn / Shop / Scores / Settings / Leave, so the whole
+	menu is usable mid-game (not just from the play screen). Shown while alive or
+	spectating.
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -20,36 +20,36 @@ local function close()
 	popup.Visible = false
 end
 
-function Pause.init(parent: Instance, settingsToggle: () -> ())
+function Pause.init(parent: Instance, settingsToggle: () -> (), shopToggle: () -> (), hiscoresToggle: () -> ())
 	hamb = Theme.button(parent, "\u{2630}", UDim2.fromScale(0.008, 0.058), UDim2.fromScale(0.04, 0.045), function()
 		popup.Visible = not popup.Visible
 	end)
 	hamb.Visible = false
 	Theme.capText(hamb, 20)
 
-	popup = Theme.panel(parent, UDim2.fromScale(0.008, 0.11), UDim2.fromScale(0.16, 0.26))
+	popup = Theme.panel(parent, UDim2.fromScale(0.008, 0.11), UDim2.fromScale(0.16, 0.42))
 	popup.Visible = false
 	local pad = Instance.new("UIPadding")
-	pad.PaddingTop = UDim.new(0.06, 0)
-	pad.PaddingBottom = UDim.new(0.06, 0)
+	pad.PaddingTop = UDim.new(0.04, 0)
+	pad.PaddingBottom = UDim.new(0.04, 0)
 	pad.PaddingLeft = UDim.new(0.07, 0)
 	pad.PaddingRight = UDim.new(0.07, 0)
 	pad.Parent = popup
 	local layout = Instance.new("UIListLayout")
 	layout.FillDirection = Enum.FillDirection.Vertical
-	layout.Padding = UDim.new(0.05, 0)
+	layout.Padding = UDim.new(0.03, 0)
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
 	layout.Parent = popup
 
 	local function item(order: number, text: string, color: Color3?, onClick: () -> ())
 		local b
 		if color then
-			b = Theme.outlineButton(popup, text, UDim2.new(), UDim2.fromScale(1, 0.21), color, onClick)
+			b = Theme.outlineButton(popup, text, UDim2.new(), UDim2.fromScale(1, 0.14), color, onClick)
 		else
-			b = Theme.button(popup, text, UDim2.new(), UDim2.fromScale(1, 0.21), onClick)
+			b = Theme.button(popup, text, UDim2.new(), UDim2.fromScale(1, 0.14), onClick)
 		end
 		b.LayoutOrder = order
-		Theme.capText(b, 16)
+		Theme.capText(b, 15)
 	end
 
 	item(1, "Resume", Theme.AccentColor, close)
@@ -57,11 +57,19 @@ function Pause.init(parent: Instance, settingsToggle: () -> ())
 		Remotes.Action:FireServer("respawn")
 		close()
 	end)
-	item(3, "Settings", nil, function()
+	item(3, "\u{1F6D2} Shop", nil, function()
+		shopToggle()
+		close()
+	end)
+	item(4, "\u{1F3C6} Scores", nil, function()
+		hiscoresToggle()
+		close()
+	end)
+	item(5, "\u{2699} Settings", nil, function()
 		settingsToggle()
 		close()
 	end)
-	item(4, "Leave to menu", Theme.Danger, function()
+	item(6, "Leave to menu", Theme.Danger, function()
 		Remotes.Action:FireServer("tomenu")
 		close()
 	end)

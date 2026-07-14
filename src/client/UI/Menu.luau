@@ -130,6 +130,7 @@ function Menu.init(parent: Instance, shopToggle: () -> (), settingsToggle: () ->
 	Theme.capText(play, 26)
 	local eye = Theme.button(card, "\u{1F441}", UDim2.fromScale(0.72, 0.58), UDim2.fromScale(0.24, 0.13), function()
 		Remotes.Action:FireServer("spectate")
+		WorldState.spectateSlot = nil -- start on the leader; the bar cycles from there
 		WorldState.status = "spectate"
 		Menu.refresh()
 	end)

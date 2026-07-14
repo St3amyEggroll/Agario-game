@@ -16,6 +16,7 @@ local AbilityDock = require(script.AbilityDock)
 local Pause = require(script.Pause)
 local Minimap = require(script.Minimap)
 local Hiscores = require(script.Hiscores)
+local Spectate = require(script.Spectate)
 local Input = require(script.Parent.Input)
 local WorldState = require(script.Parent.WorldState)
 
@@ -37,9 +38,10 @@ function UI.init(playerGui: PlayerGui)
 	HUD.init(gui)
 	Minimap.init(gui)
 	AbilityDock.init(gui)
-	Pause.init(gui, Settings.toggle) -- ☰ top-left -> Resume / Respawn / Settings / Leave
+	Pause.init(gui, Settings.toggle, Shop.toggle, Hiscores.toggle) -- ☰ full in-game menu
 	Hiscores.init(gui) -- pops in right of the card
 	Shop.init(gui) -- pops in left of the card
+	Spectate.init(gui) -- top-center Prev/Next/Play bar while spectating
 	Settings.init(gui) -- last, so the settings modal draws over the side panels
 
 	Input.onMenuToggle = Settings.toggle -- the M keybind mirrors the settings panel
@@ -47,7 +49,7 @@ function UI.init(playerGui: PlayerGui)
 	WorldState.onPlayerState = function(event)
 		Menu.refresh()
 		if event == "spawned" then
-			-- menu pop-ups shouldn't linger into the game
+			-- spawn clean; the pop-ups are reachable in-game via the ☰ pause menu
 			Shop.close()
 			Hiscores.close()
 		end
@@ -63,12 +65,7 @@ function UI.update(dt: number)
 	Menu.update(dt)
 	Minimap.update(dt)
 	Hiscores.update(dt)
-	-- the Shop/Scores pop-ups only make sense in the menu; force them closed
-	-- otherwise (covers Spectate, which hides the card without firing onPlayerState)
-	if WorldState.status ~= "menu" and WorldState.status ~= "dead" then
-		Shop.close()
-		Hiscores.close()
-	end
+	Spectate.update(dt)
 end
 
 return UI

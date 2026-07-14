@@ -28,10 +28,15 @@ function Hiscores.init(parent: Instance)
 	panel = Theme.panel(parent, UDim2.fromScale(0.64, 0.54), UDim2.fromScale(0.3, 0.56), Vector2.new(0, 0.5))
 	panel.Visible = false
 
-	local title = Theme.label(panel, "Hiscores", UDim2.fromScale(0.06, 0.02), UDim2.fromScale(0.88, 0.06))
+	local title = Theme.label(panel, "Hiscores", UDim2.fromScale(0.06, 0.02), UDim2.fromScale(0.7, 0.06))
 	title.TextColor3 = Theme.AccentColor
 	title.TextXAlignment = Enum.TextXAlignment.Left
 	Theme.capText(title, 22)
+
+	local closeBtn = Theme.button(panel, "\u{2715}", UDim2.fromScale(0.88, 0.02), UDim2.fromScale(0.09, 0.05), function()
+		panel.Visible = false
+	end)
+	Theme.capText(closeBtn, 16)
 
 	-- your stats
 	statLine = Theme.mono(panel, "Lv 1   -   0 coins", UDim2.fromScale(0.06, 0.09), UDim2.fromScale(0.88, 0.05))

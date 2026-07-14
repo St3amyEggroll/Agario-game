@@ -43,11 +43,12 @@ function Camera.update(dt: number)
 		local effR = math.sqrt(math.max(WorldState.own.mass, 1)) * Config.RadiusPerSqrtMass
 		autoViewHeight = Config.ViewHeightBase + effR * Config.ViewHeightPerRadius
 	else
-		-- menu / dead / spectate: follow the leader if we can see them
+		-- menu / dead / spectate: follow the watched player (chosen spectate
+		-- target while spectating, otherwise the current leader)
 		autoViewHeight = Config.SpectateViewHeight
-		local top = WorldState.leaderboard[1]
-		if top then
-			local cx, cy = WorldState.slotCentroid(top.s)
+		local slot = WorldState.watchedSlot()
+		if slot then
+			local cx, cy = WorldState.slotCentroid(slot)
 			if cx then
 				targetX, targetY = cx, cy :: any
 			end

@@ -30,6 +30,7 @@ local WorldState = {
 	coins = 0, -- currency collected (from gold coins)
 	xp = 0, -- lifetime XP (server-authoritative); HUD derives level + bar via Shared.Levels
 	status = "menu", -- "menu" | "alive" | "dead" | "spectate"
+	spectateSlot = nil, -- while spectating: which player's slot to follow (nil = leader)
 	leaderboard = {}, -- array of {s, n, m}
 	snaps = {}, -- ascending by t
 	-- interpolated sample, rebuilt every frame (renderer reads these)
@@ -282,6 +283,48 @@ function WorldState.slotCentroid(slot: number): (number?, number?)
 		return cx / totalM, cy / totalM
 	end
 	return nil, nil
+end
+
+-- Sorted list of the slots that currently have cells (i.e. live players).
+local function liveSlots(): { number }
+	local seen, slots = {}, {}
+	for _, cell in WorldState.view.cells do
+		if cell.slot ~= WorldState.mySlot and not seen[cell.slot] then
+			seen[cell.slot] = true
+			table.insert(slots, cell.slot)
+		end
+	end
+	table.sort(slots)
+	return slots
+end
+
+-- The slot the spectate camera should follow: the chosen target if it's still
+-- alive, else the current leader, else nil.
+function WorldState.watchedSlot(): number?
+	local target = WorldState.spectateSlot
+	if target and WorldState.slotCentroid(target) then
+		return target
+	end
+	local top = WorldState.leaderboard[1]
+	return top and top.s or nil
+end
+
+-- Cycle the spectate target to the next/prev live player (dir = 1 or -1).
+function WorldState.cycleSpectate(dir: number)
+	local slots = liveSlots()
+	if #slots == 0 then
+		WorldState.spectateSlot = nil
+		return
+	end
+	local cur = WorldState.spectateSlot or WorldState.watchedSlot()
+	local idx = 0
+	for i, s in slots do
+		if s == cur then
+			idx = i
+			break
+		end
+	end
+	WorldState.spectateSlot = slots[((idx - 1 + dir) % #slots) + 1]
 end
 
 function WorldState.colorForSlot(slot: number): Color3

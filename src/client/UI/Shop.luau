@@ -98,6 +98,11 @@ function Shop.init(parent: Instance)
 	title.TextXAlignment = Enum.TextXAlignment.Left
 	Theme.capText(title, 24)
 
+	local closeBtn = Theme.button(panel, "\u{2715}", UDim2.fromScale(0.9, 0.02), UDim2.fromScale(0.08, 0.06), function()
+		panel.Visible = false
+	end)
+	Theme.capText(closeBtn, 16)
+
 	-- search box
 	local search = Instance.new("TextBox")
 	search.Position = UDim2.fromScale(0.03, 0.1)
