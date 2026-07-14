@@ -172,4 +172,17 @@ function Theme.capText(l: GuiObject, maxSize: number)
 	c.Parent = l
 end
 
+-- Pop a panel in: a quick scale-up (with a little overshoot) via a UIScale, so
+-- panels appear with a bounce like Agma. Reuses one UIScale per panel.
+local TweenService = game:GetService("TweenService")
+function Theme.popIn(obj: GuiObject)
+	local scale = obj:FindFirstChildOfClass("UIScale")
+	if not scale then
+		scale = Instance.new("UIScale")
+		scale.Parent = obj
+	end
+	scale.Scale = 0.9
+	TweenService:Create(scale, TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+end
+
 return Theme

@@ -88,7 +88,8 @@ local function applyFilter(query: string)
 end
 
 function Shop.init(parent: Instance)
-	panel = Theme.panel(parent, UDim2.fromScale(0.5, 0.5), UDim2.fromScale(0.5, 0.72), Vector2.new(0.5, 0.5))
+	-- left-side panel (Agma-style), pops in when opened
+	panel = Theme.panel(parent, UDim2.fromScale(0.015, 0.5), UDim2.fromScale(0.44, 0.84), Vector2.new(0, 0.5))
 	panel.Visible = false
 
 	local title = Theme.label(panel, "Shop - Skins", UDim2.fromScale(0.03, 0.02), UDim2.fromScale(0.5, 0.07))
@@ -188,14 +189,21 @@ function Shop.init(parent: Instance)
 	Theme.capText(closeButton, 18)
 end
 
+function Shop.close()
+	panel.Visible = false
+end
+
 function Shop.toggle()
 	if not panel.Visible then
 		build() -- lazy: only load thumbnails when the shop is first opened
+		panel.Visible = true
 		if Shop._resizeCells then
 			Shop._resizeCells() -- AbsoluteSize is valid now the panel is shown
 		end
+		Theme.popIn(panel)
+	else
+		panel.Visible = false
 	end
-	panel.Visible = not panel.Visible
 end
 
 return Shop

@@ -87,6 +87,7 @@ function Settings.toggle()
 	panel.Visible = not panel.Visible
 	if panel.Visible then
 		refreshLabels()
+		Theme.popIn(panel)
 	end
 end
 
