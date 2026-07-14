@@ -26,6 +26,12 @@ Accessories.List = {
 	{ name = "Swords", id = 133050467164576, price = 500000 },
 	{ name = "Katanas", id = 134132948842841, price = 500000 },
 	{ name = "Chief Hat", id = 107465494658903, price = 500000 },
+	{ name = "Tail", id = 106092508678839, price = 500000 },
+	{ name = "Basket", id = 85998134979799, price = 500000 },
+	{ name = "Chel", id = 92322759647923, price = 500000 },
+	{ name = "Donkey Ears", id = 135464791581011, price = 500000 },
+	{ name = "Spikes", id = 112881927043260, price = 500000 },
+	{ name = "Captain Hat", id = 96202978415135, price = 500000 },
 }
 
 Accessories.ById = {}
