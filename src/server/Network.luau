@@ -19,6 +19,7 @@ local Keybinds = require(script.Parent.Keybinds)
 local Names = require(script.Parent.Names)
 local Levels = require(script.Parent.Levels)
 local Records = require(script.Parent.Records)
+local Abilities = require(script.Parent.Abilities)
 local Skins = require(Shared.Skins)
 local LevelCurve = require(Shared.Levels)
 
@@ -41,6 +42,8 @@ local ACTION_COOLDOWN: { [string]: number } = {
 	setaccessory = 0.2,
 	setname = 0.5,
 	setautorespawn = 0.2,
+	buyability = 0.3,
+	useability = 0.1, -- the REAL gate is the per-ability cooldown in Abilities
 	debugmass = 0.05,
 }
 
@@ -154,6 +157,34 @@ local function onAction(player, action, arg)
 		-- Boolean only; the instant respawn itself happens in Simulation.deathCheck.
 		info.autoRespawn = arg == true
 		return
+	elseif action == "buyability" then
+		-- purchase an ability with Gold (validated in Abilities.buy). arg = id.
+		if typeof(arg) ~= "string" then
+			return
+		end
+		Abilities.buy(player, arg)
+		return
+	elseif action == "useability" then
+		-- fire an owned ability. arg = id. Cooldown + ownership are enforced here;
+		-- the EFFECT of a "self" ability runs in the simulation. "place"/"target"
+		-- abilities aren't wired yet, so we just tell the client (no cooldown spent).
+		if typeof(arg) ~= "string" or not info.alive then
+			return
+		end
+		if not Abilities.canUse(info, arg) then
+			return
+		end
+		local def = Abilities.byId[arg]
+		if not def then
+			return
+		end
+		if def.kind == "self" then
+			Abilities.startCooldown(player, info, arg)
+			Simulation.enqueue(player, "ability", arg)
+		else
+			Remotes.Feedback:FireClient(player, "soon", def.name)
+		end
+		return
 	elseif action == "debugmass" then
 		-- testing helper: only a direction is accepted (the server owns the
 		-- step size), and only while Config.Debug is on
@@ -241,6 +272,7 @@ local function onPlayerAdded(player)
 	Keybinds.onPlayerAdded(player)
 	Names.onPlayerAdded(player) -- async: loads saved name, then prefills the client box
 	Levels.onPlayerAdded(player) -- async: loads saved XP, then sends it so the HUD shows the right level
+	Abilities.onPlayerAdded(player) -- async: loads owned abilities, then syncs the dock
 
 	-- also accept the in-game chat box (Roblox chat may be disabled client-side)
 	player.Chatted:Connect(function(message)
@@ -256,6 +288,7 @@ local function onPlayerRemoving(player)
 	Keybinds.onPlayerRemoving(player)
 	Names.onPlayerRemoving(player)
 	Levels.onPlayerRemoving(player) -- final XP save
+	Abilities.onPlayerRemoving(player) -- final owned-abilities save
 	chatLast[player] = nil
 	-- leaves the player's cells behind as ghost cells and keeps the slot's roster
 	-- entry alive until they're eaten; only broadcasts the roster "remove" once no

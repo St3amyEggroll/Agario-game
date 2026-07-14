@@ -93,6 +93,33 @@ local function feed(info, now: number)
 	local _ = now
 end
 
+-- Recombine ability: instantly fuse all of a player's cells into ONE at their
+-- mass-weighted centroid (the biggest cell survives and absorbs the rest).
+local function recombineCells(info)
+	local cells = info.cells
+	if #cells < 2 then
+		return
+	end
+	local total, cx, cy = 0, 0, 0
+	local survivor = cells[1]
+	for _, c in cells do
+		total += c.m
+		cx += c.x * c.m
+		cy += c.y * c.m
+		if c.m > survivor.m then
+			survivor = c
+		end
+	end
+	survivor.x, survivor.y = cx / total, cy / total
+	World.setMass(survivor, total)
+	survivor.mergeAt = World.now
+	for _, c in table.clone(cells) do
+		if c ~= survivor then
+			World.removeCell(c)
+		end
+	end
+end
+
 local function spawnPlayer(info)
 	local x, y = World.safeSpawnPos()
 	World.spawnCell(info.player, x, y, Config.StartMass)
@@ -156,6 +183,28 @@ local function drainActions(now: number)
 			-- it works the same on any input device)
 			if info.alive then
 				info.frozen = not info.frozen
+			end
+		elseif action == "ability" then
+			-- a "self" ability effect (ownership + cooldown already checked in
+			-- Network). The client cue plays the finish animation / sound.
+			if info.alive then
+				local id = cmd.arg
+				if id == "recombine" then
+					recombineCells(info)
+				elseif id == "speed" then
+					info.speedBoostUntil = now + Config.SpeedAbilityDuration
+				elseif id == "mass1000" then
+					local biggest
+					for _, cell in info.cells do
+						if not biggest or cell.m > biggest.m then
+							biggest = cell
+						end
+					end
+					if biggest then
+						World.setMass(biggest, biggest.m + Config.Mass1000Amount)
+					end
+				end
+				Remotes.Feedback:FireClient(info.player, "ability", id)
 			end
 		elseif action == "setskin" then
 			info.skinId = cmd.arg -- image/decal asset id (0 = none), validated in Network
@@ -226,6 +275,9 @@ local function moveCells(dt: number)
 				-- freeze only SLOWS you (you can still kinda move)
 				if info.frozen then
 					speed *= Config.FreezeMoveFactor
+				end
+				if World.now < info.speedBoostUntil then
+					speed *= Config.SpeedAbilityMult -- Speed ability active
 				end
 				vx = dx / d * speed
 				vy = dy / d * speed

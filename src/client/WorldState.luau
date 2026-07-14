@@ -33,6 +33,7 @@ local WorldState = {
 	spectateSlot = nil, -- while spectating: which player's slot to follow (nil = leader)
 	leaderboard = {}, -- array of {s, n, m} (LIVE top players by current mass)
 	records = {}, -- array of {n, m} (persisted ALL-TIME top masses, for the Hiscores panel)
+	abilities = { owned = {}, cooldownEnd = {} }, -- owned[id]=true; cooldownEnd[id]=os.clock() end time
 	snaps = {}, -- ascending by t
 	-- interpolated sample, rebuilt every frame (renderer reads these)
 	view = { cells = {}, viruses = {}, pellets = {} },
@@ -97,6 +98,32 @@ end)
 Remotes.Records.OnClientEvent:Connect(function(entries)
 	if typeof(entries) == "table" then
 		WorldState.records = entries
+	end
+end)
+
+-- Owned abilities + their cooldowns (drives the dock and the shop's Owned state).
+Remotes.Abilities.OnClientEvent:Connect(function(msg, a, b)
+	local ab = WorldState.abilities
+	if msg == "full" then
+		table.clear(ab.owned)
+		table.clear(ab.cooldownEnd)
+		if typeof(a) == "table" then
+			for _, id in a do
+				ab.owned[id] = true
+			end
+		end
+		if typeof(b) == "table" then
+			local now = os.clock()
+			for id, remaining in b do
+				if remaining > 0 then
+					ab.cooldownEnd[id] = now + remaining
+				end
+			end
+		end
+	elseif msg == "owned" then
+		ab.owned[a] = true
+	elseif msg == "cooldown" then
+		ab.cooldownEnd[a] = os.clock() + b
 	end
 end)
 
@@ -352,6 +379,20 @@ end
 function WorldState.nameForSlot(slot: number): string
 	local entry = WorldState.roster[slot]
 	return entry and entry.n or "?"
+end
+
+-- Ability ownership + cooldown (for the dock + shop).
+function WorldState.ownsAbility(id: string): boolean
+	return WorldState.abilities.owned[id] == true
+end
+
+-- Seconds of cooldown left on an ability (0 = ready).
+function WorldState.abilityCooldown(id: string): number
+	local endAt = WorldState.abilities.cooldownEnd[id]
+	if not endAt then
+		return 0
+	end
+	return math.max(0, endAt - os.clock())
 end
 
 -- Skin image asset id for a slot (0 / nil = no skin).

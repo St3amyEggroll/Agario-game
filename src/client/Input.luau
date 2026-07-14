@@ -126,6 +126,11 @@ function Input.trigger(action: string)
 	dispatch(action)
 end
 
+-- Use an owned ability (from the dock). The server validates ownership + cooldown.
+function Input.useAbility(id: string)
+	Remotes.Action:FireServer("useability", id)
+end
+
 --------------------------------------------------------------------- wiring
 
 function Input.init()

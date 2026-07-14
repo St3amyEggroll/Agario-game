@@ -16,6 +16,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Config = require(Shared.Config)
 local Util = require(Shared.Util)
 local Remotes = require(Shared.Remotes)
 local Skins = require(Shared.Skins)
@@ -35,9 +36,13 @@ local idBox: TextBox
 local tabButtons: { [string]: TextButton } = {}
 local currentTab = "custom"
 local cards: {
-	{ frame: Frame, lname: string, category: string, level: number, equipButton: TextButton, matchKind: string, matchId: number }
+	{ frame: Frame, lname: string, category: string, level: number, equipButton: TextButton, matchKind: string, matchId: any }
 } = {}
 local built = false
+local abilityById = {} -- id -> Config.Abilities def (price/name/color lookup)
+for _, a in Config.Abilities do
+	abilityById[a.id] = a
+end
 local colorPanel: Frame -- the COLOR tab's inline picker (shown instead of the card grid)
 local colorWidget -- ColorPicker widget inside colorPanel
 local updateColorPreview: (Color3) -> () -- refresh the picker's preview swatch + hex
@@ -59,10 +64,26 @@ local function overlayKey(): string
 	return table.concat(WorldState.overlaysForSlot(WorldState.mySlot or -1), ",")
 end
 
+local function ownedAbilityCount(): number
+	local n = 0
+	for _ in WorldState.abilities.owned do
+		n += 1
+	end
+	return n
+end
+
+-- "6000" -> "6,000" for Gold prices
+local function commaNum(n: number): string
+	local out = tostring(math.floor(n)):reverse():gsub("(%d%d%d)", "%1,")
+	return (out:reverse():gsub("^,", ""))
+end
+
 -- Is this card the look currently equipped? Colour counts only when no skin is on;
 -- overlays (accessories/avatar) count if the id is in the worn set (None never does).
 local function isActive(card): boolean
-	if card.matchKind == "overlay" then
+	if card.matchKind == "ability" then
+		return WorldState.ownsAbility(card.matchId)
+	elseif card.matchKind == "overlay" then
 		if card.matchId == 0 then
 			return false
 		end
@@ -89,6 +110,11 @@ end
 local function equipAccessory(id: number)
 	Remotes.Action:FireServer("setaccessory", id)
 	Sounds.play("equip")
+end
+
+local function buyAbility(id: string)
+	Remotes.Action:FireServer("buyability", id)
+	Sounds.play("click")
 end
 
 -- Build one card. opts: category, name, thumb (string?), swatchColor (Color3?),
@@ -227,6 +253,20 @@ local function build()
 		})
 	end
 
+	-- ABILITIES: bought with Gold. Owned ones show "Owned" and appear in the dock.
+	for _, ab in Config.Abilities do
+		makeCard({
+			category = "abilities",
+			name = ab.name,
+			swatchColor = ab.color,
+			matchKind = "ability",
+			matchId = ab.id,
+			onEquip = function()
+				buyAbility(ab.id)
+			end,
+		})
+	end
+
 	Shop.refreshButtons()
 end
 
@@ -240,7 +280,16 @@ function Shop.refreshButtons()
 	for _, card in cards do
 		local btn = card.equipButton
 		local txt, col
-		if card.level > 0 and lvl < card.level then
+		if card.matchKind == "ability" then
+			if WorldState.ownsAbility(card.matchId) then
+				txt, col = "Owned", Theme.Green
+			else
+				local def = abilityById[card.matchId]
+				local price = def and def.price or 0
+				local afford = (WorldState.coins or 0) >= price
+				txt, col = "Buy " .. commaNum(price), afford and Theme.AccentColor or Theme.MutedText
+			end
+		elseif card.level > 0 and lvl < card.level then
 			txt, col = "\u{1F512} Lv " .. card.level, Theme.MutedText
 		elseif isActive(card) then
 			-- overlays toggle, so an active one shows "Unequip"; base looks show "Equipped"
@@ -313,15 +362,21 @@ function Shop.init(parent: Instance)
 		panel.Visible = false
 	end)
 
-	-- tab bar: Avatar | Color | Skins | Level | Accessory
-	local tabDefs =
-		{ { "avatar", "Avatar" }, { "color", "Color" }, { "custom", "Skins" }, { "level", "Level" }, { "accessory", "Accessory" } }
+	-- tab bar: Avatar | Color | Skins | Level | Accessory | Abilities
+	local tabDefs = {
+		{ "avatar", "Avatar" },
+		{ "color", "Color" },
+		{ "custom", "Skins" },
+		{ "level", "Level" },
+		{ "accessory", "Access." },
+		{ "abilities", "Ability" },
+	}
 	for i, def in tabDefs do
-		local x = 0.02 + (i - 1) * 0.196
-		local btn = Theme.button(panel, def[2], UDim2.fromScale(x, 0.075), UDim2.fromScale(0.185, 0.058), function()
+		local x = 0.02 + (i - 1) * 0.163
+		local btn = Theme.button(panel, def[2], UDim2.fromScale(x, 0.075), UDim2.fromScale(0.155, 0.058), function()
 			selectTab(def[1])
 		end)
-		Theme.capText(btn, 13)
+		Theme.capText(btn, 12)
 		tabButtons[def[1]] = btn
 	end
 
@@ -493,13 +548,24 @@ end
 -- Keep buttons live while open: refresh only when the level / equipped look
 -- actually changes (cheap - no per-frame work otherwise).
 local lastLevel, lastSkin, lastColor, lastOKey = -1, math.huge, -1, "\0"
+local lastCoins, lastOwned = -1, -1
 function Shop.update(_dt: number)
 	if not panel.Visible or not built then
 		return
 	end
 	local lvl, skin, color, okey = currentLevel(), currentSkin(), currentColor(), overlayKey()
-	if lvl ~= lastLevel or skin ~= lastSkin or color ~= lastColor or okey ~= lastOKey then
+	-- coins + owned-ability count drive the Abilities tab's Buy/Owned states
+	local coins, owned = WorldState.coins or 0, ownedAbilityCount()
+	if
+		lvl ~= lastLevel
+		or skin ~= lastSkin
+		or color ~= lastColor
+		or okey ~= lastOKey
+		or coins ~= lastCoins
+		or owned ~= lastOwned
+	then
 		lastLevel, lastSkin, lastColor, lastOKey = lvl, skin, color, okey
+		lastCoins, lastOwned = coins, owned
 		Shop.refreshButtons()
 	end
 end

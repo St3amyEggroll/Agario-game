@@ -298,6 +298,11 @@ function World.addPlayer(player)
 		alive = false,
 		spectating = false,
 		autoRespawn = true, -- die -> instantly respawn instead of the death menu (Settings toggle, default on)
+		abilities = {}, -- SET {[id]=true} of OWNED abilities (bought with Gold)
+		abilityCooldowns = {}, -- [id] = os.clock() end time; the dock mirrors the remaining time
+		speedBoostUntil = 0, -- World.now until which the Speed ability is active
+		kills = 0, -- players eliminated this session (Hiscores: Kills)
+		playSeconds = 0, -- seconds spent alive this session (Hiscores: Playtime)
 		lastAction = {}, -- [actionName] = os.clock() of last accepted use
 	}
 	World.players[player] = info

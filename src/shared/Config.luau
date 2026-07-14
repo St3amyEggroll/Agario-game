@@ -225,6 +225,23 @@ local Config = {
 	Debug = true, -- shows testing helpers (+/- mass buttons) and lets the server accept them. Turn OFF for release!
 	DebugMassPercent = 10, -- percent of current mass added/removed per debug button click
 
+	------------------------------------------------------------------ Abilities (bought with Gold, used from the dock)
+	-- kind: "self" = use on yourself immediately; "place" = drop somewhere on the
+	-- map (Pass 3); "target" = drop on another player (Pass 4). price is in Gold.
+	Abilities = {
+		{ id = "recombine", name = "Recombine", price = 90000, cooldown = 45, kind = "self", color = Color3.fromRGB(240, 120, 90), desc = "Instantly merge all your cells into one." },
+		{ id = "mass1000", name = "Mass 1000", price = 6000, cooldown = 45, kind = "self", color = Color3.fromRGB(90, 220, 120), desc = "Give yourself +1000 mass (drop-on-map coming soon)." },
+		{ id = "speed", name = "Speed", price = 36000, cooldown = 45, kind = "self", color = Color3.fromRGB(245, 215, 70), desc = "Move much faster for a few seconds." },
+		{ id = "freezefood", name = "FreezeFood", price = 75000, cooldown = 45, kind = "target", color = Color3.fromRGB(90, 210, 240), desc = "Freeze an opponent for 3 seconds." },
+		{ id = "spawner", name = "Spawner", price = 90000, cooldown = 45, kind = "place", color = Color3.fromRGB(255, 90, 190), desc = "Spawn an experimental mothercell on the map." },
+		{ id = "spike", name = "Spike", price = 90000, cooldown = 45, kind = "place", color = Color3.fromRGB(70, 200, 80), desc = "Place a virus spike anywhere on the map." },
+		{ id = "portal", name = "Portal", price = 90000, cooldown = 45, kind = "place", color = Color3.fromRGB(160, 110, 255), desc = "Spawn a portal - enter it to teleport across the map." },
+		{ id = "goldblock", name = "Gold Block", price = 90000, cooldown = 45, kind = "place", color = Color3.fromRGB(255, 205, 55), desc = "Drop a gold block that pays out coins." },
+	},
+	SpeedAbilityMult = 2.4, -- movement speed multiplier while the Speed ability is active
+	SpeedAbilityDuration = 5, -- seconds the Speed boost lasts
+	Mass1000Amount = 1000, -- mass granted by the Mass 1000 ability
+
 	------------------------------------------------------------------ Names / Chat
 	MaxNameLength = 16, -- custom names are clamped to this many characters
 	MaxChatLength = 60, -- chat messages are clamped to this many characters

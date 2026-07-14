@@ -11,6 +11,13 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Remotes = require(ReplicatedStorage:WaitForChild("Shared").Remotes)
 local LevelCurve = require(ReplicatedStorage.Shared.Levels)
+local Config = require(ReplicatedStorage.Shared.Config)
+
+-- ability id -> display name (for the use / cooldown cue toasts)
+local ABILITY_NAME = {}
+for _, a in Config.Abilities do
+	ABILITY_NAME[a.id] = a.name
+end
 
 local HUD = require(script.HUD)
 local Menu = require(script.Menu)
@@ -86,11 +93,19 @@ function UI.init(playerGui: PlayerGui)
 		end
 	end
 
-	-- server SFX/notification cue: a kill (with the victim's name)
+	-- server SFX/notification cue: a kill (with the victim's name), an ability
+	-- firing (finish cue), or a rejected use (not owned yet / not enough Gold)
 	Remotes.Feedback.OnClientEvent:Connect(function(kind, arg)
 		if kind == "kill" then
 			Sounds.play("kill")
 			Notifications.show("You killed " .. tostring(arg), Theme.Danger)
+		elseif kind == "ability" then
+			Sounds.play("levelup")
+			Notifications.show((ABILITY_NAME[arg] or "Ability") .. "!", Theme.AccentColor)
+		elseif kind == "soon" then
+			Notifications.show(tostring(arg) .. " - coming soon", Theme.MutedText)
+		elseif kind == "broke" then
+			Notifications.show("Not enough Gold for " .. tostring(arg), Theme.Danger)
 		end
 	end)
 
