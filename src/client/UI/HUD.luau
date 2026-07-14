@@ -71,8 +71,8 @@ function HUD.init(parent: Instance)
 	Theme.capText(massLabel, 26)
 	divider(bar, 0.41)
 
-	-- Coins
-	local coinCap = Theme.caption(bar, "Coins", UDim2.fromScale(0.43, 0.13), UDim2.fromScale(0.17, 0.28))
+	-- Gold (the shop currency; earned from gold pickups)
+	local coinCap = Theme.caption(bar, "Gold", UDim2.fromScale(0.43, 0.13), UDim2.fromScale(0.17, 0.28))
 	coinCap.TextColor3 = Theme.Gold
 	coinCap.TextXAlignment = Enum.TextXAlignment.Left
 	Theme.capText(coinCap, 11)

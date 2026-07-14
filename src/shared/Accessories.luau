@@ -17,12 +17,21 @@ function Accessories.thumb(id: number): string
 	return ("rbxthumb://type=Asset&id=%d&w=150&h=150"):format(id)
 end
 
--- id 0 is reserved: "no accessory".
+-- id 0 is reserved: "no accessory". `price` is the Gold cost in the Buy tab
+-- (0 = free). Names/prices below match the reference; the ids are PLACEHOLDERS
+-- (reused catalog art so the layer is visible) - send real accessory art ids and
+-- I'll swap them in.
 Accessories.List = {
-	-- PLACEHOLDERS - replace with real transparent accessory art:
-	{ name = "Crosshair", id = 11988231187 },
-	{ name = "Gengar", id = 11759293347 },
-	{ name = "Dragon Ball", id = 11759193017 },
+	{ name = "Bread", id = 11988231187, price = 400000 },
+	{ name = "Leafy Hat", id = 11759293347, price = 750000 },
+	{ name = "Angel Halo", id = 11759193017, price = 1000000 },
+	{ name = "Cap", id = 11988231187, price = 1000000 },
+	{ name = "Cat Ears", id = 11759293347, price = 1000000 },
+	{ name = "Cat Ears 2", id = 11759193017, price = 1000000 },
+	{ name = "Cat Whiskers", id = 11988231187, price = 1000000 },
+	{ name = "Circle Saw", id = 11759293347, price = 1000000 },
+	{ name = "Evil Horns", id = 11759193017, price = 1000000 },
+	{ name = "Flame", id = 11988231187, price = 1000000 },
 }
 
 Accessories.ById = {}

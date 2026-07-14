@@ -34,7 +34,7 @@ function Hiscores.init(parent: Instance)
 	end)
 
 	-- your stats
-	statLine = Theme.mono(panel, "Lv 1   -   0 coins", UDim2.fromScale(0.06, 0.09), UDim2.fromScale(0.88, 0.05))
+	statLine = Theme.mono(panel, "Lv 1   -   0 Gold", UDim2.fromScale(0.06, 0.09), UDim2.fromScale(0.88, 0.05))
 	statLine.TextXAlignment = Enum.TextXAlignment.Left
 	Theme.capText(statLine, 14)
 
@@ -79,7 +79,7 @@ end
 
 function Hiscores.refresh()
 	local level = LevelCurve.levelForXp(WorldState.xp or 0)
-	statLine.Text = ("Lv %d   -   %d coins"):format(level, WorldState.coins or 0)
+	statLine.Text = ("Lv %d   -   %s Gold"):format(level, Util.abbrevMass(WorldState.coins or 0))
 
 	local board = WorldState.leaderboard or {}
 	local mySlot = WorldState.mySlot
