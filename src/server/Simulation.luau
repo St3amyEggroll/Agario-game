@@ -326,15 +326,12 @@ local function resolveOwnCells(now: number, dt: number)
 					-- cells settle instead of jittering.
 					continue
 				elseif not info.frozen then
-					-- While either cell is still launching from a split/pop (impulse
-					-- above the skip threshold), let the impulse separate them -
-					-- adding the collision push too would recoil the parent backward,
-					-- a visible jerk on split. Separation resumes once impulse decays.
-					local skip2 = Config.ImpulseSeparationSkip * Config.ImpulseSeparationSkip
-					if a.ix * a.ix + a.iy * a.iy > skip2 or b.ix * b.ix + b.iy * b.iy > skip2 then
-						continue
-					end
-					-- SOLID collision: ACCUMULATE each cell's desired push here;
+					-- SOLID collision applies IMMEDIATELY after a split (no
+					-- impulse grace period): overlapping own-cells push apart right
+					-- away so a fresh split expands fast instead of the halves
+					-- passing through each other for a second. The launch impulse and
+					-- this push stack, which is what we want - quick separation.
+					-- ACCUMULATE each cell's desired push here;
 					-- it's applied (capped per CELL) after the pair loop. Capping
 					-- per pair was the bug - a cell stacked with many others (a
 					-- multi-split) got shoved by every pair at once = a huge

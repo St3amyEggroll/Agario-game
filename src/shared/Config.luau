@@ -94,12 +94,6 @@ local Config = {
 	-- over a few ticks while still keeping cells solid. High enough that fast
 	-- small cells can't overlap through it.
 	SeparationMaxSpeed = 2400,
-	-- While a freshly split/popped piece still carries impulse above this speed
-	-- (units/s), skip SOLID separation between it and other own-cells: the impulse
-	-- already drives them apart, and also running the collision push just recoils
-	-- the parent backward - a visible jerk on split. Separation resumes once the
-	-- impulse decays below this, to settle any resting overlap.
-	ImpulseSeparationSkip = 50,
 	SplitCooldown = 0.1, -- server-side rate limit on split actions (1.2x faster)
 	MultiSplitCooldown = 0.15, -- multi/triple split rate limit (faster)
 
