@@ -418,12 +418,12 @@ function Renderer.render(cam)
 			end
 			if w.kind ~= v.kind then
 				w.kind = v.kind
-				-- Experimental = a solid PINK mothercell. The virus sprite has green
-				-- baked in and can't be tinted pink (ImageColor3 only multiplies), so
-				-- for exps we HIDE the sprite and show the pink disc with a thicker
-				-- darker-pink ring. Regular viruses keep the green spiky sprite.
+				-- experimentals (mothercells) use their own sprite over a pink disc;
+				-- regular viruses use the green virus sprite over a green disc. The
+				-- disc shows through / behind as a fallback if the sprite can't load.
 				local isExp = v.kind == 2
-				w.image.Visible = not isExp
+				w.image.Visible = true
+				w.image.Image = isExp and Config.ExperimentalImageId or Config.VirusImageId
 				local discColor = isExp and Config.ExperimentalColor or Config.VirusColor
 				w.disc.BackgroundColor3 = discColor
 				w.stroke.Color = darker(discColor)

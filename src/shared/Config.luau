@@ -220,6 +220,7 @@ local Config = {
 	VirusColor = Color3.fromRGB(70, 200, 80),
 	ExperimentalColor = Color3.fromRGB(255, 90, 190), -- pink mothercell (agma-style)
 	VirusImageId = "rbxassetid://105917001657812", -- virus sprite (ImageLabel)
+	ExperimentalImageId = "rbxassetid://90551503360926", -- experimental (mothercell) sprite; pink disc shows behind as a fallback
 
 	------------------------------------------------------------------ Debug / testing
 	Debug = true, -- shows testing helpers (+/- mass buttons) and lets the server accept them. Turn OFF for release!
