@@ -390,7 +390,10 @@ function Renderer.render(cam)
 				w.frame.BackgroundColor3 = WorldState.colorForSlot(p.slot)
 				activePellets[id] = w
 			end
-			place(w, ox + p.x * scale, oy + p.y * scale, p.r * 2 * scale)
+			-- floor the drawn size at 2px: place() rounds size to whole pixels, so a
+			-- sub-pixel pellet (zoomed out) would round to 0 = invisible, then flicker
+			-- to 1px as the camera pans on a split. A 2px floor keeps them steady.
+			place(w, ox + p.x * scale, oy + p.y * scale, math.max(p.r * 2 * scale, 2))
 			w.gen = gen
 		end
 	end
@@ -429,7 +432,7 @@ function Renderer.render(cam)
 				w.stroke.Color = darker(discColor)
 				w.stroke.Thickness = isExp and 4 or 2
 			end
-			place(w, ox + v.x * scale, oy + v.y * scale, px)
+			place(w, ox + v.x * scale, oy + v.y * scale, math.max(px, 2))
 			w.r = v.r
 			w.zid = 100000 + id -- stable z tiebreaker (viruses sit above equal-size cells)
 			table.insert(visibleCellList, w)
@@ -473,7 +476,7 @@ function Renderer.render(cam)
 					w.skin.Visible = false
 				end
 			end
-			place(w, ox + c.x * scale, oy + c.y * scale, pixels)
+			place(w, ox + c.x * scale, oy + c.y * scale, math.max(pixels, 2))
 
 			-- dead (ghost) cells render GRAY + faded with NO labels (their skin is
 			-- already gone - the roster entry has k=0). Cached so these writes only

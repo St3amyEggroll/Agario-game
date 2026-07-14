@@ -77,9 +77,10 @@ local Config = {
 	-- smaller fraction).
 	MergeOverlap = 1.0,
 	-- When a player disconnects their cells become ownerless GRAY "dead" cells:
-	-- transparent, no name/mass label, stationary, eatable by anyone. They sit for
-	-- GhostLifetime seconds then despawn (they do NOT shrink or decay).
+	-- transparent, no name/mass label, eatable by anyone. They shrink SLOWLY and
+	-- despawn after GhostLifetime seconds (or once they melt below MinCellMass).
 	GhostLifetime = 60,
+	GhostDecayRate = 0.045, -- fraction of mass a dead cell loses per second (gentle shrink)
 	GhostTransparency = 0.55, -- how faded dead cells render (0 = solid, 1 = invisible)
 	GhostColor = Color3.fromRGB(150, 150, 150), -- neutral gray, so dead cells read as nobody's
 

@@ -214,9 +214,11 @@ local function moveCells(dt: number)
 		local damp = math.exp(-Config.ImpulseDamping * dt)
 		cell.ix *= damp
 		cell.iy *= damp
-		-- dead (ghost) cells sit unchanged until they despawn (pruneGhosts); only
-		-- live cells above the min slowly bleed mass
-		if not cell.ghost and cell.m > Config.MassDecayMin then
+		-- dead (ghost) cells shrink SLOWLY until they despawn (pruneGhosts); live
+		-- cells only bleed above the min
+		if cell.ghost then
+			World.setMass(cell, cell.m - cell.m * Config.GhostDecayRate * dt)
+		elseif cell.m > Config.MassDecayMin then
 			World.setMass(cell, cell.m - cell.m * Config.MassDecayRate * dt)
 		end
 	end
@@ -695,14 +697,14 @@ local function deathCheck()
 	end
 end
 
--- Remove dead (ghost) cells once their lifetime expires (they despawn ~1 min
--- after the player left). Collect first, remove after (removeCell mutates cells).
+-- Remove dead (ghost) cells once they've melted below the mass floor OR their
+-- ~1 min lifetime runs out. Collect first, remove after (removeCell mutates cells).
 local ghostRemoveScratch = {}
 
 local function pruneGhosts(now: number)
 	table.clear(ghostRemoveScratch)
 	for _, cell in World.cells do
-		if cell.ghost and cell.ghostExpire and now >= cell.ghostExpire then
+		if cell.ghost and (cell.m <= Config.MinCellMass or (cell.ghostExpire and now >= cell.ghostExpire)) then
 			ghostRemoveScratch[#ghostRemoveScratch + 1] = cell
 		end
 	end
