@@ -52,10 +52,10 @@ local Config = {
 	MaxCells = 32, -- max simultaneous cells per player
 	MinCellMass = 100, -- a cell can never be smaller than this (split/pop keep every piece >= this)
 	SplitMinMass = 200, -- a cell needs at least this much mass to split (so both halves stay >= MinCellMass)
-	SplitImpulse = 1050, -- base launch speed of the new half...
-	SplitImpulsePerRadius = 12, -- ...scaled up by cell radius so BIG cells launch pieces fast enough to
+	SplitImpulse = 1350, -- base launch speed of the new half...
+	SplitImpulsePerRadius = 16, -- ...scaled up by cell radius so BIG cells launch pieces fast enough to
 	-- clear their (larger) radius quickly - otherwise big split halves overlap in a blob for too long
-	ImpulseDamping = 3.4, -- exponential damping rate for split/pop impulses (lower = pieces carry further)
+	ImpulseDamping = 2.7, -- exponential damping rate for split/pop impulses (lower = pieces carry further/faster)
 	-- merge timer scales with cell mass: little cells ~MergeTimeBase, growing
 	-- with mass, capped at MergeTimeMax. (base 4s, +0.006/mass, cap 10s => a
 	-- ~60-mass sliver ~4s, a ~1000-mass cell 10s.)
@@ -93,13 +93,13 @@ local Config = {
 	-- that reads as a teleport/blink. Capping makes separation a smooth push
 	-- over a few ticks while still keeping cells solid. High enough that fast
 	-- small cells can't overlap through it.
-	SeparationMaxSpeed = 1500,
+	SeparationMaxSpeed = 2400,
 	-- While a freshly split/popped piece still carries impulse above this speed
 	-- (units/s), skip SOLID separation between it and other own-cells: the impulse
 	-- already drives them apart, and also running the collision push just recoils
 	-- the parent backward - a visible jerk on split. Separation resumes once the
 	-- impulse decays below this, to settle any resting overlap.
-	ImpulseSeparationSkip = 90,
+	ImpulseSeparationSkip = 50,
 	SplitCooldown = 0.1, -- server-side rate limit on split actions (1.2x faster)
 	MultiSplitCooldown = 0.15, -- multi/triple split rate limit (faster)
 
@@ -163,7 +163,7 @@ local Config = {
 	------------------------------------------------------------------ Client rendering
 	-- render this far behind the newest snapshot. Keep >= 2 snapshot intervals
 	-- (2 / SnapshotRate): lower feels snappier but stutters on network jitter.
-	InterpolationDelay = 0.11,
+	InterpolationDelay = 0.09,
 	ViewHeightBase = 1200, -- world units visible vertically at minimum size...
 	ViewHeightPerRadius = 9, -- ...plus this per unit of your largest cell's radius (zoom out as you grow)
 	ViewHeightMin = 650, -- how tight you can zoom in (lower = closer to your cell)
