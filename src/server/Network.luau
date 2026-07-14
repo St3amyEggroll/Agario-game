@@ -123,6 +123,10 @@ local function sendFullRoster(player)
 	for slot, info in World.slotToInfo do
 		roster[tostring(slot)] = { n = info.name, c = info.colorIdx, k = info.skinId }
 	end
+	-- include lingering ghost slots so a late joiner renders them faded too
+	for slot, entry in World.ghostRoster do
+		roster[tostring(slot)] = entry
+	end
 	local myInfo = World.players[player]
 	Remotes.Roster:FireClient(player, "full", roster, myInfo.slot)
 end

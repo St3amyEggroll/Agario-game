@@ -348,4 +348,11 @@ function WorldState.skinForSlot(slot: number): number
 	return (entry and entry.k) or 0
 end
 
+-- True if the slot belongs to a disconnected player's ghost cells (faded,
+-- nameless). The server flags the slot's roster entry with g=true.
+function WorldState.isGhostSlot(slot: number): boolean
+	local entry = WorldState.roster[slot]
+	return entry ~= nil and entry.g == true
+end
+
 return WorldState

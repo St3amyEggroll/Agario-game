@@ -169,6 +169,7 @@ local function buildPools()
 			lastMassSize = -1,
 			lastSkin = -1,
 			lastZ = -1,
+			lastGhost = false,
 			slot = -1,
 		}
 	end)
@@ -471,24 +472,40 @@ function Renderer.render(cam)
 			end
 			place(w, ox + c.x * scale, oy + c.y * scale, pixels)
 
+			-- ghost cells (from a disconnected player) render FADED and drop their
+			-- name; their skin is already gone (the roster entry has k=0). Cached so
+			-- the transparency writes only fire when a wrapper's ghost state flips
+			-- (including when it's recycled for a live cell later).
+			local isGhost = WorldState.isGhostSlot(c.slot)
+			if w.lastGhost ~= isGhost then
+				w.lastGhost = isGhost
+				local t = isGhost and Config.GhostTransparency or 0
+				w.frame.BackgroundTransparency = t
+				w.stroke.Transparency = t
+			end
+
 			-- labels only when the cell is big enough on screen to read; text
-			-- size is manual + cached so we never trigger a text re-fit
+			-- size is manual + cached so we never trigger a text re-fit. Ghosts show
+			-- their mass (how big the free food is) but NOT a name.
 			local showLabels = pixels >= Config.LabelMinPixels
-			if showLabels then
+			local showName = showLabels and not isGhost
+			if showName then
 				local name = WorldState.nameForSlot(c.slot)
 				if w.lastName ~= name then
 					w.lastName = name
 					w.nameLabel.Text = name
 				end
-				local mass = math.floor(Util.massFromRadius(c.r) + 0.5)
-				if w.lastMass ~= mass then
-					w.lastMass = mass
-					w.massLabel.Text = tostring(mass)
-				end
 				local nameSize = math.min(math.floor(pixels * 0.16 + 4), 40)
 				if w.lastNameSize ~= nameSize then
 					w.lastNameSize = nameSize
 					w.nameLabel.TextSize = nameSize
+				end
+			end
+			if showLabels then
+				local mass = math.floor(Util.massFromRadius(c.r) + 0.5)
+				if w.lastMass ~= mass then
+					w.lastMass = mass
+					w.massLabel.Text = tostring(mass)
 				end
 				local massSize = math.min(math.floor(pixels * 0.11 + 3), 28)
 				if w.lastMassSize ~= massSize then
@@ -496,8 +513,10 @@ function Renderer.render(cam)
 					w.massLabel.TextSize = massSize
 				end
 			end
-			if w.nameLabel.Visible ~= showLabels then
-				w.nameLabel.Visible = showLabels
+			if w.nameLabel.Visible ~= showName then
+				w.nameLabel.Visible = showName
+			end
+			if w.massLabel.Visible ~= showLabels then
 				w.massLabel.Visible = showLabels
 			end
 

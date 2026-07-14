@@ -26,9 +26,12 @@ local World = {
 	players = {}, -- [Player] = info (see addPlayer)
 	slotToInfo = {}, -- [slot] = info
 	-- [slot] = count of ghost cells left behind by a disconnected player. The slot
-	-- (and its roster name/colour) stays reserved while > 0 so the ghosts still
-	-- render as the old player; freed when the last ghost is eaten / expires.
+	-- stays reserved while > 0 so a new player can't inherit it; freed when the
+	-- last ghost is eaten / shrinks away.
 	ghostSlots = {},
+	-- [slot] = roster entry for a ghost slot (faded, nameless, no skin). Kept so a
+	-- late joiner's full-roster sync includes the ghosts too.
+	ghostRoster = {},
 	orbs = {}, -- [id] = orb
 	extraOrbCount = 0,
 	viruses = {}, -- array
@@ -178,7 +181,7 @@ function World.removeCell(cell)
 	if info then
 		Util.arrayRemove(info.cells, cell)
 	elseif cell.ghost then
-		-- a ghost cell of a departed player was just eaten / expired: when the
+		-- a ghost cell of a departed player was just eaten / shrank away: when the
 		-- last one for that slot is gone, release the reserved slot + roster entry
 		local slot = cell.slot
 		local left = (World.ghostSlots[slot] or 1) - 1
@@ -186,6 +189,7 @@ function World.removeCell(cell)
 			World.ghostSlots[slot] = left
 		else
 			World.ghostSlots[slot] = nil
+			World.ghostRoster[slot] = nil
 			Remotes.Roster:FireAllClients("remove", slot)
 		end
 	end
@@ -312,15 +316,18 @@ function World.removePlayer(player)
 		cell.ghost = true
 		cell.ix, cell.iy = 0, 0 -- drop any residual split impulse: stationary immediately
 		cell.mergeAt = math.huge -- ghosts never merge (no owner to steer them together)
-		cell.ghostExpire = World.now + Config.GhostLifetime -- despawn if left uneaten
 		ghostCount += 1
 	end
 	World.slotToInfo[info.slot] = nil
 	World.players[player] = nil
 	if ghostCount > 0 then
-		-- reserve the slot + keep its roster entry (name/colour) so the ghosts
-		-- still render as the old player until they're all eaten / expire
 		World.ghostSlots[info.slot] = ghostCount
+		-- flag the slot as a ghost in the roster: keep the colour so you can tell
+		-- whose it was, but drop the skin and mark it (g) so clients render the
+		-- leftovers faded + nameless. Stored so late joiners get it in the full sync.
+		local entry = { n = info.name, c = info.colorIdx, k = 0, g = true }
+		World.ghostRoster[info.slot] = entry
+		Remotes.Roster:FireAllClients("update", info.slot, entry)
 	else
 		Remotes.Roster:FireAllClients("remove", info.slot)
 	end
