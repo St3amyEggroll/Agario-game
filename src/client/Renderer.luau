@@ -496,6 +496,9 @@ function Renderer.render(cam)
 				w.lastAccessory = accId
 				if accId ~= 0 then
 					w.accessory.Image = Accessories.thumb(accId)
+					local ay, ascale = Accessories.placement(accId)
+					w.accessory.Position = UDim2.fromScale(0.5, ay)
+					w.accessory.Size = UDim2.fromScale(ascale, ascale)
 					w.accessory.Visible = true
 				else
 					w.accessory.Visible = false

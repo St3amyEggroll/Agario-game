@@ -242,6 +242,9 @@ function Menu.update(_dt: number)
 		previewAccessory.Visible = accId ~= 0
 		if accId ~= 0 then
 			previewAccessory.Image = Accessories.thumb(accId)
+			local ay, ascale = Accessories.placement(accId)
+			previewAccessory.Position = UDim2.fromScale(0.5, ay)
+			previewAccessory.Size = UDim2.fromScale(ascale, ascale)
 		end
 	end
 end
