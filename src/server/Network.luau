@@ -118,6 +118,35 @@ local function sendFullRoster(player)
 	Remotes.Roster:FireClient(player, "full", roster, myInfo.slot)
 end
 
+-- Filter a chat message and broadcast (slot, text) to every client, which drives
+-- both the chat log and the cell chat bubbles. Rate-limited per player.
+local chatLast: { [Player]: number } = {}
+local function sendChat(player, message)
+	if typeof(message) ~= "string" then
+		return
+	end
+	local now = os.clock()
+	if chatLast[player] and now - chatLast[player] < Config.ChatCooldown then
+		return
+	end
+	chatLast[player] = now
+	task.spawn(function()
+		local pinfo = World.players[player]
+		if not pinfo then
+			return
+		end
+		local text = message:gsub("[%c]", ""):gsub("^%s+", ""):gsub("%s+$", ""):sub(1, Config.MaxChatLength)
+		if #text == 0 then
+			return
+		end
+		local ok, filtered = pcall(function()
+			local obj = TextService:FilterStringAsync(text, player.UserId)
+			return obj:GetNonChatStringForBroadcastAsync()
+		end)
+		Remotes.Chat:FireAllClients(pinfo.slot, (ok and filtered) or text)
+	end)
+end
+
 local function onPlayerAdded(player)
 	-- no 3D avatar in a 2D game; nuke any character that slipped through
 	if player.Character then
@@ -144,24 +173,9 @@ local function onPlayerAdded(player)
 	Names.onPlayerAdded(player) -- async: loads saved name, then prefills the client box
 	Levels.onPlayerAdded(player) -- async: loads saved XP, then sends it so the HUD shows the right level
 
-	-- chat bubbles: when a player chats, filter it and broadcast (slot, text)
-	-- so every client can float a bubble above that player's cell
+	-- also accept the in-game chat box (Roblox chat may be disabled client-side)
 	player.Chatted:Connect(function(message)
-		task.spawn(function()
-			local pinfo = World.players[player]
-			if not pinfo or typeof(message) ~= "string" then
-				return
-			end
-			local text = message:gsub("[%c]", ""):sub(1, Config.MaxChatLength)
-			if #text == 0 then
-				return
-			end
-			local ok, filtered = pcall(function()
-				local obj = TextService:FilterStringAsync(text, player.UserId)
-				return obj:GetNonChatStringForBroadcastAsync()
-			end)
-			Remotes.Chat:FireAllClients(pinfo.slot, (ok and filtered) or text)
-		end)
+		sendChat(player, message)
 	end)
 end
 
@@ -170,6 +184,7 @@ local function onPlayerRemoving(player)
 	Keybinds.onPlayerRemoving(player)
 	Names.onPlayerRemoving(player)
 	Levels.onPlayerRemoving(player) -- final XP save
+	chatLast[player] = nil
 	World.removePlayer(player)
 	if info then
 		Remotes.Roster:FireAllClients("remove", info.slot)
@@ -183,6 +198,7 @@ function Network.init()
 		-- pure echo; the client computes RTT from its own clock
 		Remotes.Ping:FireClient(player, t)
 	end)
+	Remotes.Chat.OnServerEvent:Connect(sendChat) -- in-game chat box -> filtered broadcast
 	Players.PlayerAdded:Connect(onPlayerAdded)
 	Players.PlayerRemoving:Connect(onPlayerRemoving)
 	-- players who joined before this script ran (fast Studio starts)

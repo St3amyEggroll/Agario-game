@@ -1,12 +1,8 @@
 --[[
-	HUD (minimal / classic-agar layout):
-	  - MASS: a big mono number floating bottom-left (no card, just a text stroke
-	    so it reads over any cell), with a small "MASS" caption above it.
-	  - Ping / FPS / Coins: tiny mono lines tucked top-left, under the menu row.
-	  - Level bar: a thin XP bar floating bottom-center.
-
-	FPS is an exponential moving average of frame time; ping is set by the
-	round-trip loop in the client bootstrap.
+	HUD - top-left stats bar (Agma-style, minimal): Level + XP, Mass, Coins, and
+	FPS / Ping / Cells, all in one bar next to the pause button. Shown always
+	(the menu panels float over the dimmed game, like Agma), so mass/cells read 0
+	while you're in the menu.
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -17,115 +13,93 @@ local WorldState = require(script.Parent.Parent.WorldState)
 
 local HUD = {}
 
-local massLabel: TextLabel
-local pingLabel: TextLabel
-local fpsLabel: TextLabel
-local coinLabel: TextLabel
-local statsFrame: Frame
-local massFrame: Frame
-
-local levelBar: Frame
-local levelBadge: TextLabel
+local lvLabel: TextLabel
 local xpFill: Frame
-local xpText: TextLabel
+local massLabel: TextLabel
+local coinLabel: TextLabel
+local fpsLabel: TextLabel
+local pingLabel: TextLabel
+local cellsLabel: TextLabel
 
 local smoothedDt = 1 / 60
 local pingMs = -1
-local lastMassText, lastPingText, lastFpsText, lastCoinText = "", "", "", ""
-local lastLevelText, lastXpText, lastFill = "", "", -1
+local last = {}
 local uiAccumulator = 0
 
--- one tiny top-left stat line ("PING 42ms"): muted caption + mono value, floating
-local function statLine(parent: Instance, y: number, caption: string, valueColor: Color3): TextLabel
-	local cap = Theme.caption(parent, caption, UDim2.fromScale(0, y), UDim2.fromScale(0.5, 0.3))
-	cap.TextXAlignment = Enum.TextXAlignment.Left
-	cap.TextStrokeColor3 = Color3.new(0, 0, 0)
-	cap.TextStrokeTransparency = 0.5
-	Theme.capText(cap, 12)
-
-	local val = Theme.readout(parent, "--", UDim2.fromScale(0.5, y), UDim2.fromScale(0.5, 0.3))
-	val.TextColor3 = valueColor
-	val.TextXAlignment = Enum.TextXAlignment.Left
-	Theme.capText(val, 13)
-	return val
+local function divider(parent: Instance, x: number)
+	local d = Instance.new("Frame")
+	d.AnchorPoint = Vector2.new(0.5, 0.5)
+	d.Position = UDim2.fromScale(x, 0.5)
+	d.Size = UDim2.new(0, 1, 0.6, 0)
+	d.BackgroundColor3 = Color3.new(1, 1, 1)
+	d.BackgroundTransparency = 0.85
+	d.BorderSizePixel = 0
+	d.Parent = parent
 end
 
 function HUD.init(parent: Instance)
-	-- tiny stat block, top-left (sits below the menu-button row placed by UI.init)
-	local stats = Instance.new("Frame")
-	stats.Position = UDim2.fromScale(0.065, 0.02)
-	stats.Size = UDim2.fromScale(0.13, 0.11)
-	stats.BackgroundTransparency = 1
-	stats.Parent = parent
-	statsFrame = stats
-	pingLabel = statLine(stats, 0.02, "Ping", Theme.TextColor)
-	fpsLabel = statLine(stats, 0.36, "FPS", Theme.TextColor)
-	coinLabel = statLine(stats, 0.70, "Coins", Theme.Gold)
+	local bar = Theme.panel(parent, UDim2.fromScale(0.064, 0.014), UDim2.fromScale(0.33, 0.06))
 
-	-- MASS: big floating readout, bottom-left
-	local massBox = Instance.new("Frame")
-	massBox.AnchorPoint = Vector2.new(0, 1)
-	massBox.Position = UDim2.fromScale(0.014, 0.965)
-	massBox.Size = UDim2.fromScale(0.26, 0.13)
-	massBox.BackgroundTransparency = 1
-	massBox.Parent = parent
-	massFrame = massBox
-	local massCap = Theme.caption(massBox, "Mass", UDim2.fromScale(0.01, 0), UDim2.fromScale(0.6, 0.26))
-	massCap.TextXAlignment = Enum.TextXAlignment.Left
-	massCap.TextStrokeColor3 = Color3.new(0, 0, 0)
-	massCap.TextStrokeTransparency = 0.5
-	Theme.capText(massCap, 14)
-	massLabel = Theme.readout(massBox, "0", UDim2.fromScale(0, 0.26), UDim2.fromScale(1, 0.74))
-	massLabel.TextXAlignment = Enum.TextXAlignment.Left
-	Theme.capText(massLabel, 44)
-
-	HUD.initLevelBar(parent)
-end
-
--- thin XP bar, bottom-center: "Lv N" + a progress track (fraction from raw XP
--- via the shared curve, so it matches the server with no extra networking).
-function HUD.initLevelBar(parent: Instance)
-	local bar = Instance.new("Frame")
-	bar.AnchorPoint = Vector2.new(0.5, 1)
-	bar.Position = UDim2.fromScale(0.5, 0.985)
-	bar.Size = UDim2.fromScale(0.3, 0.035)
-	bar.BackgroundTransparency = 1
-	bar.Parent = parent
-	levelBar = bar
-
-	levelBadge = Theme.readout(bar, "Lv 1", UDim2.fromScale(0, 0), UDim2.fromScale(0.16, 1))
-	levelBadge.TextColor3 = Theme.AccentColor
-	levelBadge.TextXAlignment = Enum.TextXAlignment.Left
-	Theme.capText(levelBadge, 16)
-
-	local track = Instance.new("Frame")
-	track.AnchorPoint = Vector2.new(0, 0.5)
-	track.Position = UDim2.fromScale(0.19, 0.5)
-	track.Size = UDim2.fromScale(0.81, 0.5)
-	track.BackgroundColor3 = Theme.Field
-	track.BackgroundTransparency = 0.25
-	track.BorderSizePixel = 0
-	Theme.round(track, 6)
-	Theme.stroke(track)
-	track.Parent = bar
-
+	-- Level + XP
+	lvLabel = Theme.mono(bar, "Lv 1", UDim2.fromScale(0.015, 0.14), UDim2.fromScale(0.11, 0.42))
+	lvLabel.TextColor3 = Theme.AccentColor
+	lvLabel.TextXAlignment = Enum.TextXAlignment.Left
+	Theme.capText(lvLabel, 15)
+	local xpTrack = Instance.new("Frame")
+	xpTrack.Position = UDim2.fromScale(0.015, 0.64)
+	xpTrack.Size = UDim2.fromScale(0.11, 0.2)
+	xpTrack.BackgroundColor3 = Theme.Field
+	xpTrack.BorderSizePixel = 0
+	Theme.round(xpTrack, 4)
+	xpTrack.Parent = bar
 	xpFill = Instance.new("Frame")
-	xpFill.Position = UDim2.fromScale(0, 0)
 	xpFill.Size = UDim2.fromScale(0, 1)
 	xpFill.BackgroundColor3 = Theme.AccentColor
 	xpFill.BorderSizePixel = 0
-	Theme.round(xpFill, 6)
-	xpFill.Parent = track
+	Theme.round(xpFill, 4)
+	xpFill.Parent = xpTrack
+	divider(bar, 0.15)
 
-	xpText = Theme.mono(track, "0 / 0", UDim2.fromScale(0, 0), UDim2.fromScale(1, 1))
-	xpText.ZIndex = 2
-	xpText.TextStrokeColor3 = Color3.new(0, 0, 0)
-	xpText.TextStrokeTransparency = 0.4
-	Theme.capText(xpText, 12)
+	-- Mass (hero)
+	local massCap = Theme.caption(bar, "Mass", UDim2.fromScale(0.17, 0.13), UDim2.fromScale(0.2, 0.28))
+	massCap.TextXAlignment = Enum.TextXAlignment.Left
+	Theme.capText(massCap, 11)
+	massLabel = Theme.mono(bar, "0", UDim2.fromScale(0.17, 0.4), UDim2.fromScale(0.22, 0.52))
+	massLabel.TextXAlignment = Enum.TextXAlignment.Left
+	Theme.capText(massLabel, 26)
+	divider(bar, 0.41)
+
+	-- Coins
+	local coinCap = Theme.caption(bar, "Coins", UDim2.fromScale(0.43, 0.13), UDim2.fromScale(0.17, 0.28))
+	coinCap.TextColor3 = Theme.Gold
+	coinCap.TextXAlignment = Enum.TextXAlignment.Left
+	Theme.capText(coinCap, 11)
+	coinLabel = Theme.mono(bar, "0", UDim2.fromScale(0.43, 0.4), UDim2.fromScale(0.17, 0.52))
+	coinLabel.TextColor3 = Theme.Gold
+	coinLabel.TextXAlignment = Enum.TextXAlignment.Left
+	Theme.capText(coinLabel, 22)
+	divider(bar, 0.62)
+
+	-- FPS / Ping / Cells
+	fpsLabel = Theme.mono(bar, "FPS --", UDim2.fromScale(0.64, 0.1), UDim2.fromScale(0.35, 0.28))
+	pingLabel = Theme.mono(bar, "PING --", UDim2.fromScale(0.64, 0.39), UDim2.fromScale(0.35, 0.28))
+	cellsLabel = Theme.mono(bar, "CELLS 0", UDim2.fromScale(0.64, 0.68), UDim2.fromScale(0.35, 0.28))
+	for _, l in { fpsLabel, pingLabel, cellsLabel } do
+		l.TextColor3 = Theme.MutedText
+		l.TextXAlignment = Enum.TextXAlignment.Left
+		Theme.capText(l, 12)
+	end
 end
 
 function HUD.setPing(ms: number)
 	pingMs = ms
+end
+
+local function setText(label: TextLabel, key: string, text: string)
+	if last[key] ~= text then
+		last[key] = text
+		label.Text = text
+	end
 end
 
 function HUD.update(dt: number)
@@ -137,63 +111,18 @@ function HUD.update(dt: number)
 	end
 	uiAccumulator = 0
 
-	-- the whole in-game HUD hides in the menu / when dead (the play menu owns
-	-- that screen); shown while playing
-	local playing = WorldState.status == "alive"
-	if statsFrame.Visible ~= playing then
-		statsFrame.Visible = playing
-	end
-	if massFrame.Visible ~= playing then
-		massFrame.Visible = playing
-	end
-	if not playing then
-		if levelBar.Visible then
-			levelBar.Visible = false
-		end
-		return
-	end
-
-	local massText = tostring(math.floor(WorldState.own.mass + 0.5))
-	if massText ~= lastMassText then
-		lastMassText = massText
-		massLabel.Text = massText
-	end
-	local coinText = tostring(WorldState.coins or 0)
-	if coinText ~= lastCoinText then
-		lastCoinText = coinText
-		coinLabel.Text = coinText
-	end
-	local pingText = pingMs >= 0 and (math.floor(pingMs + 0.5) .. "ms") or "--"
-	if pingText ~= lastPingText then
-		lastPingText = pingText
-		pingLabel.Text = pingText
-	end
-	local fpsText = tostring(math.floor(1 / smoothedDt + 0.5))
-	if fpsText ~= lastFpsText then
-		lastFpsText = fpsText
-		fpsLabel.Text = fpsText
-	end
-
-	-- level bar shows while playing (we already returned above if not)
-	if not levelBar.Visible then
-		levelBar.Visible = true
-	end
+	setText(massLabel, "mass", tostring(math.floor(WorldState.own.mass + 0.5)))
+	setText(coinLabel, "coins", tostring(WorldState.coins or 0))
+	setText(fpsLabel, "fps", "FPS " .. math.floor(1 / smoothedDt + 0.5))
+	setText(pingLabel, "ping", pingMs >= 0 and ("PING " .. math.floor(pingMs + 0.5)) or "PING --")
+	setText(cellsLabel, "cells", "CELLS " .. (WorldState.own.count or 0))
 
 	local level, into, need = LevelCurve.progress(WorldState.xp or 0)
-	local levelText = "Lv " .. level
-	if levelText ~= lastLevelText then
-		lastLevelText = levelText
-		levelBadge.Text = levelText
-	end
+	setText(lvLabel, "lv", "Lv " .. level)
 	local fill = need > 0 and math.clamp(into / need, 0, 1) or 1
-	if math.abs(fill - lastFill) > 0.005 then
-		lastFill = fill
+	if last.fill ~= fill then
+		last.fill = fill
 		xpFill.Size = UDim2.fromScale(fill, 1)
-	end
-	local xpStr = math.floor(into) .. " / " .. need
-	if xpStr ~= lastXpText then
-		lastXpText = xpStr
-		xpText.Text = xpStr
 	end
 end
 

@@ -1,12 +1,12 @@
 --[[
-	UI - assembles the interface ScreenGui: the play menu, HUD, ability dock,
-	the in-game pause menu, settings (keybinds) and the shop. World rendering
-	lives in a separate, lower ScreenGui (Renderer); this one sits on top.
-
-	Layout (minimal / classic-agar): bottom-left = Mass, top-left = tiny stats +
-	the ☰ pause button, bottom-center = level bar, bottom-right = ability dock.
-	Leaderboard is the Roblox player list (top-right, native). Menu / Respawn /
-	Settings live in the ☰ pause popup; Spectate lives on the play menu.
+	UI - assembles the interface (Agma-style layout, minimal look):
+	  top-left   = stats bar (Lv/XP, Mass, Coins, FPS/Ping/Cells) + ☰ pause
+	  top-right  = custom leaderboard
+	  center     = play card (menu)
+	  bottom-left  = chat
+	  bottom-center = ability dock (in-game)
+	  bottom-right = minimap
+	World rendering lives in a separate, lower ScreenGui (Renderer).
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -20,6 +20,9 @@ local Settings = require(script.Settings)
 local Shop = require(script.Shop)
 local AbilityDock = require(script.AbilityDock)
 local Pause = require(script.Pause)
+local Leaderboard = require(script.Leaderboard)
+local Minimap = require(script.Minimap)
+local Chat = require(script.Chat)
 local Input = require(script.Parent.Input)
 local WorldState = require(script.Parent.WorldState)
 
@@ -37,30 +40,31 @@ function UI.init(playerGui: PlayerGui)
 	gui.DisplayOrder = 10
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-	Menu.init(gui, Shop.toggle, Settings.toggle) -- overlay first so panels draw above it
+	Menu.init(gui, Shop.toggle, Settings.toggle) -- overlay + card (drawn under the HUD)
 	HUD.init(gui)
-	AbilityDock.init(gui) -- bottom-right on-screen action buttons (also touch controls)
+	Leaderboard.init(gui)
+	Minimap.init(gui)
+	Chat.init(gui)
+	AbilityDock.init(gui)
 	Pause.init(gui, Settings.toggle) -- ☰ top-left -> Resume / Respawn / Settings / Leave
 	Settings.init(gui)
-	Shop.init(gui)
+	Shop.init(gui) -- modal on top
 
 	Input.onMenuToggle = Settings.toggle -- the M keybind mirrors the settings panel
 
-	-- debug testing buttons (below the stat block); gated by Config.Debug - the
-	-- server also refuses these when it's off
+	-- debug testing buttons (mid-left); gated by Config.Debug
 	if Config.Debug then
 		local pctLabel = ("%d%%"):format(Config.DebugMassPercent)
-		local addMass = Theme.outlineButton(gui, "+" .. pctLabel, UDim2.fromScale(0.012, 0.35), UDim2.fromScale(0.055, 0.04), Theme.Green, function()
+		local addMass = Theme.outlineButton(gui, "+" .. pctLabel, UDim2.fromScale(0.012, 0.4), UDim2.fromScale(0.055, 0.04), Theme.Green, function()
 			Remotes.Action:FireServer("debugmass", 1)
 		end)
 		Theme.capText(addMass, 14)
-		local subMass = Theme.outlineButton(gui, "-" .. pctLabel, UDim2.fromScale(0.072, 0.35), UDim2.fromScale(0.055, 0.04), Theme.Danger, function()
+		local subMass = Theme.outlineButton(gui, "-" .. pctLabel, UDim2.fromScale(0.072, 0.4), UDim2.fromScale(0.055, 0.04), Theme.Danger, function()
 			Remotes.Action:FireServer("debugmass", -1)
 		end)
 		Theme.capText(subMass, 14)
 	end
 
-	-- server state -> UI
 	WorldState.onPlayerState = function(_event)
 		Menu.refresh()
 	end
@@ -73,6 +77,8 @@ function UI.update(dt: number)
 	AbilityDock.update(dt)
 	Pause.update(dt)
 	Menu.update(dt)
+	Leaderboard.update(dt)
+	Minimap.update(dt)
 end
 
 return UI

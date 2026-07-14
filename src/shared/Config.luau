@@ -211,6 +211,7 @@ local Config = {
 	------------------------------------------------------------------ Names / Chat
 	MaxNameLength = 16, -- custom names are clamped to this many characters
 	MaxChatLength = 60, -- chat messages are clamped to this many characters
+	ChatCooldown = 0.6, -- min seconds between accepted chat messages per player (anti-spam)
 	ChatBubbleTime = 5, -- seconds a chat bubble stays above a cell
 
 	------------------------------------------------------------------ Default keybinds (remappable in Settings)

@@ -77,8 +77,8 @@ end
 
 function AbilityDock.init(parent: Instance)
 	container = Instance.new("Frame")
-	container.AnchorPoint = Vector2.new(1, 1)
-	container.Position = UDim2.fromScale(0.988, 0.985)
+	container.AnchorPoint = Vector2.new(0.5, 1)
+	container.Position = UDim2.fromScale(0.5, 0.985)
 	container.Size = UDim2.fromScale(0.26, 0.08)
 	container.BackgroundTransparency = 1
 	container.Visible = false
@@ -86,7 +86,7 @@ function AbilityDock.init(parent: Instance)
 
 	local layout = Instance.new("UIListLayout")
 	layout.FillDirection = Enum.FillDirection.Horizontal
-	layout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 	layout.VerticalAlignment = Enum.VerticalAlignment.Center
 	layout.Padding = UDim.new(0.02, 0)
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
