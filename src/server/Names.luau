@@ -19,6 +19,7 @@ local TextService = game:GetService("TextService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
+local Util = require(Shared.Util)
 local Remotes = require(Shared.Remotes)
 local World = require(script.Parent.World)
 
@@ -94,12 +95,12 @@ local function saveSkinNow(player, skinId: number)
 	end
 end
 
-local function saveColorNow(player, colorIdx: number)
+local function saveColorNow(player, packed: number)
 	if not store then
 		return
 	end
 	local ok, err = pcall(function()
-		store:SetAsync("color_" .. player.UserId, colorIdx)
+		store:SetAsync("color_" .. player.UserId, packed)
 	end)
 	if not ok then
 		warn("[Agar] color save failed:", err)
@@ -160,8 +161,15 @@ function Names.onPlayerAdded(player)
 			info.skinId = savedSkin -- restore the BASE skin (positive only; avatar is an overlay now)
 			changed = true
 		end
-		if savedColor and savedColor >= 1 and savedColor <= #Config.Palette then
-			info.colorIdx = savedColor -- restore the chosen cell colour
+		if savedColor and savedColor >= 0 and savedColor <= 0xFFFFFF then
+			-- legacy saves stored a palette INDEX (1..#Palette); newer saves store a
+			-- packed 0xRRGGBB colour. Remap an index-looking value so old players keep
+			-- a real colour instead of a near-black one.
+			if savedColor >= 1 and savedColor <= #Config.Palette then
+				info.color = Util.packColor(Config.Palette[savedColor])
+			else
+				info.color = savedColor -- restore the chosen cell colour
+			end
 			changed = true
 		end
 		if savedOverlays then
@@ -198,7 +206,7 @@ function Names.saveSkin(player, skinId: number)
 end
 
 -- Persist the chosen cell colour (debounced). Called from Network on setcolor.
-function Names.saveColor(player, colorIdx: number)
+function Names.saveColor(player, packed: number)
 	if not store or colorSavePending[player] then
 		return
 	end
@@ -208,7 +216,7 @@ function Names.saveColor(player, colorIdx: number)
 			colorSavePending[player] = nil
 			local info = World.players[player]
 			if info then
-				saveColorNow(player, info.colorIdx)
+				saveColorNow(player, info.color)
 			end
 		end
 	end)
@@ -280,7 +288,7 @@ function Names.onPlayerRemoving(player)
 	if colorSavePending[player] then
 		colorSavePending[player] = nil
 		if info then
-			saveColorNow(player, info.colorIdx)
+			saveColorNow(player, info.color)
 		end
 	end
 	if overlaysSavePending[player] then

@@ -55,6 +55,18 @@ function Util.abbrevMass(n: number): string
 	end
 end
 
+-- Pack a Color3 into a single 0xRRGGBB integer (0..16777215) and back. Player
+-- cell colours are arbitrary now (the HSV picker), so they ride the roster as
+-- one packed int instead of a palette index. Reliable channel, so size is a
+-- non-issue; this just keeps the wire a plain number.
+function Util.packColor(c: Color3): number
+	return math.floor(c.R * 255 + 0.5) * 65536 + math.floor(c.G * 255 + 0.5) * 256 + math.floor(c.B * 255 + 0.5)
+end
+
+function Util.unpackColor(packed: number): Color3
+	return Color3.fromRGB(math.floor(packed / 65536) % 256, math.floor(packed / 256) % 256, packed % 256)
+end
+
 -- Returns a unit vector (dx, dy) or (1, 0) when the input is degenerate.
 function Util.unit(dx: number, dy: number): (number, number)
 	local d = math.sqrt(dx * dx + dy * dy)

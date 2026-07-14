@@ -13,6 +13,7 @@ local Input = require(script.Parent.Parent.Input)
 local Sounds = require(script.Parent.Parent.Sounds)
 local Renderer = require(script.Parent.Parent.Renderer)
 local Minimap = require(script.Parent.Minimap)
+local ColorPicker = require(script.Parent.ColorPicker)
 
 -- map background presets (first is the default blackish)
 local BG_PRESETS = {
@@ -43,6 +44,7 @@ local Settings = {}
 
 local panel: Frame
 local keyButtons: { [string]: TextButton } = {}
+local currentBg = BG_PRESETS[1] -- last-applied map background (world + minimap); seeds the picker
 
 local function refreshLabels()
 	for action, button in keyButtons do
@@ -102,10 +104,20 @@ function Settings.init(parent: Instance)
 	sfxBtn.TextColor3 = on and Theme.Green or Theme.MutedText
 	Theme.capText(sfxBtn, 16)
 
-	-- Map Background: a row of colour swatches (applies to the world + minimap)
-	local bgLabel = Theme.label(panel, "Map Background", UDim2.fromScale(0.05, 0.86), UDim2.fromScale(0.5, 0.045))
+	-- Map Background: a "Pick" HSV picker + a row of quick preset swatches. Both
+	-- apply to the world background AND the minimap surface (a local visual).
+	local function applyBg(color: Color3)
+		currentBg = color
+		Renderer.setBackground(color)
+		Minimap.setBackground(color)
+	end
+	local bgLabel = Theme.label(panel, "Map Background", UDim2.fromScale(0.05, 0.86), UDim2.fromScale(0.45, 0.045))
 	bgLabel.TextXAlignment = Enum.TextXAlignment.Left
 	Theme.capText(bgLabel, 16)
+	local pickBtn = Theme.button(panel, "\u{1F3A8} Pick", UDim2.fromScale(0.64, 0.855), UDim2.fromScale(0.31, 0.05), function()
+		ColorPicker.open("Map background", currentBg, applyBg)
+	end)
+	Theme.capText(pickBtn, 15)
 	for i, color in BG_PRESETS do
 		local sw = Instance.new("TextButton")
 		sw.Position = UDim2.fromScale(0.05 + (i - 1) * 0.117, 0.915)
@@ -119,8 +131,7 @@ function Settings.init(parent: Instance)
 		sw.Parent = panel
 		sw.Activated:Connect(function()
 			Sounds.play("click")
-			Renderer.setBackground(color)
-			Minimap.setBackground(color)
+			applyBg(color)
 		end)
 	end
 

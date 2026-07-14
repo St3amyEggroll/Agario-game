@@ -122,13 +122,14 @@ local function onAction(player, action, arg)
 		Names.saveOverlays(player)
 		return
 	elseif action == "setcolor" then
-		-- pick your cell colour (palette index). Clears any skin so the plain
-		-- coloured cell shows. Persisted like the skin.
+		-- pick your cell colour: a packed 0xRRGGBB int (from the HSV picker or a
+		-- palette swatch). Clears any skin so the plain coloured cell shows.
+		-- Persisted like the skin.
 		if not isFiniteNumber(arg) then
 			return
 		end
 		arg = math.floor(arg)
-		if arg < 1 or arg > #Config.Palette then
+		if arg < 0 or arg > 0xFFFFFF then
 			return
 		end
 		Names.saveColor(player, arg)
@@ -168,7 +169,7 @@ local function sendFullRoster(player)
 	-- serialization reliably
 	local roster = {}
 	for slot, info in World.slotToInfo do
-		roster[tostring(slot)] = { n = info.name, c = info.colorIdx, k = info.skinId, a = World.overlaysArray(info) }
+		roster[tostring(slot)] = { n = info.name, c = info.color, k = info.skinId, a = World.overlaysArray(info) }
 	end
 	-- include lingering ghost slots so a late joiner renders them faded too
 	for slot, entry in World.ghostRoster do

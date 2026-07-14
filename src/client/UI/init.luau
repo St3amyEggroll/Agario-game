@@ -22,6 +22,7 @@ local Minimap = require(script.Minimap)
 local Hiscores = require(script.Hiscores)
 local Spectate = require(script.Spectate)
 local Notifications = require(script.Notifications)
+local ColorPicker = require(script.ColorPicker)
 local Input = require(script.Parent.Input)
 local WorldState = require(script.Parent.WorldState)
 local Sounds = require(script.Parent.Sounds)
@@ -72,6 +73,7 @@ function UI.init(playerGui: PlayerGui)
 	Spectate.init(gui) -- top-center Prev/Next/Play bar while spectating
 	Settings.init(gui) -- also right side; exclusivity keeps it from overlapping Hiscores
 	Notifications.init(gui) -- top-center toasts (level-ups, kills)
+	ColorPicker.init(gui) -- shared HSV picker modal (skin colour + map background); init LAST so it draws above every panel
 
 	Input.onMenuToggle = settingsToggle -- the M keybind mirrors the settings panel
 

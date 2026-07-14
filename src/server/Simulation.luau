@@ -161,9 +161,9 @@ local function drainActions(now: number)
 			info.skinId = cmd.arg -- image/decal asset id (0 = none), validated in Network
 			World.broadcastRosterUpdate(info)
 		elseif action == "setcolor" then
-			-- pick your cell colour (palette index, validated in Network); clears
+			-- pick your cell colour (packed 0xRRGGBB, validated in Network); clears
 			-- the skin so the plain coloured cell shows
-			info.colorIdx = cmd.arg
+			info.color = cmd.arg
 			info.skinId = 0
 			World.broadcastRosterUpdate(info)
 		elseif action == "setaccessory" then

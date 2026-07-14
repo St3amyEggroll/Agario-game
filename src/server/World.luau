@@ -283,7 +283,7 @@ function World.addPlayer(player)
 		player = player,
 		slot = findFreeSlot(),
 		name = player.DisplayName,
-		colorIdx = math.random(#Config.Palette),
+		color = Util.packColor(Config.Palette[math.random(#Config.Palette)]), -- BASE colour: packed 0xRRGGBB (HSV picker / palette)
 		skinId = 0, -- BASE layer: 0 = plain colored circle; positive = image/decal skin
 		overlays = {}, -- SET {[id]=true} of layers over the skin: +id = accessory, -id = avatar(UserId)
 		coins = 0, -- currency collected from gold coins
@@ -329,7 +329,7 @@ function World.removePlayer(player)
 		-- flag the slot as a ghost in the roster: KEEP the dead player's colour AND
 		-- skin, mark it (g) so clients render the leftovers faded (transparent skin)
 		-- + nameless. Stored so late joiners get it in the full sync.
-		local entry = { n = info.name, c = info.colorIdx, k = info.skinId, a = World.overlaysArray(info), g = true }
+		local entry = { n = info.name, c = info.color, k = info.skinId, a = World.overlaysArray(info), g = true }
 		World.ghostRoster[info.slot] = entry
 		Remotes.Roster:FireAllClients("update", info.slot, entry)
 	else
@@ -390,7 +390,7 @@ function World.broadcastRosterUpdate(info)
 	Remotes.Roster:FireAllClients(
 		"update",
 		info.slot,
-		{ n = info.name, c = info.colorIdx, k = info.skinId, a = World.overlaysArray(info) }
+		{ n = info.name, c = info.color, k = info.skinId, a = World.overlaysArray(info) }
 	)
 end
 

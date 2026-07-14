@@ -25,7 +25,7 @@ local MAX_SNAPSHOTS = 30
 
 local WorldState = {
 	orbs = {}, -- [id] = {x, y, color, r}
-	roster = {}, -- [slot] = {n = name, c = colorIdx}
+	roster = {}, -- [slot] = {n = name, c = packed 0xRRGGBB colour, k = skinId, a = overlays}
 	mySlot = nil,
 	coins = 0, -- currency collected (from gold coins)
 	xp = 0, -- lifetime XP (server-authoritative); HUD derives level + bar via Shared.Levels
@@ -338,10 +338,15 @@ function WorldState.cycleSpectate(dir: number)
 	WorldState.spectateSlot = slots[((idx - 1 + dir) % #slots) + 1]
 end
 
+-- Decode a slot's cell colour. `c` is a packed 0xRRGGBB int (the HSV picker /
+-- palette swatches ride as packed RGB now, not a palette index).
 function WorldState.colorForSlot(slot: number): Color3
 	local entry = WorldState.roster[slot]
-	local idx = entry and entry.c or 1
-	return Config.Palette[idx] or Config.Palette[1]
+	local c = entry and entry.c
+	if typeof(c) ~= "number" then
+		return Config.Palette[1]
+	end
+	return Util.unpackColor(c)
 end
 
 function WorldState.nameForSlot(slot: number): string

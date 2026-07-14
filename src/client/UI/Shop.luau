@@ -17,11 +17,13 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
+local Util = require(Shared.Util)
 local Remotes = require(Shared.Remotes)
 local Skins = require(Shared.Skins)
 local Accessories = require(Shared.Accessories)
 local LevelCurve = require(Shared.Levels)
 local Theme = require(script.Parent.Theme)
+local ColorPicker = require(script.Parent.ColorPicker)
 local WorldState = require(script.Parent.Parent.WorldState)
 local Sounds = require(script.Parent.Parent.Sounds)
 
@@ -34,9 +36,10 @@ local idBox: TextBox
 local tabButtons: { [string]: TextButton } = {}
 local currentTab = "custom"
 local cards: {
-	{ frame: Frame, lname: string, category: string, level: number, equipButton: TextButton, matchKind: string, matchId: number }
+	{ frame: Frame, lname: string, category: string, level: number, equipButton: TextButton, img: ImageLabel, matchKind: string, matchId: number }
 } = {}
 local built = false
+local colorPickCard -- the COLOR tab's custom-picker card (its swatch tracks your live colour)
 
 local function currentLevel(): number
 	return LevelCurve.levelForXp(WorldState.xp)
@@ -58,7 +61,9 @@ end
 -- Is this card the look currently equipped? Colour counts only when no skin is on;
 -- overlays (accessories/avatar) count if the id is in the worn set (None never does).
 local function isActive(card): boolean
-	if card.matchKind == "color" then
+	if card.matchKind == "colorpick" then
+		return false
+	elseif card.matchKind == "color" then
 		return currentSkin() == 0 and currentColor() == card.matchId
 	elseif card.matchKind == "overlay" then
 		if card.matchId == 0 then
@@ -84,8 +89,8 @@ local function equipAvatar()
 	Sounds.play("equip")
 end
 
-local function equipColor(idx: number)
-	Remotes.Action:FireServer("setcolor", idx)
+local function equipColor(packed: number)
+	Remotes.Action:FireServer("setcolor", packed)
 	Sounds.play("equip")
 end
 
@@ -156,6 +161,7 @@ local function makeCard(opts)
 		category = opts.category,
 		level = reqLevel,
 		equipButton = equipButton,
+		img = img,
 		matchKind = opts.matchKind,
 		matchId = opts.matchId,
 	})
@@ -189,16 +195,35 @@ local function build()
 		onEquip = equipAvatar,
 	})
 
-	-- COLOR: one swatch per palette colour (equipping clears any skin)
+	-- COLOR: a custom HSV picker card + one swatch per palette preset. Equipping
+	-- any colour clears the skin so the plain coloured cell shows. Colours ride
+	-- as a packed 0xRRGGBB int now (arbitrary colours, not a palette index).
+	makeCard({
+		category = "color",
+		name = "Custom",
+		swatchColor = Color3.new(1, 1, 1),
+		matchKind = "colorpick",
+		matchId = 0,
+		onEquip = function()
+			local packed = currentColor()
+			local seed = (currentSkin() == 0 and typeof(packed) == "number") and Util.unpackColor(packed)
+				or Color3.new(1, 1, 1)
+			ColorPicker.open("Skin color", seed, function(c)
+				equipColor(Util.packColor(c))
+			end)
+		end,
+	})
+	colorPickCard = cards[#cards]
 	for i, col in Config.Palette do
+		local packed = Util.packColor(col)
 		makeCard({
 			category = "color",
 			name = "Color " .. i,
 			swatchColor = col,
 			matchKind = "color",
-			matchId = i,
+			matchId = packed,
 			onEquip = function()
-				equipColor(i)
+				equipColor(packed)
 			end,
 		})
 	end
@@ -257,7 +282,9 @@ function Shop.refreshButtons()
 	for _, card in cards do
 		local btn = card.equipButton
 		local txt, col
-		if card.level > 0 and lvl < card.level then
+		if card.matchKind == "colorpick" then
+			txt, col = "\u{1F3A8} Pick", Theme.AccentColor
+		elseif card.level > 0 and lvl < card.level then
 			txt, col = "\u{1F512} Lv " .. card.level, Theme.MutedText
 		elseif isActive(card) then
 			-- overlays toggle, so an active one shows "Unequip"; base looks show "Equipped"
@@ -274,6 +301,13 @@ function Shop.refreshButtons()
 		end
 		if btn.TextColor3 ~= col then
 			btn.TextColor3 = col
+		end
+	end
+	-- keep the custom-picker swatch showing your current cell colour
+	if colorPickCard and colorPickCard.img then
+		local packed = currentColor()
+		if typeof(packed) == "number" then
+			colorPickCard.img.BackgroundColor3 = Util.unpackColor(packed)
 		end
 	end
 end
