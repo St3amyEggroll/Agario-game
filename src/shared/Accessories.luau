@@ -18,21 +18,14 @@ function Accessories.thumb(id: number): string
 end
 
 -- id 0 is reserved: "no accessory". `price` is the Gold cost in the Buy tab
--- (0 = free). Names/prices below match the reference; the ids are PLACEHOLDERS
--- (reused catalog art so the layer is visible) - send real accessory art ids and
--- I'll swap them in.
+-- (0 = free); prices are placeholders until the buy/own economy lands.
 Accessories.List = {
-	{ name = "Test Decal", id = 1619290961, price = 0 }, -- your decal - equip it to check it renders
-	{ name = "Bread", id = 11988231187, price = 400000 },
-	{ name = "Leafy Hat", id = 11759293347, price = 750000 },
-	{ name = "Angel Halo", id = 11759193017, price = 1000000 },
-	{ name = "Cap", id = 11988231187, price = 1000000 },
-	{ name = "Cat Ears", id = 11759293347, price = 1000000 },
-	{ name = "Cat Ears 2", id = 11759193017, price = 1000000 },
-	{ name = "Cat Whiskers", id = 11988231187, price = 1000000 },
-	{ name = "Circle Saw", id = 11759293347, price = 1000000 },
-	{ name = "Evil Horns", id = 11759193017, price = 1000000 },
-	{ name = "Flame", id = 11988231187, price = 1000000 },
+	{ name = "Chicken Hat", id = 76661227221519, price = 500000 },
+	{ name = "Egg Hat", id = 88334382966718, price = 500000 },
+	{ name = "Heart Hat", id = 109962142302629, price = 500000 },
+	{ name = "Swords", id = 133050467164576, price = 500000 },
+	{ name = "Katanas", id = 134132948842841, price = 500000 },
+	{ name = "Chief Hat", id = 107465494658903, price = 500000 },
 }
 
 Accessories.ById = {}
