@@ -7,10 +7,11 @@
 	"setskin" action; the server stores the id on your roster slot and the
 	renderer draws it on your cell.
 
-	PERF: the ~100+ thumbnail ImageLabels are built lazily on first open (not at
-	game start), and filtering just toggles card.Visible - the UIGridLayout
-	skips invisible children, so no rebuild and no gaps. rbxthumb thumbnails
-	stream in on demand.
+	PERF: the ~100+ thumbnail ImageLabels are built ONCE, on a deferred task the
+	first time the menu opens (not synchronously on the load frame). Filtering
+	just toggles card.Visible - the UIGridLayout skips invisible children, so no
+	rebuild and no gaps. rbxthumb thumbnails stream in on demand (and the grid
+	clips off-screen cards, so their images only load when scrolled into view).
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -184,20 +185,24 @@ function Shop.init(parent: Instance)
 end
 
 -- The shop is always open while in the menu (no toggle button). setOpen(true)
--- lazily builds the thumbnails on first show and pops the panel in.
+-- pops the panel in and builds the card grid ONCE, on a deferred task so the
+-- ~100 thumbnail frames aren't created on the load / menu-open frame itself.
 function Shop.setOpen(open: boolean)
 	if open == panel.Visible then
 		return
 	end
+	panel.Visible = open
 	if open then
-		build() -- lazy: only load thumbnails the first time the menu shows
-		panel.Visible = true
-		if Shop._resizeCells then
-			Shop._resizeCells() -- AbsoluteSize is valid now the panel is shown
-		end
 		Theme.popIn(panel)
-	else
-		panel.Visible = false
+		task.defer(function()
+			if not panel.Visible then
+				return -- closed again before the deferred build ran
+			end
+			build() -- guarded by `built`: only creates the cards the first time
+			if Shop._resizeCells then
+				Shop._resizeCells() -- AbsoluteSize is valid now the panel is shown
+			end
+		end)
 	end
 end
 

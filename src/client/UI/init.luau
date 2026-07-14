@@ -46,9 +46,9 @@ function UI.init(playerGui: PlayerGui)
 	Minimap.init(gui)
 	AbilityDock.init(gui)
 	Pause.init(gui, Settings.toggle) -- ☰ top-left -> Resume / Respawn / Settings / Leave
-	Settings.init(gui)
 	Hiscores.init(gui) -- right of the card, open in the menu
 	Shop.init(gui) -- left of the card, open in the menu
+	Settings.init(gui) -- last, so the settings modal draws over the open panels
 
 	Input.onMenuToggle = Settings.toggle -- the M keybind mirrors the settings panel
 
