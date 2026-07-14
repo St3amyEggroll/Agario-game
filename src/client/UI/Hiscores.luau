@@ -60,16 +60,21 @@ function Hiscores.init(parent: Instance)
 	end
 end
 
--- Always open while in the menu (no toggle button).
-function Hiscores.setOpen(open: boolean)
-	if open == panel.Visible then
+function Hiscores.close()
+	if panel.Visible then
+		panel.Visible = false
+	end
+end
+
+-- Opened from the play-card Scores button.
+function Hiscores.toggle()
+	if panel.Visible then
+		panel.Visible = false
 		return
 	end
-	panel.Visible = open
-	if open then
-		Hiscores.refresh()
-		Theme.popIn(panel)
-	end
+	panel.Visible = true
+	Hiscores.refresh()
+	Theme.popIn(panel)
 end
 
 function Hiscores.refresh()

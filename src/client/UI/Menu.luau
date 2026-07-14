@@ -21,7 +21,9 @@ local nameBox: TextBox
 local skinPreview: Frame
 local skinImage: ImageLabel
 local deathLabel: TextLabel
+local onShopToggle: (() -> ())? = nil
 local onSettings: (() -> ())? = nil
+local onHiscores: (() -> ())? = nil
 local lastSkin = -1
 
 local function commas(n: number): string
@@ -37,8 +39,10 @@ local function submitName()
 	end
 end
 
-function Menu.init(parent: Instance, settingsToggle: () -> ())
+function Menu.init(parent: Instance, shopToggle: () -> (), settingsToggle: () -> (), hiscoresToggle: () -> ())
+	onShopToggle = shopToggle
 	onSettings = settingsToggle
+	onHiscores = hiscoresToggle
 
 	overlay = Instance.new("Frame")
 	overlay.Size = UDim2.fromScale(1, 1)
@@ -48,7 +52,7 @@ function Menu.init(parent: Instance, settingsToggle: () -> ())
 	overlay.Parent = parent
 
 	-- logo above the card
-	local logo = Theme.label(overlay, "AGARIO 2D", UDim2.fromScale(0.5, 0.17), UDim2.fromScale(0.5, 0.09))
+	local logo = Theme.label(overlay, "VIRUS IO", UDim2.fromScale(0.5, 0.17), UDim2.fromScale(0.5, 0.09))
 	logo.AnchorPoint = Vector2.new(0.5, 0.5)
 	Theme.capText(logo, 52)
 
@@ -131,13 +135,25 @@ function Menu.init(parent: Instance, settingsToggle: () -> ())
 	end)
 	Theme.capText(eye, 20)
 
-	-- Settings (the Shop + Hiscores panels are always open beside the card)
-	local settings = Theme.button(card, "\u{2699} Settings", UDim2.fromScale(0.2, 0.76), UDim2.fromScale(0.6, 0.1), function()
+	-- Shop | Scores | Settings (Shop pops in left of the card, Scores right)
+	local shop = Theme.button(card, "\u{1F6D2} Shop", UDim2.fromScale(0.04, 0.76), UDim2.fromScale(0.29, 0.1), function()
+		if onShopToggle then
+			onShopToggle()
+		end
+	end)
+	Theme.capText(shop, 14)
+	local scores = Theme.button(card, "\u{1F3C6} Scores", UDim2.fromScale(0.355, 0.76), UDim2.fromScale(0.29, 0.1), function()
+		if onHiscores then
+			onHiscores()
+		end
+	end)
+	Theme.capText(scores, 14)
+	local settings = Theme.button(card, "\u{2699}", UDim2.fromScale(0.67, 0.76), UDim2.fromScale(0.29, 0.1), function()
 		if onSettings then
 			onSettings()
 		end
 	end)
-	Theme.capText(settings, 15)
+	Theme.capText(settings, 16)
 
 	-- ? help (below the card)
 	local help = Theme.button(card, "?  Controls: Space split - W feed - F freeze", UDim2.fromScale(0.5, 0.9), UDim2.fromScale(0.94, 0.08), function() end)

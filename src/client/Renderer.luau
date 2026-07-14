@@ -530,20 +530,31 @@ function Renderer.render(cam)
 		return ra < rb
 	end)
 	for i, w in visibleCellList do
-		local z = math.min(10 + i, 240)
+		-- z = sort position. The old low cap (240) made every cell past index ~230
+		-- share the SAME top z in a crowd (many players split into packs), so the
+		-- biggest cells z-fought and flickered - the multiplayer split "flashing".
+		-- i is bounded by the on-screen entity count, so a high cap never ties in
+		-- practice. (World and UI are separate ScreenGuis, so this can't collide
+		-- with the interface z range.)
+		local z = math.min(10 + i, 1000000)
 		if w.frame.ZIndex ~= z then
 			w.frame.ZIndex = z
 		end
-		-- the overlay child (a cell's SKIN, or a virus's SPRITE) tracks its body's
-		-- z: with global Sibling z-order it must, or it renders at its fixed
-		-- creation z while the body moves through the stack - the virus sprite
-		-- (z=201) then flickers above/below your cell as the sort shifts when you
-		-- overlap a virus (the "flashing"). Child-after-parent tree order at equal
-		-- z keeps the overlay just above its own body.
-		local overlay = w.skin or w.image
-		if overlay and w.lastZ ~= z then
+		-- Children (a cell's SKIN or a virus's SPRITE, and the cell's name/mass
+		-- labels) MUST track the body's z under global Sibling z-order, or they
+		-- render at their fixed creation layer while the body moves through the
+		-- stack (flicker). Labels tracking z also stops overlapping labels from all
+		-- sharing z=250 and z-fighting, and correctly hides a covered cell's name.
+		if w.lastZ ~= z then
 			w.lastZ = z
-			overlay.ZIndex = z
+			local overlay = w.skin or w.image
+			if overlay then
+				overlay.ZIndex = z
+			end
+			if w.nameLabel then
+				w.nameLabel.ZIndex = z
+				w.massLabel.ZIndex = z
+			end
 		end
 	end
 end

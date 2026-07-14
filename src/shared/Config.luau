@@ -52,10 +52,10 @@ local Config = {
 	MaxCells = 32, -- max simultaneous cells per player
 	MinCellMass = 100, -- a cell can never be smaller than this (split/pop keep every piece >= this)
 	SplitMinMass = 200, -- a cell needs at least this much mass to split (so both halves stay >= MinCellMass)
-	SplitImpulse = 936, -- base launch speed of the new half...
-	SplitImpulsePerRadius = 9, -- ...scaled up by cell radius so BIG cells launch pieces fast enough to
+	SplitImpulse = 1050, -- base launch speed of the new half...
+	SplitImpulsePerRadius = 12, -- ...scaled up by cell radius so BIG cells launch pieces fast enough to
 	-- clear their (larger) radius quickly - otherwise big split halves overlap in a blob for too long
-	ImpulseDamping = 4, -- exponential damping rate for split/pop impulses
+	ImpulseDamping = 3.4, -- exponential damping rate for split/pop impulses (lower = pieces carry further)
 	-- merge timer scales with cell mass: little cells ~MergeTimeBase, growing
 	-- with mass, capped at MergeTimeMax. (base 4s, +0.006/mass, cap 10s => a
 	-- ~60-mass sliver ~4s, a ~1000-mass cell 10s.)
@@ -145,8 +145,8 @@ local Config = {
 	-- pellets); self-feeding your own pellets gives none, so you can't farm your
 	-- own level. XP is lifetime-cumulative and saved across sessions.
 	XpPerMass = 1, -- XP gained per unit of consumed food mass
-	LevelBaseXp = 400, -- XP to go from level 1 -> 2
-	LevelGrowth = 1.18, -- each level needs this many times more XP than the last (geometric)
+	LevelBaseXp = 2000, -- XP to go from level 1 -> 2 (leveling was too fast; slowed ~5x)
+	LevelGrowth = 1.25, -- each level needs this many times more XP than the last (geometric)
 	MaxLevel = 500, -- hard cap (also bounds the level-from-xp loop)
 
 	------------------------------------------------------------------ Networking

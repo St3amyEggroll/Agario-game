@@ -184,26 +184,31 @@ function Shop.init(parent: Instance)
 	Shop._resizeCells = resizeCells
 end
 
--- The shop is always open while in the menu (no toggle button). setOpen(true)
--- pops the panel in and builds the card grid ONCE, on a deferred task so the
--- ~100 thumbnail frames aren't created on the load / menu-open frame itself.
-function Shop.setOpen(open: boolean)
-	if open == panel.Visible then
+function Shop.close()
+	if panel.Visible then
+		panel.Visible = false
+	end
+end
+
+-- Opened from the play-card Shop button. Pops the panel in and builds the card
+-- grid ONCE, on a deferred task so the ~100 thumbnail frames aren't created on
+-- the click frame itself.
+function Shop.toggle()
+	if panel.Visible then
+		panel.Visible = false
 		return
 	end
-	panel.Visible = open
-	if open then
-		Theme.popIn(panel)
-		task.defer(function()
-			if not panel.Visible then
-				return -- closed again before the deferred build ran
-			end
-			build() -- guarded by `built`: only creates the cards the first time
-			if Shop._resizeCells then
-				Shop._resizeCells() -- AbsoluteSize is valid now the panel is shown
-			end
-		end)
-	end
+	panel.Visible = true
+	Theme.popIn(panel)
+	task.defer(function()
+		if not panel.Visible then
+			return -- closed again before the deferred build ran
+		end
+		build() -- guarded by `built`: only creates the cards the first time
+		if Shop._resizeCells then
+			Shop._resizeCells() -- AbsoluteSize is valid now the panel is shown
+		end
+	end)
 end
 
 return Shop

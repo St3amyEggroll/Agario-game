@@ -25,14 +25,6 @@ UI.Menu = Menu
 UI.Settings = Settings
 UI.Shop = Shop
 
--- The Shop (left of the card) and Hiscores (right) are open whenever the menu is
--- up, and closed while playing/spectating - no buttons.
-local function syncMenuPanels()
-	local inMenu = WorldState.status == "menu" or WorldState.status == "dead"
-	Shop.setOpen(inMenu)
-	Hiscores.setOpen(inMenu)
-end
-
 function UI.init(playerGui: PlayerGui)
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "AgarUI"
@@ -41,24 +33,27 @@ function UI.init(playerGui: PlayerGui)
 	gui.DisplayOrder = 10
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-	Menu.init(gui, Settings.toggle) -- overlay + card (drawn under the HUD)
+	Menu.init(gui, Shop.toggle, Settings.toggle, Hiscores.toggle) -- overlay + card
 	HUD.init(gui)
 	Minimap.init(gui)
 	AbilityDock.init(gui)
 	Pause.init(gui, Settings.toggle) -- ☰ top-left -> Resume / Respawn / Settings / Leave
-	Hiscores.init(gui) -- right of the card, open in the menu
-	Shop.init(gui) -- left of the card, open in the menu
-	Settings.init(gui) -- last, so the settings modal draws over the open panels
+	Hiscores.init(gui) -- pops in right of the card
+	Shop.init(gui) -- pops in left of the card
+	Settings.init(gui) -- last, so the settings modal draws over the side panels
 
 	Input.onMenuToggle = Settings.toggle -- the M keybind mirrors the settings panel
 
-	WorldState.onPlayerState = function(_event)
+	WorldState.onPlayerState = function(event)
 		Menu.refresh()
-		syncMenuPanels()
+		if event == "spawned" then
+			-- menu pop-ups shouldn't linger into the game
+			Shop.close()
+			Hiscores.close()
+		end
 	end
 
 	gui.Parent = playerGui
-	syncMenuPanels() -- start in the menu with both panels open
 end
 
 function UI.update(dt: number)
@@ -68,10 +63,12 @@ function UI.update(dt: number)
 	Menu.update(dt)
 	Minimap.update(dt)
 	Hiscores.update(dt)
-	-- keep the menu panels tracking status even for transitions that don't fire
-	-- onPlayerState (e.g. the Spectate button sets status directly); setOpen
-	-- early-returns when already in the right state, so this is ~free
-	syncMenuPanels()
+	-- the Shop/Scores pop-ups only make sense in the menu; force them closed
+	-- otherwise (covers Spectate, which hides the card without firing onPlayerState)
+	if WorldState.status ~= "menu" and WorldState.status ~= "dead" then
+		Shop.close()
+		Hiscores.close()
+	end
 end
 
 return UI
