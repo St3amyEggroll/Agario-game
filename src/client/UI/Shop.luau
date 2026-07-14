@@ -181,21 +181,16 @@ function Shop.init(parent: Instance)
 	end
 	scroll:GetPropertyChangedSignal("AbsoluteSize"):Connect(resizeCells)
 	Shop._resizeCells = resizeCells
-
-	local closeButton = Theme.button(panel, "Close", UDim2.fromScale(0.5, 0.99), UDim2.fromScale(0.2, 0.06), function()
-		panel.Visible = false
-	end)
-	closeButton.AnchorPoint = Vector2.new(0.5, 1)
-	Theme.capText(closeButton, 18)
 end
 
-function Shop.close()
-	panel.Visible = false
-end
-
-function Shop.toggle()
-	if not panel.Visible then
-		build() -- lazy: only load thumbnails when the shop is first opened
+-- The shop is always open while in the menu (no toggle button). setOpen(true)
+-- lazily builds the thumbnails on first show and pops the panel in.
+function Shop.setOpen(open: boolean)
+	if open == panel.Visible then
+		return
+	end
+	if open then
+		build() -- lazy: only load thumbnails the first time the menu shows
 		panel.Visible = true
 		if Shop._resizeCells then
 			Shop._resizeCells() -- AbsoluteSize is valid now the panel is shown

@@ -28,15 +28,10 @@ function Hiscores.init(parent: Instance)
 	panel = Theme.panel(parent, UDim2.fromScale(0.64, 0.54), UDim2.fromScale(0.3, 0.56), Vector2.new(0, 0.5))
 	panel.Visible = false
 
-	local title = Theme.label(panel, "Hiscores", UDim2.fromScale(0.06, 0.02), UDim2.fromScale(0.6, 0.06))
+	local title = Theme.label(panel, "Hiscores", UDim2.fromScale(0.06, 0.02), UDim2.fromScale(0.88, 0.06))
 	title.TextColor3 = Theme.AccentColor
 	title.TextXAlignment = Enum.TextXAlignment.Left
 	Theme.capText(title, 22)
-
-	local close = Theme.button(panel, "\u{2715}", UDim2.fromScale(0.87, 0.02), UDim2.fromScale(0.1, 0.05), function()
-		panel.Visible = false
-	end)
-	Theme.capText(close, 16)
 
 	-- your stats
 	statLine = Theme.mono(panel, "Lv 1   -   0 coins", UDim2.fromScale(0.06, 0.09), UDim2.fromScale(0.88, 0.05))
@@ -65,15 +60,13 @@ function Hiscores.init(parent: Instance)
 	end
 end
 
-function Hiscores.close()
-	panel.Visible = false
-end
-
-function Hiscores.toggle()
-	if panel.Visible then
-		panel.Visible = false
-	else
-		panel.Visible = true
+-- Always open while in the menu (no toggle button).
+function Hiscores.setOpen(open: boolean)
+	if open == panel.Visible then
+		return
+	end
+	panel.Visible = open
+	if open then
 		Hiscores.refresh()
 		Theme.popIn(panel)
 	end

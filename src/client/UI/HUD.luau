@@ -1,8 +1,7 @@
 --[[
-	HUD - top-left stats bar (Agma-style, minimal): Level + XP, Mass, Coins, and
-	FPS / Ping / Cells, all in one bar next to the pause button. Shown always
-	(the menu panels float over the dimmed game, like Agma), so mass/cells read 0
-	while you're in the menu.
+	HUD - bottom-left stats bar (minimal): Level + XP, Mass, Coins, and
+	FPS / Ping / Cells, all in one bar. Shown always (the menu panels float over
+	the dimmed game), so mass/cells read 0 while you're in the menu.
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -38,8 +37,8 @@ local function divider(parent: Instance, x: number)
 end
 
 function HUD.init(parent: Instance)
-	-- sits just below the Roblox top bar (their logo / menu / mic own the corner)
-	local bar = Theme.panel(parent, UDim2.fromScale(0.055, 0.058), UDim2.fromScale(0.33, 0.06))
+	-- bottom-left stats bar (Level/XP, Mass, Coins, FPS/Ping/Cells)
+	local bar = Theme.panel(parent, UDim2.fromScale(0.008, 0.99), UDim2.fromScale(0.33, 0.06), Vector2.new(0, 1))
 
 	-- Level + XP
 	lvLabel = Theme.mono(bar, "Lv 1", UDim2.fromScale(0.015, 0.14), UDim2.fromScale(0.11, 0.42))

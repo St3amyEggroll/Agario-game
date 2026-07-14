@@ -25,6 +25,14 @@ UI.Menu = Menu
 UI.Settings = Settings
 UI.Shop = Shop
 
+-- The Shop (left of the card) and Hiscores (right) are open whenever the menu is
+-- up, and closed while playing/spectating - no buttons.
+local function syncMenuPanels()
+	local inMenu = WorldState.status == "menu" or WorldState.status == "dead"
+	Shop.setOpen(inMenu)
+	Hiscores.setOpen(inMenu)
+end
+
 function UI.init(playerGui: PlayerGui)
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "AgarUI"
@@ -33,27 +41,24 @@ function UI.init(playerGui: PlayerGui)
 	gui.DisplayOrder = 10
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-	Menu.init(gui, Shop.toggle, Settings.toggle, Hiscores.toggle) -- overlay + card (drawn under the HUD)
+	Menu.init(gui, Settings.toggle) -- overlay + card (drawn under the HUD)
 	HUD.init(gui)
 	Minimap.init(gui)
 	AbilityDock.init(gui)
 	Pause.init(gui, Settings.toggle) -- ☰ top-left -> Resume / Respawn / Settings / Leave
 	Settings.init(gui)
-	Hiscores.init(gui) -- right-side pop-up
-	Shop.init(gui) -- left-side pop-up
+	Hiscores.init(gui) -- right of the card, open in the menu
+	Shop.init(gui) -- left of the card, open in the menu
 
 	Input.onMenuToggle = Settings.toggle -- the M keybind mirrors the settings panel
 
-	WorldState.onPlayerState = function(event)
+	WorldState.onPlayerState = function(_event)
 		Menu.refresh()
-		if event == "spawned" then
-			-- menu-only pop-ups shouldn't linger into the game
-			Shop.close()
-			Hiscores.close()
-		end
+		syncMenuPanels()
 	end
 
 	gui.Parent = playerGui
+	syncMenuPanels() -- start in the menu with both panels open
 end
 
 function UI.update(dt: number)
@@ -63,6 +68,10 @@ function UI.update(dt: number)
 	Menu.update(dt)
 	Minimap.update(dt)
 	Hiscores.update(dt)
+	-- keep the menu panels tracking status even for transitions that don't fire
+	-- onPlayerState (e.g. the Spectate button sets status directly); setOpen
+	-- early-returns when already in the right state, so this is ~free
+	syncMenuPanels()
 end
 
 return UI

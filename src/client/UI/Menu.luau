@@ -20,9 +20,7 @@ local overlay: Frame
 local nameBox: TextBox
 local skinPreview: Frame
 local skinImage: ImageLabel
-local onShopToggle: (() -> ())? = nil
 local onSettings: (() -> ())? = nil
-local onHiscores: (() -> ())? = nil
 local lastSkin = -1
 
 local function submitName()
@@ -33,10 +31,8 @@ local function submitName()
 	end
 end
 
-function Menu.init(parent: Instance, shopToggle: () -> (), settingsToggle: () -> (), hiscoresToggle: () -> ())
-	onShopToggle = shopToggle
+function Menu.init(parent: Instance, settingsToggle: () -> ())
 	onSettings = settingsToggle
-	onHiscores = hiscoresToggle
 
 	overlay = Instance.new("Frame")
 	overlay.Size = UDim2.fromScale(1, 1)
@@ -52,14 +48,6 @@ function Menu.init(parent: Instance, shopToggle: () -> (), settingsToggle: () ->
 
 	-- the card
 	local card = Theme.panel(overlay, UDim2.fromScale(0.5, 0.54), UDim2.fromScale(0.26, 0.52), Vector2.new(0.5, 0.5))
-
-	-- Skins button (top-right of the card) - skins one tap from the front
-	local skinsBtn = Theme.button(card, "\u{1F3A8} Skins", UDim2.fromScale(0.62, 0.035), UDim2.fromScale(0.34, 0.1), function()
-		if onShopToggle then
-			onShopToggle()
-		end
-	end)
-	Theme.capText(skinsBtn, 15)
 
 	-- skin preview
 	skinPreview = Instance.new("Frame")
@@ -130,25 +118,13 @@ function Menu.init(parent: Instance, shopToggle: () -> (), settingsToggle: () ->
 	end)
 	Theme.capText(eye, 20)
 
-	-- Shop | Hiscores | Settings
-	local shop = Theme.button(card, "\u{1F6D2} Shop", UDim2.fromScale(0.04, 0.76), UDim2.fromScale(0.29, 0.1), function()
-		if onShopToggle then
-			onShopToggle()
-		end
-	end)
-	Theme.capText(shop, 14)
-	local hiscores = Theme.button(card, "\u{1F3C6} Scores", UDim2.fromScale(0.355, 0.76), UDim2.fromScale(0.29, 0.1), function()
-		if onHiscores then
-			onHiscores()
-		end
-	end)
-	Theme.capText(hiscores, 14)
-	local settings = Theme.button(card, "\u{2699}", UDim2.fromScale(0.67, 0.76), UDim2.fromScale(0.29, 0.1), function()
+	-- Settings (the Shop + Hiscores panels are always open beside the card)
+	local settings = Theme.button(card, "\u{2699} Settings", UDim2.fromScale(0.2, 0.76), UDim2.fromScale(0.6, 0.1), function()
 		if onSettings then
 			onSettings()
 		end
 	end)
-	Theme.capText(settings, 16)
+	Theme.capText(settings, 15)
 
 	-- ? help (below the card)
 	local help = Theme.button(card, "?  Controls: Space split - W feed - F freeze", UDim2.fromScale(0.5, 0.9), UDim2.fromScale(0.94, 0.08), function() end)
