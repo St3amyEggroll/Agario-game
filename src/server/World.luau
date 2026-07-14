@@ -323,10 +323,10 @@ function World.removePlayer(player)
 	World.players[player] = nil
 	if ghostCount > 0 then
 		World.ghostSlots[info.slot] = ghostCount
-		-- flag the slot as a ghost in the roster: keep the colour so you can tell
-		-- whose it was, but drop the skin and mark it (g) so clients render the
-		-- leftovers faded + nameless. Stored so late joiners get it in the full sync.
-		local entry = { n = info.name, c = info.colorIdx, k = 0, g = true }
+		-- flag the slot as a ghost in the roster: KEEP the dead player's colour AND
+		-- skin, mark it (g) so clients render the leftovers faded (transparent skin)
+		-- + nameless. Stored so late joiners get it in the full sync.
+		local entry = { n = info.name, c = info.colorIdx, k = info.skinId, g = true }
 		World.ghostRoster[info.slot] = entry
 		Remotes.Roster:FireAllClients("update", info.slot, entry)
 	else
@@ -342,17 +342,29 @@ function World.totalMass(info): number
 	return total
 end
 
--- Spawn point that avoids parking a new player inside something that can
--- instantly eat them. Brute scan is fine: cell counts are small.
+-- Spawn point that doesn't drop you ON TOP of any cell, virus or experimental
+-- (so you never spawn inside something). Clearance = your radius + the other
+-- entity's radius + a margin. Brute scan is fine: entity counts are small.
 function World.safeSpawnPos(): (number, number)
-	local threshold = Config.StartMass * Config.EatMassRatio
-	for _ = 1, 12 do
+	local spawnR = Util.radiusFromMass(Config.StartMass)
+	local margin = 80
+	for _ = 1, 24 do
 		local x, y = World.randomPos(150)
 		local safe = true
 		for _, cell in World.cells do
-			if cell.m >= threshold and Util.dist2(x, y, cell.x, cell.y) < 400 * 400 then
+			local clear = spawnR + cell.r + margin
+			if Util.dist2(x, y, cell.x, cell.y) < clear * clear then
 				safe = false
 				break
+			end
+		end
+		if safe then
+			for _, v in World.viruses do -- includes experimentals (kind == "exp")
+				local clear = spawnR + v.r + margin
+				if Util.dist2(x, y, v.x, v.y) < clear * clear then
+					safe = false
+					break
+				end
 			end
 		end
 		if safe then

@@ -82,7 +82,6 @@ local Config = {
 	GhostLifetime = 60,
 	GhostDecayRate = 0.045, -- fraction of mass a dead cell loses per second (gentle shrink)
 	GhostTransparency = 0.55, -- how faded dead cells render (0 = solid, 1 = invisible)
-	GhostColor = Color3.fromRGB(150, 150, 150), -- neutral gray, so dead cells read as nobody's
 
 	------------------------------------------------------------------ Freeze
 	-- Freeze fully locks your aim movement (0 = can't steer while frozen). Split

@@ -478,25 +478,19 @@ function Renderer.render(cam)
 			end
 			place(w, ox + c.x * scale, oy + c.y * scale, math.max(pixels, 2))
 
-			-- dead (ghost) cells render GRAY + faded with NO labels (their skin is
-			-- already gone - the roster entry has k=0). Cached so these writes only
-			-- fire when a wrapper's ghost state flips (incl. recycling onto a live cell).
+			-- dead (ghost) cells keep the dead player's LOOK - their skin, or just
+			-- their plain colour if they had no skin - but rendered faded, with NO
+			-- labels. The body colour/skin come from the (kept) roster entry; here we
+			-- only fade the body, stroke and skin. Cached so these writes fire only
+			-- when a wrapper's ghost state flips (incl. recycling onto a live cell,
+			-- which restores full opacity).
 			local isGhost = WorldState.isGhostSlot(c.slot)
 			if w.lastGhost ~= isGhost then
 				w.lastGhost = isGhost
-				if isGhost then
-					w.frame.BackgroundColor3 = Config.GhostColor
-					w.frame.BackgroundTransparency = Config.GhostTransparency
-					w.stroke.Color = darker(Config.GhostColor)
-					w.stroke.Transparency = Config.GhostTransparency
-				else
-					-- recycled onto a live cell: restore its real colour + opacity
-					local color = WorldState.colorForSlot(c.slot)
-					w.frame.BackgroundColor3 = color
-					w.frame.BackgroundTransparency = 0
-					w.stroke.Color = darker(color)
-					w.stroke.Transparency = 0
-				end
+				local t = isGhost and Config.GhostTransparency or 0
+				w.frame.BackgroundTransparency = t
+				w.stroke.Transparency = t
+				w.skin.ImageTransparency = t
 			end
 
 			-- labels only when big enough on screen AND not a dead cell (dead cells

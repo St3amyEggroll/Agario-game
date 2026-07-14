@@ -20,7 +20,7 @@ local DEFS = {
 }
 
 local sounds: { [string]: Sound } = {}
-local enabled = true -- toggled from Settings (Sound Effects on/off)
+local enabled = false -- default OFF; toggled from Settings (Sound Effects on/off)
 
 function Sounds.setEnabled(on: boolean)
 	enabled = on
