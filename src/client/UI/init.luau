@@ -66,6 +66,7 @@ function UI.update(dt: number)
 	Minimap.update(dt)
 	Hiscores.update(dt)
 	Spectate.update(dt)
+	Shop.update(dt)
 end
 
 return UI

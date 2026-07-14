@@ -18,6 +18,8 @@ local Snapshots = require(script.Parent.Snapshots)
 local Keybinds = require(script.Parent.Keybinds)
 local Names = require(script.Parent.Names)
 local Levels = require(script.Parent.Levels)
+local Skins = require(Shared.Skins)
+local LevelCurve = require(Shared.Levels)
 
 local Network = {}
 
@@ -87,7 +89,14 @@ local function onAction(player, action, arg)
 			return
 		end
 		arg = math.floor(arg)
-		if arg < 0 or arg > 1e12 then
+		-- cap high enough for modern asset ids (level-skin ids are ~1e14)
+		if arg < 0 or arg > 1e16 then
+			return
+		end
+		-- level-locked skins: reject if the player hasn't reached the unlock level
+		-- (custom pasted ids and free catalog skins have requiredLevel 0)
+		local reqLevel = Skins.requiredLevel(arg)
+		if reqLevel > 0 and LevelCurve.levelForXp(info.xp) < reqLevel then
 			return
 		end
 		Names.saveSkin(player, arg) -- persist the equipped skin across sessions

@@ -18,14 +18,20 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Remotes = require(Shared.Remotes)
 local Skins = require(Shared.Skins)
+local LevelCurve = require(Shared.Levels)
 local Theme = require(script.Parent.Theme)
+local WorldState = require(script.Parent.Parent.WorldState)
 
 local Shop = {}
 
 local panel: Frame
 local scroll: ScrollingFrame
-local cards: { { frame: Frame, name: string, lname: string } } = {}
+local cards: { { frame: Frame, lname: string, level: number, equipButton: TextButton } } = {}
 local built = false
+
+local function currentLevel(): number
+	return LevelCurve.levelForXp(WorldState.xp)
+end
 
 local function equip(id: number)
 	Remotes.Action:FireServer("setskin", id)
@@ -62,19 +68,59 @@ local function build()
 		nameLabel.TextWrapped = true
 		Theme.capText(nameLabel, 14)
 
+		local reqLevel = skin.level or 0
+
+		-- level-locked skins get a corner badge showing the unlock level
+		if reqLevel > 0 then
+			local badge = Theme.label(card, "Lv " .. reqLevel, UDim2.fromScale(0.04, 0.04), UDim2.fromScale(0.5, 0.12))
+			badge.BackgroundColor3 = Theme.AccentColor
+			badge.BackgroundTransparency = 0.15
+			badge.TextColor3 = Color3.new(1, 1, 1)
+			badge.TextXAlignment = Enum.TextXAlignment.Center
+			Theme.round(badge, 6)
+			Theme.capText(badge, 12)
+		end
+
 		local equipButton = Theme.button(
 			card,
 			"Equip",
 			UDim2.fromScale(0.5, 0.97),
 			UDim2.fromScale(0.86, 0.2),
 			function()
+				-- locked level skins do nothing on click (the server would reject it anyway)
+				if reqLevel > 0 and currentLevel() < reqLevel then
+					return
+				end
 				equip(skin.id)
 			end
 		)
 		equipButton.AnchorPoint = Vector2.new(0.5, 1)
 		Theme.capText(equipButton, 14)
 
-		table.insert(cards, { frame = card, name = skin.name, lname = skin.name:lower() })
+		table.insert(cards, { frame = card, lname = skin.name:lower(), level = reqLevel, equipButton = equipButton })
+	end
+	Shop.refreshLocks()
+end
+
+-- Update every level-skin's Equip button to reflect the player's current level:
+-- unlocked shows "Equip", locked shows a lock + the required level.
+function Shop.refreshLocks()
+	if not built then
+		return
+	end
+	local lvl = currentLevel()
+	for _, card in cards do
+		if card.level > 0 then
+			local locked = lvl < card.level
+			local txt = locked and ("\u{1F512} Lv " .. card.level) or "Equip"
+			if card.equipButton.Text ~= txt then
+				card.equipButton.Text = txt
+			end
+			local col = locked and Theme.MutedText or Theme.TextColor
+			if card.equipButton.TextColor3 ~= col then
+				card.equipButton.TextColor3 = col
+			end
+		end
 	end
 end
 
@@ -210,10 +256,25 @@ function Shop.toggle()
 			return -- closed again before the deferred build ran
 		end
 		build() -- guarded by `built`: only creates the cards the first time
+		Shop.refreshLocks() -- reflect the current level on the level-skin buttons
 		if Shop._resizeCells then
 			Shop._resizeCells() -- AbsoluteSize is valid now the panel is shown
 		end
 	end)
+end
+
+-- Keep the level-skin locks live while the shop is open: refresh only when the
+-- player's level actually changes (cheap - no per-frame work otherwise).
+local lastShownLevel = -1
+function Shop.update(_dt: number)
+	if not panel.Visible or not built then
+		return
+	end
+	local lvl = currentLevel()
+	if lvl ~= lastShownLevel then
+		lastShownLevel = lvl
+		Shop.refreshLocks()
+	end
 end
 
 return Shop

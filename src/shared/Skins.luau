@@ -120,12 +120,83 @@ Skins.List = {
 	{ name = "Elmo Fire", id = 10901055606 },
 	{ name = "Gamer Controller", id = 10322933810 },
 	{ name = "Kirby", id = 11041446595 },
+	-- ---- extra shop skins ----
+	{ name = "Beluga", id = 7129155278 },
+	{ name = "Touge Out Cat", id = 11176073582 },
+	{ name = "Adventure Time", id = 8373881918 },
+	{ name = "Demon Slayer", id = 5444301611 },
+	{ name = "PJ Monkey", id = 4535856663 },
+	{ name = "Spooky Skeleton", id = 348864556 },
+	{ name = "Bread", id = 2163500151 },
+	{ name = "Mr Incredible", id = 8423240984 },
+	{ name = "Kaido One Piece", id = 7553025629 },
+	{ name = "Minecraft Died", id = 3601030967 },
+	{ name = "Invisible", id = 2483186 },
+	{ name = "Aesthetic Anime", id = 5191098772 },
+	{ name = "Cursed Image", id = 1847902752 },
+	{ name = "Funny Cat Moment", id = 7205866972 },
+	{ name = "Summer Chill Out", id = 3290453459 },
+	{ name = "Aesthetic", id = 1049060234 },
+	{ name = "Kawaii", id = 5206932266 },
+	{ name = "Roblox Meme 1", id = 7279137105 },
+	{ name = "Birthday", id = 935443517 },
+	{ name = "Miku Plush", id = 5530807649 },
+	{ name = "Himiko Magic Girl", id = 4560862750 },
+	{ name = "Miku Blue Pixel", id = 11696751303 },
 }
 
--- id -> entry (for validating "is this a real catalog skin")
+-- Level-locked skins: a progression reward. Only equippable once you reach the
+-- required level (enforced server-side in Network.setskin; the shop shows a lock
+-- with the required level until then). They also live in Skins.List (appended
+-- below) so they appear in the shop grid alongside the free skins.
+Skins.LevelSkins = {
+	{ name = "Fly", id = 123184203462937, level = 5 },
+	{ name = "Spider", id = 136246504733085, level = 10 },
+	{ name = "Wasp", id = 89421765434538, level = 15 },
+	{ name = "Lizard", id = 131498499712183, level = 20 },
+	{ name = "Bat", id = 133850690603961, level = 25 },
+	{ name = "Snake", id = 83813680359486, level = 30 },
+	{ name = "Fox", id = 135966158378567, level = 35 },
+	{ name = "Coyote", id = 115304738072653, level = 40 },
+	{ name = "Hunter", id = 106909526202766, level = 45 },
+	{ name = "Sumo", id = 80096571188996, level = 50 },
+	{ name = "Bear", id = 122066180752950, level = 55 },
+	{ name = "Cougar", id = 88168990057844, level = 60 },
+	{ name = "Panther", id = 72746715010536, level = 65 },
+	{ name = "Lion", id = 77852246856007, level = 70 },
+	{ name = "Crocodile", id = 71841427184637, level = 75 },
+	{ name = "Shark", id = 124671757253954, level = 80 },
+	{ name = "Mammoth", id = 92940263650897, level = 85 },
+	{ name = "Raptor", id = 121327620427191, level = 90 },
+	{ name = "T-Rex", id = 93342400772415, level = 95 },
+	{ name = "Kraken", id = 136266440086993, level = 100 },
+	{ name = "Tiny Fairy", id = 81553136576404, level = 105 },
+	{ name = "Small Goblin", id = 124070492740278, level = 110 },
+	{ name = "Young Elf", id = 97701702636034, level = 115 },
+	{ name = "Grove Spirit", id = 103866438790783, level = 120 },
+	{ name = "Mystical Dwarf", id = 102542102042632, level = 125 },
+	{ name = "Brave Halfling", id = 115415384048734, level = 130 },
+	{ name = "Wild Werewolf", id = 92934725261858, level = 135 },
+	{ name = "Powerful Sorcerer", id = 110570118950675, level = 140 },
+	{ name = "Stealthy Assassin", id = 87813738178173, level = 145 },
+	{ name = "Valiant Knight", id = 92903783395298, level = 150 },
+}
+
+-- append level skins so they show in the shop grid too (after the free skins)
+for _, s in Skins.LevelSkins do
+	table.insert(Skins.List, s)
+end
+
+-- id -> entry (for validating "is this a real catalog skin" + its unlock level)
 Skins.ById = {}
 for _, s in Skins.List do
 	Skins.ById[s.id] = s
+end
+
+-- Level required to equip a skin (0 = free / not level-locked).
+function Skins.requiredLevel(id: number): number
+	local e = Skins.ById[id]
+	return (e and e.level) or 0
 end
 
 return Skins
