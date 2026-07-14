@@ -21,6 +21,15 @@ local DEFS = {
 }
 
 local sounds: { [string]: Sound } = {}
+local enabled = true -- toggled from Settings (Sound Effects on/off)
+
+function Sounds.setEnabled(on: boolean)
+	enabled = on
+end
+
+function Sounds.isEnabled(): boolean
+	return enabled
+end
 
 function Sounds.init()
 	for name, def in DEFS do
@@ -35,6 +44,9 @@ end
 -- Play an effect by name (no-op if unknown or before init). Restarts from 0 so
 -- rapid repeats retrigger instead of being ignored mid-play.
 function Sounds.play(name: string)
+	if not enabled then
+		return
+	end
 	local s = sounds[name]
 	if s then
 		s.TimePosition = 0

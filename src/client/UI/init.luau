@@ -21,12 +21,10 @@ local Pause = require(script.Pause)
 local Minimap = require(script.Minimap)
 local Hiscores = require(script.Hiscores)
 local Spectate = require(script.Spectate)
-local Radio = require(script.Radio)
 local Notifications = require(script.Notifications)
 local Input = require(script.Parent.Input)
 local WorldState = require(script.Parent.WorldState)
 local Sounds = require(script.Parent.Sounds)
-local Music = require(script.Parent.Music)
 local Theme = require(script.Theme)
 
 local UI = {}
@@ -37,7 +35,6 @@ UI.Shop = Shop
 
 function UI.init(playerGui: PlayerGui)
 	Sounds.init() -- build the reusable SFX (click, equip, ...) before any button exists
-	Music.init() -- start the radio
 
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "AgarUI"
@@ -75,7 +72,6 @@ function UI.init(playerGui: PlayerGui)
 	Spectate.init(gui) -- top-center Prev/Next/Play bar while spectating
 	Settings.init(gui) -- also right side; exclusivity keeps it from overlapping Hiscores
 	Notifications.init(gui) -- top-center toasts (level-ups, kills)
-	Radio.init(gui) -- top-right music control
 
 	Input.onMenuToggle = settingsToggle -- the M keybind mirrors the settings panel
 

@@ -10,6 +10,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
 local Theme = require(script.Parent.Theme)
 local Input = require(script.Parent.Parent.Input)
+local Sounds = require(script.Parent.Parent.Sounds)
 
 -- fixed display order + friendly names
 local ROWS = {
@@ -70,6 +71,22 @@ function Settings.init(parent: Instance)
 	Theme.closeButton(panel, UDim2.fromScale(0.9, 0.02), UDim2.fromScale(0.08, 0.06), function()
 		Settings.setVisible(false)
 	end)
+
+	-- Sound Effects on/off toggle (below the keybind rows)
+	local sfxLabel = Theme.label(panel, "Sound Effects", UDim2.fromScale(0.05, 0.8), UDim2.fromScale(0.5, 0.05))
+	sfxLabel.TextXAlignment = Enum.TextXAlignment.Left
+	Theme.capText(sfxLabel, 16)
+	local sfxBtn
+	sfxBtn = Theme.button(panel, "On", UDim2.fromScale(0.64, 0.8), UDim2.fromScale(0.31, 0.052), function()
+		Sounds.setEnabled(not Sounds.isEnabled())
+		local on = Sounds.isEnabled()
+		sfxBtn.Text = on and "On" or "Off"
+		sfxBtn.TextColor3 = on and Theme.Green or Theme.MutedText
+	end)
+	local on = Sounds.isEnabled()
+	sfxBtn.Text = on and "On" or "Off"
+	sfxBtn.TextColor3 = on and Theme.Green or Theme.MutedText
+	Theme.capText(sfxBtn, 16)
 
 	-- reserved-for-future note: defaults come from Config.DefaultKeybinds
 	local _ = Config
