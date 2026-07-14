@@ -15,8 +15,8 @@ local DEFS = {
 	click = { id = "rbxassetid://139658322785649", volume = 0.35 }, -- any UI button press
 	equip = { id = "rbxassetid://138323438407619", volume = 0.5 }, -- equipping a skin / color / avatar
 	split = { id = "rbxassetid://72264591133889", volume = 0.4 }, -- pressing split
-	levelup = { id = "rbxassetid://140172825268473", volume = 0.55 }, -- gaining a level
-	kill = { id = "rbxassetid://330595293", volume = 0.55 }, -- you eliminated another player
+	levelup = { id = "rbxassetid://7464917496", volume = 0.55 }, -- gaining a level
+	kill = { id = "rbxassetid://106404805196224", volume = 0.55 }, -- you eliminated another player
 }
 
 local sounds: { [string]: Sound } = {}
