@@ -76,6 +76,10 @@ local Config = {
 	-- to travel deep to the big cell's center (which happened at big sizes with a
 	-- smaller fraction).
 	MergeOverlap = 1.0,
+	-- When a player disconnects their cells stay as ownerless "ghost" cells
+	-- (stationary, same mass/size, eatable by anyone). If nobody eats them they
+	-- despawn after this many seconds, so a quiet server doesn't leak slots.
+	GhostLifetime = 120,
 
 	------------------------------------------------------------------ Freeze
 	-- Freeze fully locks your aim movement (0 = can't steer while frozen). Split

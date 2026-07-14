@@ -180,15 +180,14 @@ local function onPlayerAdded(player)
 end
 
 local function onPlayerRemoving(player)
-	local info = World.players[player]
 	Keybinds.onPlayerRemoving(player)
 	Names.onPlayerRemoving(player)
 	Levels.onPlayerRemoving(player) -- final XP save
 	chatLast[player] = nil
+	-- leaves the player's cells behind as ghost cells and keeps the slot's roster
+	-- entry alive until they're eaten; only broadcasts the roster "remove" once no
+	-- ghosts remain (handled inside removePlayer)
 	World.removePlayer(player)
-	if info then
-		Remotes.Roster:FireAllClients("remove", info.slot)
-	end
 end
 
 function Network.init()

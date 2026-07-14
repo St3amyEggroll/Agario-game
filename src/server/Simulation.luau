@@ -451,7 +451,9 @@ local function eatPass(now: number)
 	end)
 
 	for _, cell in sorted do
-		if cell.dead then
+		-- ghost cells (from a disconnected player) are inert: they can be EATEN
+		-- (they're in the hash as prey) but never eat / grow / pop themselves
+		if cell.dead or cell.ghost then
 			continue
 		end
 		local r = cell.r
@@ -579,8 +581,13 @@ local function feedViruses(now: number)
 			end
 			World.setMass(virus, newMass)
 			virus.feeds += 1
-			virus.vx = dx * Config.VirusPushSpeed
-			virus.vy = dy * Config.VirusPushSpeed
+			-- regular viruses drift in the feed direction; Experimentals
+			-- (mothercells) are ANCHORED - feeding them never nudges them, they
+			-- just grow and spew food from a fixed spot
+			if virus.kind ~= "exp" then
+				virus.vx = dx * Config.VirusPushSpeed
+				virus.vy = dy * Config.VirusPushSpeed
+			end
 			World.removePellet(pellet)
 
 			-- Experimentals reward feeders with bonus orbs sprayed nearby
@@ -608,6 +615,42 @@ local function feedViruses(now: number)
 					child.vx = dx * Config.VirusSplitImpulse
 					child.vy = dy * Config.VirusSplitImpulse
 				end
+			end
+		end
+	end
+	local _ = now
+end
+
+-- Experimentals (mothercells) EAT any cell small enough that rams into them and
+-- grow by its mass (capped at ExperimentalMaxMass) - so splitting into one costs
+-- you those pieces, agma-style. A cell big enough to POP the experimental instead
+-- does so in eatPass (that runs first), so this only claims cells too small to pop
+-- it. Ghost cells are left alone (they're food for players, not mothercells).
+local function experimentalsEatCells(now: number)
+	for _, virus in World.viruses do
+		if virus.kind ~= "exp" or virus.dead then
+			continue
+		end
+		local r = virus.r
+		table.clear(scratchHits)
+		World.dynHash:forEachInAABB(virus.x - r, virus.y - r, virus.x + r, virus.y + r, function(e)
+			if e.kind ~= "cell" or e.dead or e.ghost then
+				return
+			end
+			-- exp must clearly out-mass the cell to eat it, and the cell's center
+			-- must be well inside the exp (you have to actually go into it)
+			if virus.m < e.m * Config.EatMassRatio then
+				return
+			end
+			local reach = r - e.r * Config.EatDepth
+			if reach > 0 and Util.dist2(virus.x, virus.y, e.x, e.y) < reach * reach then
+				table.insert(scratchHits, e)
+			end
+		end)
+		for _, e in scratchHits do
+			if not e.dead then
+				World.setMass(virus, math.min(virus.m + e.m, Config.ExperimentalMaxMass))
+				World.removeCell(e)
 			end
 		end
 	end
@@ -651,6 +694,23 @@ local function deathCheck()
 	end
 end
 
+-- Despawn ghost cells (from disconnected players) that have sat uneaten past
+-- their lifetime, so a quiet server doesn't hold their slots forever. Collect
+-- first, remove after (removeCell mutates World.cells).
+local ghostExpireScratch = {}
+
+local function pruneGhosts(now: number)
+	table.clear(ghostExpireScratch)
+	for _, cell in World.cells do
+		if cell.ghost and cell.ghostExpire and now >= cell.ghostExpire then
+			ghostExpireScratch[#ghostExpireScratch + 1] = cell
+		end
+	end
+	for _, cell in ghostExpireScratch do
+		World.removeCell(cell)
+	end
+end
+
 --------------------------------------------------------------------- step
 
 function Simulation.step(dt: number, now: number)
@@ -662,9 +722,11 @@ function Simulation.step(dt: number, now: number)
 	rebuildDynHash()
 	resolveOwnCells(now, dt)
 	eatPass(now)
+	experimentalsEatCells(now)
 	feedViruses(now)
 	ejectExperimentals(now)
 	deathCheck()
+	pruneGhosts(now)
 end
 
 return Simulation

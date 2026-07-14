@@ -25,6 +25,10 @@ local World = {
 	now = 0, -- server-relative time, set every tick by Simulation
 	players = {}, -- [Player] = info (see addPlayer)
 	slotToInfo = {}, -- [slot] = info
+	-- [slot] = count of ghost cells left behind by a disconnected player. The slot
+	-- (and its roster name/colour) stays reserved while > 0 so the ghosts still
+	-- render as the old player; freed when the last ghost is eaten / expires.
+	ghostSlots = {},
 	orbs = {}, -- [id] = orb
 	extraOrbCount = 0,
 	viruses = {}, -- array
@@ -173,6 +177,17 @@ function World.removeCell(cell)
 	local info = World.players[cell.player]
 	if info then
 		Util.arrayRemove(info.cells, cell)
+	elseif cell.ghost then
+		-- a ghost cell of a departed player was just eaten / expired: when the
+		-- last one for that slot is gone, release the reserved slot + roster entry
+		local slot = cell.slot
+		local left = (World.ghostSlots[slot] or 1) - 1
+		if left > 0 then
+			World.ghostSlots[slot] = left
+		else
+			World.ghostSlots[slot] = nil
+			Remotes.Roster:FireAllClients("remove", slot)
+		end
 	end
 end
 
@@ -250,7 +265,9 @@ end
 
 local function findFreeSlot(): number
 	for slot = 1, 255 do
-		if not World.slotToInfo[slot] then
+		-- skip slots reserved by lingering ghost cells so a new player can't
+		-- inherit a dead player's colour/name mid-render
+		if not World.slotToInfo[slot] and not World.ghostSlots[slot] then
 			return slot
 		end
 	end
@@ -285,12 +302,28 @@ function World.removePlayer(player)
 	if not info then
 		return
 	end
-	-- copy: removeCell mutates info.cells
-	for _, cell in table.clone(info.cells) do
-		World.removeCell(cell)
+	-- Leave the player's cells behind as GHOST cells instead of deleting them:
+	-- ownerless, stationary, keeping their mass/size, and eatable by anyone (free
+	-- food) - exactly like agar when someone disconnects. They stay in World.cells
+	-- and just detach from the departing player.
+	local ghostCount = 0
+	for _, cell in info.cells do
+		cell.player = nil -- ownerless: moveCells finds no info, so it stops steering
+		cell.ghost = true
+		cell.ix, cell.iy = 0, 0 -- drop any residual split impulse: stationary immediately
+		cell.mergeAt = math.huge -- ghosts never merge (no owner to steer them together)
+		cell.ghostExpire = World.now + Config.GhostLifetime -- despawn if left uneaten
+		ghostCount += 1
 	end
 	World.slotToInfo[info.slot] = nil
 	World.players[player] = nil
+	if ghostCount > 0 then
+		-- reserve the slot + keep its roster entry (name/colour) so the ghosts
+		-- still render as the old player until they're all eaten / expire
+		World.ghostSlots[info.slot] = ghostCount
+	else
+		Remotes.Roster:FireAllClients("remove", info.slot)
+	end
 end
 
 function World.totalMass(info): number
