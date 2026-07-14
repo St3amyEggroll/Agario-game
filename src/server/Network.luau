@@ -182,8 +182,10 @@ local function onPlayerAdded(player)
 	local level = Instance.new("IntValue")
 	level.Name = "Level"
 	level.Parent = ls
-	local mass = Instance.new("IntValue")
+	-- Mass is a StringValue so the native list can show abbreviated "1.2K"/"3.4M"
+	local mass = Instance.new("StringValue")
 	mass.Name = "Mass"
+	mass.Value = "0"
 	mass.Parent = ls
 	ls.Parent = player
 

@@ -316,6 +316,7 @@ function World.removePlayer(player)
 		cell.ghost = true
 		cell.ix, cell.iy = 0, 0 -- drop any residual split impulse: stationary immediately
 		cell.mergeAt = math.huge -- ghosts never merge (no owner to steer them together)
+		cell.ghostExpire = World.now + Config.GhostLifetime -- despawn 1 min after disconnect
 		ghostCount += 1
 	end
 	World.slotToInfo[info.slot] = nil

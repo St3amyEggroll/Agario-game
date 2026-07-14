@@ -36,7 +36,8 @@ local function refreshLabels()
 end
 
 function Settings.init(parent: Instance)
-	panel = Theme.panel(parent, UDim2.fromScale(0.5, 0.5), UDim2.fromScale(0.32, 0.62), Vector2.new(0.5, 0.5))
+	-- sits on the RIGHT side (like Hiscores) instead of overlaying the play card
+	panel = Theme.panel(parent, UDim2.fromScale(0.64, 0.5), UDim2.fromScale(0.31, 0.66), Vector2.new(0, 0.5))
 	panel.Visible = false
 
 	local title = Theme.label(panel, "Settings - Keybinds", UDim2.fromScale(0.05, 0.02), UDim2.fromScale(0.9, 0.08))

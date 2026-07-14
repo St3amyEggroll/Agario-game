@@ -475,40 +475,45 @@ function Renderer.render(cam)
 			end
 			place(w, ox + c.x * scale, oy + c.y * scale, pixels)
 
-			-- ghost cells (from a disconnected player) render FADED and drop their
-			-- name; their skin is already gone (the roster entry has k=0). Cached so
-			-- the transparency writes only fire when a wrapper's ghost state flips
-			-- (including when it's recycled for a live cell later).
+			-- dead (ghost) cells render GRAY + faded with NO labels (their skin is
+			-- already gone - the roster entry has k=0). Cached so these writes only
+			-- fire when a wrapper's ghost state flips (incl. recycling onto a live cell).
 			local isGhost = WorldState.isGhostSlot(c.slot)
 			if w.lastGhost ~= isGhost then
 				w.lastGhost = isGhost
-				local t = isGhost and Config.GhostTransparency or 0
-				w.frame.BackgroundTransparency = t
-				w.stroke.Transparency = t
+				if isGhost then
+					w.frame.BackgroundColor3 = Config.GhostColor
+					w.frame.BackgroundTransparency = Config.GhostTransparency
+					w.stroke.Color = darker(Config.GhostColor)
+					w.stroke.Transparency = Config.GhostTransparency
+				else
+					-- recycled onto a live cell: restore its real colour + opacity
+					local color = WorldState.colorForSlot(c.slot)
+					w.frame.BackgroundColor3 = color
+					w.frame.BackgroundTransparency = 0
+					w.stroke.Color = darker(color)
+					w.stroke.Transparency = 0
+				end
 			end
 
-			-- labels only when the cell is big enough on screen to read; text
-			-- size is manual + cached so we never trigger a text re-fit. Ghosts show
-			-- their mass (how big the free food is) but NOT a name.
-			local showLabels = pixels >= Config.LabelMinPixels
-			local showName = showLabels and not isGhost
-			if showName then
+			-- labels only when big enough on screen AND not a dead cell (dead cells
+			-- carry no name/mass); text size is manual + cached (no text re-fit)
+			local showLabels = pixels >= Config.LabelMinPixels and not isGhost
+			if showLabels then
 				local name = WorldState.nameForSlot(c.slot)
 				if w.lastName ~= name then
 					w.lastName = name
 					w.nameLabel.Text = name
 				end
+				local mass = math.floor(Util.massFromRadius(c.r) + 0.5)
+				if w.lastMass ~= mass then
+					w.lastMass = mass
+					w.massLabel.Text = Util.abbrevMass(mass)
+				end
 				local nameSize = math.min(math.floor(pixels * 0.16 + 4), 40)
 				if w.lastNameSize ~= nameSize then
 					w.lastNameSize = nameSize
 					w.nameLabel.TextSize = nameSize
-				end
-			end
-			if showLabels then
-				local mass = math.floor(Util.massFromRadius(c.r) + 0.5)
-				if w.lastMass ~= mass then
-					w.lastMass = mass
-					w.massLabel.Text = tostring(mass)
 				end
 				local massSize = math.min(math.floor(pixels * 0.11 + 3), 28)
 				if w.lastMassSize ~= massSize then
@@ -516,10 +521,8 @@ function Renderer.render(cam)
 					w.massLabel.TextSize = massSize
 				end
 			end
-			if w.nameLabel.Visible ~= showName then
-				w.nameLabel.Visible = showName
-			end
-			if w.massLabel.Visible ~= showLabels then
+			if w.nameLabel.Visible ~= showLabels then
+				w.nameLabel.Visible = showLabels
 				w.massLabel.Visible = showLabels
 			end
 

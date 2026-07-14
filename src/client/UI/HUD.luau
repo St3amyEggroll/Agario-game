@@ -7,6 +7,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
+local Util = require(Shared.Util)
 local Theme = require(script.Parent.Theme)
 local LevelCurve = require(Shared.Levels)
 local WorldState = require(script.Parent.Parent.WorldState)
@@ -112,7 +113,7 @@ function HUD.update(dt: number)
 	end
 	uiAccumulator = 0
 
-	setText(massLabel, "mass", tostring(math.floor(WorldState.own.mass + 0.5)))
+	setText(massLabel, "mass", Util.abbrevMass(WorldState.own.mass))
 	setText(coinLabel, "coins", tostring(WorldState.coins or 0))
 	setText(fpsLabel, "fps", "FPS " .. math.floor(1 / smoothedDt + 0.5))
 	setText(pingLabel, "ping", pingMs >= 0 and ("PING " .. math.floor(pingMs + 0.5)) or "PING --")

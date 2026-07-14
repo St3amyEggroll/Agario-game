@@ -34,17 +34,36 @@ function UI.init(playerGui: PlayerGui)
 	gui.DisplayOrder = 10
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-	Menu.init(gui, Shop.toggle, Settings.toggle, Hiscores.toggle) -- overlay + card
+	-- The three side panels (Shop left, Hiscores + Settings right) are mutually
+	-- exclusive: opening one closes the others so they never overlap or cover the
+	-- play card. Each wrapper closes the OTHER two, then toggles itself.
+	local function shopToggle()
+		Settings.setVisible(false)
+		Hiscores.close()
+		Shop.toggle()
+	end
+	local function hiscoresToggle()
+		Settings.setVisible(false)
+		Shop.close()
+		Hiscores.toggle()
+	end
+	local function settingsToggle()
+		Shop.close()
+		Hiscores.close()
+		Settings.toggle()
+	end
+
+	Menu.init(gui, shopToggle, settingsToggle, hiscoresToggle) -- overlay + card
 	HUD.init(gui)
 	Minimap.init(gui)
 	AbilityDock.init(gui)
-	Pause.init(gui, Settings.toggle, Shop.toggle, Hiscores.toggle) -- ☰ full in-game menu
+	Pause.init(gui, settingsToggle, shopToggle, hiscoresToggle) -- ☰ full in-game menu
 	Hiscores.init(gui) -- pops in right of the card
 	Shop.init(gui) -- pops in left of the card
 	Spectate.init(gui) -- top-center Prev/Next/Play bar while spectating
-	Settings.init(gui) -- last, so the settings modal draws over the side panels
+	Settings.init(gui) -- also right side; exclusivity keeps it from overlapping Hiscores
 
-	Input.onMenuToggle = Settings.toggle -- the M keybind mirrors the settings panel
+	Input.onMenuToggle = settingsToggle -- the M keybind mirrors the settings panel
 
 	WorldState.onPlayerState = function(event)
 		Menu.refresh()

@@ -214,11 +214,9 @@ local function moveCells(dt: number)
 		local damp = math.exp(-Config.ImpulseDamping * dt)
 		cell.ix *= damp
 		cell.iy *= damp
-		-- ghosts (from disconnected players) shrink FAST at any size until they hit
-		-- the floor and get removed (pruneGhosts); live cells only bleed above the min
-		if cell.ghost then
-			World.setMass(cell, cell.m - cell.m * Config.GhostDecayRate * dt)
-		elseif cell.m > Config.MassDecayMin then
+		-- dead (ghost) cells sit unchanged until they despawn (pruneGhosts); only
+		-- live cells above the min slowly bleed mass
+		if not cell.ghost and cell.m > Config.MassDecayMin then
 			World.setMass(cell, cell.m - cell.m * Config.MassDecayRate * dt)
 		end
 	end
@@ -697,15 +695,14 @@ local function deathCheck()
 	end
 end
 
--- Remove ghost cells once they've shrunk to the mass floor. Ghosts are NEVER on
--- a timer - they stay the whole time until eaten or melted down to MinCellMass.
--- Collect first, remove after (removeCell mutates World.cells).
+-- Remove dead (ghost) cells once their lifetime expires (they despawn ~1 min
+-- after the player left). Collect first, remove after (removeCell mutates cells).
 local ghostRemoveScratch = {}
 
-local function pruneGhosts()
+local function pruneGhosts(now: number)
 	table.clear(ghostRemoveScratch)
 	for _, cell in World.cells do
-		if cell.ghost and cell.m <= Config.MinCellMass then
+		if cell.ghost and cell.ghostExpire and now >= cell.ghostExpire then
 			ghostRemoveScratch[#ghostRemoveScratch + 1] = cell
 		end
 	end
@@ -729,7 +726,7 @@ function Simulation.step(dt: number, now: number)
 	feedViruses(now)
 	ejectExperimentals(now)
 	deathCheck()
-	pruneGhosts()
+	pruneGhosts(now)
 end
 
 return Simulation

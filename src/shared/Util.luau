@@ -42,6 +42,19 @@ function Util.arrayRemove(arr: { any }, value: any): boolean
 	return false
 end
 
+-- Abbreviate a mass/score for display: 532 -> "532", 1500 -> "1.5K",
+-- 15000 -> "15K", 2_340_000 -> "2.34M". Trailing zeros are trimmed.
+function Util.abbrevMass(n: number): string
+	n = math.floor(n + 0.5)
+	if n < 1000 then
+		return tostring(n)
+	elseif n < 1e6 then
+		return (string.format("%.1f", n / 1000):gsub("%.0$", "")) .. "K"
+	else
+		return (string.format("%.2f", n / 1e6):gsub("%.?0+$", "")) .. "M"
+	end
+end
+
 -- Returns a unit vector (dx, dy) or (1, 0) when the input is degenerate.
 function Util.unit(dx: number, dy: number): (number, number)
 	local d = math.sqrt(dx * dx + dy * dy)

@@ -7,6 +7,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local LevelCurve = require(Shared.Levels)
+local Util = require(Shared.Util)
 local Theme = require(script.Parent.Theme)
 local WorldState = require(script.Parent.Parent.WorldState)
 
@@ -17,11 +18,6 @@ local panel: Frame
 local statLine: TextLabel
 local rows = {}
 local acc = 0
-
-local function commaMass(m: number): string
-	local out = tostring(m):reverse():gsub("(%d%d%d)", "%1,")
-	return (out:reverse():gsub("^,", ""))
-end
 
 function Hiscores.init(parent: Instance)
 	-- sits just RIGHT of the center play card (its left edge ~0.64), pops in
@@ -94,7 +90,7 @@ function Hiscores.refresh()
 		if entry then
 			local mine = entry.s == mySlot
 			row.name.Text = entry.n or "?"
-			row.mass.Text = commaMass(entry.m or 0)
+			row.mass.Text = Util.abbrevMass(entry.m or 0)
 			row.name.TextColor3 = mine and Theme.AccentColor or Theme.TextColor
 			row.rank.TextColor3 = mine and Theme.AccentColor or Theme.MutedText
 			row.mass.TextColor3 = mine and Theme.AccentColor or Theme.MutedText

@@ -76,14 +76,12 @@ local Config = {
 	-- to travel deep to the big cell's center (which happened at big sizes with a
 	-- smaller fraction).
 	MergeOverlap = 1.0,
-	-- When a player disconnects their cells stay as ownerless "ghost" cells
-	-- (stationary, eatable by anyone). They stick around the WHOLE time - never on
-	-- a timer - and only leave when eaten or when they shrink down to MinCellMass.
-	-- They shrink FAST (this fraction of mass per second, ~30x normal decay) so a
-	-- disconnected whale steadily melts into edible chunks instead of parking a
-	-- giant blob forever.
-	GhostDecayRate = 0.06,
-	GhostTransparency = 0.55, -- how faded ghost cells render (0 = solid, 1 = invisible); they also drop their name + skin
+	-- When a player disconnects their cells become ownerless GRAY "dead" cells:
+	-- transparent, no name/mass label, stationary, eatable by anyone. They sit for
+	-- GhostLifetime seconds then despawn (they do NOT shrink or decay).
+	GhostLifetime = 60,
+	GhostTransparency = 0.55, -- how faded dead cells render (0 = solid, 1 = invisible)
+	GhostColor = Color3.fromRGB(150, 150, 150), -- neutral gray, so dead cells read as nobody's
 
 	------------------------------------------------------------------ Freeze
 	-- Freeze fully locks your aim movement (0 = can't steer while frozen). Split
