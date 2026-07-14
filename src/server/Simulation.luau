@@ -624,11 +624,11 @@ local function feedViruses(now: number)
 	local _ = now
 end
 
--- Experimentals (mothercells) EAT any cell small enough that rams into them and
--- grow by its mass (capped at ExperimentalMaxMass) - so splitting into one costs
--- you those pieces, agma-style. A cell big enough to POP the experimental instead
--- does so in eatPass (that runs first), so this only claims cells too small to pop
--- it. Ghost cells are left alone (they're food for players, not mothercells).
+-- Experimentals (mothercells) EAT any cell SMALLER than themselves that rams into
+-- them and grow by its mass (capped at ExperimentalMaxMass) - so touching /
+-- splitting into one costs you those cells, agma-style. A cell big enough to POP
+-- the experimental instead does so in eatPass (that runs first). Ghost cells are
+-- left alone (they're food for players, not mothercells).
 local function experimentalsEatCells(now: number)
 	for _, virus in World.viruses do
 		if virus.kind ~= "exp" or virus.dead then
@@ -640,9 +640,9 @@ local function experimentalsEatCells(now: number)
 			if e.kind ~= "cell" or e.dead or e.ghost then
 				return
 			end
-			-- exp must clearly out-mass the cell to eat it, and the cell's center
-			-- must be well inside the exp (you have to actually go into it)
-			if virus.m < e.m * Config.EatMassRatio then
+			-- eat any cell smaller than the exp whose center has gone inside it
+			-- (a bigger cell pops the exp in eatPass instead, so it's excluded here)
+			if e.m >= virus.m then
 				return
 			end
 			local reach = r - e.r * Config.EatDepth
