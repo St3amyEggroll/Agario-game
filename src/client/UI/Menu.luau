@@ -11,6 +11,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Remotes = require(Shared.Remotes)
 local Skins = require(Shared.Skins)
+local Accessories = require(Shared.Accessories)
 local Theme = require(script.Parent.Theme)
 local WorldState = require(script.Parent.Parent.WorldState)
 
@@ -20,6 +21,7 @@ local overlay: Frame
 local nameBox: TextBox
 local skinPreview: Frame
 local skinImage: ImageLabel
+local previewAccessory: ImageLabel
 local previewName: TextLabel
 local deathLabel: TextLabel
 local onShopToggle: (() -> ())? = nil
@@ -27,6 +29,7 @@ local onSettings: (() -> ())? = nil
 local onHiscores: (() -> ())? = nil
 local lastSkin = -1
 local lastColor: Color3? = nil
+local lastAccessory = -1
 
 local function commas(n: number): string
 	local out = tostring(n):reverse():gsub("(%d%d%d)", "%1,")
@@ -107,6 +110,17 @@ function Menu.init(parent: Instance, shopToggle: () -> (), settingsToggle: () ->
 	previewName.ZIndex = 5
 	Theme.capText(previewName, 22)
 	previewName.Parent = skinPreview
+
+	-- accessory layered over the skin in the preview (matches your in-game cell)
+	previewAccessory = Instance.new("ImageLabel")
+	previewAccessory.AnchorPoint = Vector2.new(0.5, 0.5)
+	previewAccessory.Position = UDim2.fromScale(0.5, 0.5)
+	previewAccessory.Size = UDim2.fromScale(1.5, 1.5)
+	previewAccessory.BackgroundTransparency = 1
+	previewAccessory.ScaleType = Enum.ScaleType.Fit
+	previewAccessory.Visible = false
+	previewAccessory.ZIndex = 4
+	previewAccessory.Parent = skinPreview
 
 	-- nickname
 	nameBox = Instance.new("TextBox")
@@ -219,6 +233,15 @@ function Menu.update(_dt: number)
 		if color ~= lastColor then
 			lastColor = color
 			skinPreview.BackgroundColor3 = color
+		end
+	end
+	-- accessory layered over the preview (live when you equip one)
+	local accId = WorldState.accessoryForSlot(mySlot)
+	if accId ~= lastAccessory then
+		lastAccessory = accId
+		previewAccessory.Visible = accId ~= 0
+		if accId ~= 0 then
+			previewAccessory.Image = Accessories.thumb(accId)
 		end
 	end
 end
