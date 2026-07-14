@@ -289,6 +289,8 @@ function World.addPlayer(player)
 		coins = 0, -- currency collected from gold coins
 		xp = 0, -- lifetime XP (from consumed food mass); drives level, saved across sessions
 		xpSent = -1, -- last XP value pushed to this client (avoids re-sending unchanged XP)
+		bestMass = 0, -- highest total mass this session (fed to the all-time Records board)
+		recordsSubmitted = 0, -- last bestMass submitted to Records (avoids duplicate writes)
 		cells = {},
 		aimX = Config.MapWidth / 2,
 		aimY = Config.MapHeight / 2,

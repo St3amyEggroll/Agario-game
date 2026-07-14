@@ -23,11 +23,13 @@ local World = require(script.World)
 local Simulation = require(script.Simulation)
 local Snapshots = require(script.Snapshots)
 local Network = require(script.Network)
+local Records = require(script.Records)
 
 local Config = require(game:GetService("ReplicatedStorage").Shared.Config)
 
 World.init()
 Network.init()
+Records.init()
 
 local TICK = 1 / Config.TickRate
 local SNAP_INTERVAL = 1 / Config.SnapshotRate

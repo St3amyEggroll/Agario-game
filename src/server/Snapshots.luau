@@ -77,6 +77,9 @@ function Snapshots.sendLeaderboard()
 	local entries = {}
 	for player, info in World.players do
 		local mass = info.alive and math.floor(World.totalMass(info) + 0.5) or 0
+		if mass > (info.bestMass or 0) then
+			info.bestMass = mass -- session peak, fed to the all-time Records board
+		end
 		-- Roblox native player-list columns: Level (always) + Mass (in-game)
 		local ls = player:FindFirstChild("leaderstats")
 		if ls then

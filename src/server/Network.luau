@@ -18,6 +18,7 @@ local Snapshots = require(script.Parent.Snapshots)
 local Keybinds = require(script.Parent.Keybinds)
 local Names = require(script.Parent.Names)
 local Levels = require(script.Parent.Levels)
+local Records = require(script.Parent.Records)
 local Skins = require(Shared.Skins)
 local LevelCurve = require(Shared.Levels)
 
@@ -243,6 +244,10 @@ local function onPlayerAdded(player)
 end
 
 local function onPlayerRemoving(player)
+	local info = World.players[player]
+	if info then
+		Records.submit(player.UserId, info.name, info.bestMass or 0) -- final all-time record
+	end
 	Keybinds.onPlayerRemoving(player)
 	Names.onPlayerRemoving(player)
 	Levels.onPlayerRemoving(player) -- final XP save

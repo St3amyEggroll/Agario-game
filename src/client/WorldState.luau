@@ -31,7 +31,8 @@ local WorldState = {
 	xp = 0, -- lifetime XP (server-authoritative); HUD derives level + bar via Shared.Levels
 	status = "menu", -- "menu" | "alive" | "dead" | "spectate"
 	spectateSlot = nil, -- while spectating: which player's slot to follow (nil = leader)
-	leaderboard = {}, -- array of {s, n, m}
+	leaderboard = {}, -- array of {s, n, m} (LIVE top players by current mass)
+	records = {}, -- array of {n, m} (persisted ALL-TIME top masses, for the Hiscores panel)
 	snaps = {}, -- ascending by t
 	-- interpolated sample, rebuilt every frame (renderer reads these)
 	view = { cells = {}, viruses = {}, pellets = {} },
@@ -90,6 +91,12 @@ Remotes.Leaderboard.OnClientEvent:Connect(function(entries)
 	WorldState.leaderboard = entries
 	if WorldState.onLeaderboard then
 		WorldState.onLeaderboard(entries)
+	end
+end)
+
+Remotes.Records.OnClientEvent:Connect(function(entries)
+	if typeof(entries) == "table" then
+		WorldState.records = entries
 	end
 end)
 

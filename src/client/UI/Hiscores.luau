@@ -38,7 +38,7 @@ function Hiscores.init(parent: Instance)
 	statLine.TextXAlignment = Enum.TextXAlignment.Left
 	Theme.capText(statLine, 14)
 
-	local hdr = Theme.caption(panel, "Top players", UDim2.fromScale(0.06, 0.15), UDim2.fromScale(0.88, 0.04))
+	local hdr = Theme.caption(panel, "All-time records", UDim2.fromScale(0.06, 0.15), UDim2.fromScale(0.88, 0.04))
 	hdr.TextXAlignment = Enum.TextXAlignment.Left
 	Theme.capText(hdr, 11)
 
@@ -81,13 +81,14 @@ function Hiscores.refresh()
 	local level = LevelCurve.levelForXp(WorldState.xp or 0)
 	statLine.Text = ("Lv %d   -   %s Gold"):format(level, Util.abbrevMass(WorldState.coins or 0))
 
-	local board = WorldState.leaderboard or {}
-	local mySlot = WorldState.mySlot
+	local board = WorldState.records or {}
+	local myEntry = WorldState.roster[WorldState.mySlot or -1]
+	local myName = myEntry and myEntry.n
 	for i = 1, ROWS do
 		local row = rows[i]
 		local entry = board[i]
 		if entry then
-			local mine = entry.s == mySlot
+			local mine = myName ~= nil and entry.n == myName
 			row.name.Text = entry.n or "?"
 			row.mass.Text = Util.abbrevMass(entry.m or 0)
 			row.name.TextColor3 = mine and Theme.AccentColor or Theme.TextColor
