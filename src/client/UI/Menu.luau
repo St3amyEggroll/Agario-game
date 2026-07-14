@@ -20,8 +20,14 @@ local overlay: Frame
 local nameBox: TextBox
 local skinPreview: Frame
 local skinImage: ImageLabel
+local deathLabel: TextLabel
 local onSettings: (() -> ())? = nil
 local lastSkin = -1
+
+local function commas(n: number): string
+	local out = tostring(n):reverse():gsub("(%d%d%d)", "%1,")
+	return (out:reverse():gsub("^,", ""))
+end
 
 local function submitName()
 	local text = nameBox and nameBox.Text or ""
@@ -45,6 +51,13 @@ function Menu.init(parent: Instance, settingsToggle: () -> ())
 	local logo = Theme.label(overlay, "AGARIO 2D", UDim2.fromScale(0.5, 0.17), UDim2.fromScale(0.5, 0.09))
 	logo.AnchorPoint = Vector2.new(0.5, 0.5)
 	Theme.capText(logo, 52)
+
+	-- death summary (shown only after you were eaten)
+	deathLabel = Theme.label(overlay, "", UDim2.fromScale(0.5, 0.24), UDim2.fromScale(0.6, 0.035))
+	deathLabel.AnchorPoint = Vector2.new(0.5, 0.5)
+	deathLabel.TextColor3 = Theme.Danger
+	deathLabel.Visible = false
+	Theme.capText(deathLabel, 20)
 
 	-- the card
 	local card = Theme.panel(overlay, UDim2.fromScale(0.5, 0.54), UDim2.fromScale(0.26, 0.52), Vector2.new(0.5, 0.5))
@@ -138,6 +151,14 @@ end
 function Menu.refresh()
 	local status = WorldState.status
 	overlay.Visible = status == "menu" or status == "dead"
+	if deathLabel then
+		if status == "dead" then
+			deathLabel.Text = "You were eaten!   Best mass: " .. commas(math.floor(WorldState.own.peakMass + 0.5))
+			deathLabel.Visible = true
+		else
+			deathLabel.Visible = false
+		end
+	end
 end
 
 -- live-refresh the skin preview while the menu shows

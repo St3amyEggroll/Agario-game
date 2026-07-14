@@ -461,11 +461,8 @@ local function eatPass(now: number)
 		end)
 		for _, orb in scratchHits do
 			if orb.isCoin then
-				local owner = World.players[cell.player]
-				if owner then
-					owner.coins += 1
-					Remotes.PlayerState:FireClient(cell.player, "coins", owner.coins)
-				end
+				-- coins are granted + persisted + pushed to the client by Levels
+				Levels.addCoins(World.players[cell.player], 1)
 				if Config.CoinBonusMass > 0 then
 					cell.m += Config.CoinBonusMass
 					grew = true

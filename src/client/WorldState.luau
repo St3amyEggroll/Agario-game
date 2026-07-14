@@ -35,7 +35,7 @@ local WorldState = {
 	-- interpolated sample, rebuilt every frame (renderer reads these)
 	view = { cells = {}, viruses = {}, pellets = {} },
 	-- aggregates about MY cells, from the interpolated view (smooth camera)
-	own = { x = Config.MapWidth / 2, y = Config.MapHeight / 2, mass = 0, maxR = 0, count = 0 },
+	own = { x = Config.MapWidth / 2, y = Config.MapHeight / 2, mass = 0, maxR = 0, count = 0, peakMass = 0 },
 	-- optional callbacks assigned by init.client
 	onPlayerState = nil, -- fn("spawned" | "died")
 	onLeaderboard = nil, -- fn(entries)
@@ -95,6 +95,7 @@ end)
 Remotes.PlayerState.OnClientEvent:Connect(function(event, arg)
 	if event == "spawned" then
 		WorldState.status = "alive"
+		WorldState.own.peakMass = 0 -- fresh life: reset the peak for the death summary
 	elseif event == "died" then
 		WorldState.status = "dead"
 	elseif event == "menu" then
@@ -260,6 +261,9 @@ function WorldState.sample(dt: number)
 		end
 	end
 	own.mass = newestMass
+	if WorldState.status == "alive" and newestMass > own.peakMass then
+		own.peakMass = newestMass -- track the run's best mass for the death summary
+	end
 end
 
 -- Centroid of some other player's cells in the current view (spectate camera).
