@@ -1,8 +1,8 @@
 --[[
 	Pause - the in-game control menu. A single "hamburger" button top-left opens a
-	popup with Resume / Respawn / Shop / Scores / Settings / Leave, so the whole
-	menu is usable mid-game (not just from the play screen). Shown while alive or
-	spectating.
+	popup with Resume / Menu / Respawn / Scores / Settings / Leave, so the whole
+	menu is usable mid-game (Menu opens the play card over the game to customize /
+	change skin). Shown while alive or spectating.
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -20,7 +20,7 @@ local function close()
 	popup.Visible = false
 end
 
-function Pause.init(parent: Instance, settingsToggle: () -> (), shopToggle: () -> (), hiscoresToggle: () -> ())
+function Pause.init(parent: Instance, settingsToggle: () -> (), menuOpen: () -> (), hiscoresToggle: () -> ())
 	hamb = Theme.button(parent, "\u{2630}", UDim2.fromScale(0.008, 0.058), UDim2.fromScale(0.04, 0.045), function()
 		popup.Visible = not popup.Visible
 	end)
@@ -57,8 +57,8 @@ function Pause.init(parent: Instance, settingsToggle: () -> (), shopToggle: () -
 		Remotes.Action:FireServer("respawn")
 		close()
 	end)
-	item(3, "\u{1F6D2} Shop", nil, function()
-		shopToggle()
+	item(3, "\u{1F3A8} Menu", nil, function()
+		menuOpen() -- open the play card over the game to customize (change skin, etc.)
 		close()
 	end)
 	item(4, "\u{1F3C6} Scores", nil, function()

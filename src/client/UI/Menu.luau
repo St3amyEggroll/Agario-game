@@ -19,6 +19,9 @@ local WorldState = require(script.Parent.Parent.WorldState)
 local Menu = {}
 
 local overlay: Frame
+local playBtn: TextButton
+local eyeBtn: TextButton
+local forceOpen = false -- show the play card OVER the game (in-game customize), even while alive
 local nameBox: TextBox
 local skinPreview: Frame
 local skinImage: ImageLabel
@@ -164,19 +167,25 @@ function Menu.init(parent: Instance, shopToggle: () -> (), settingsToggle: () ->
 		previewName.Text = nameBox.Text
 	end)
 
-	-- PLAY + spectate (eye)
-	local play = Theme.outlineButton(card, "PLAY", UDim2.fromScale(0.04, 0.58), UDim2.fromScale(0.62, 0.13), Theme.Green, function()
-		submitName()
-		Remotes.Action:FireServer("play")
+	-- PLAY + spectate (eye). While alive (the menu was opened in-game to customize)
+	-- PLAY becomes "Resume" and just closes the overlay instead of respawning.
+	playBtn = Theme.outlineButton(card, "PLAY", UDim2.fromScale(0.04, 0.58), UDim2.fromScale(0.62, 0.13), Theme.Green, function()
+		if WorldState.status == "alive" then
+			forceOpen = false
+			Menu.refresh()
+		else
+			submitName()
+			Remotes.Action:FireServer("play")
+		end
 	end)
-	Theme.capText(play, 26)
-	local eye = Theme.button(card, "\u{1F441}", UDim2.fromScale(0.72, 0.58), UDim2.fromScale(0.24, 0.13), function()
+	Theme.capText(playBtn, 26)
+	eyeBtn = Theme.button(card, "\u{1F441}", UDim2.fromScale(0.72, 0.58), UDim2.fromScale(0.24, 0.13), function()
 		Remotes.Action:FireServer("spectate")
 		WorldState.spectateSlot = nil -- start on the leader; the bar cycles from there
 		WorldState.status = "spectate"
 		Menu.refresh()
 	end)
-	Theme.capText(eye, 20)
+	Theme.capText(eyeBtn, 20)
 
 	-- Shop | Settings | Scores (Shop pops in left of the card, Scores right)
 	local shop = Theme.button(card, "\u{1F6D2} Shop", UDim2.fromScale(0.04, 0.76), UDim2.fromScale(0.29, 0.1), function()
@@ -207,9 +216,24 @@ function Menu.init(parent: Instance, shopToggle: () -> (), settingsToggle: () ->
 	Menu.refresh()
 end
 
+-- Open the play card OVER the running game (customize / change skin mid-match).
+function Menu.openInGame()
+	forceOpen = true
+	Menu.refresh()
+end
+
 function Menu.refresh()
 	local status = WorldState.status
-	overlay.Visible = status == "menu" or status == "dead"
+	if status ~= "alive" then
+		forceOpen = false -- menu/dead/spectate already decide overlay visibility on their own
+	end
+	overlay.Visible = status == "menu" or status == "dead" or forceOpen
+	if playBtn then
+		playBtn.Text = status == "alive" and "RESUME" or "PLAY" -- in-game: Play closes the menu
+	end
+	if eyeBtn then
+		eyeBtn.Visible = status ~= "alive" -- can't spectate while you're playing
+	end
 	if deathLabel then
 		if status == "dead" then
 			deathLabel.Text = "You were eaten!   Best mass: " .. commas(math.floor(WorldState.own.peakMass + 0.5))

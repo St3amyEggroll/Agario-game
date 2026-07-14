@@ -66,7 +66,7 @@ function UI.init(playerGui: PlayerGui)
 	HUD.init(gui)
 	Minimap.init(gui)
 	AbilityDock.init(gui)
-	Pause.init(gui, settingsToggle, shopToggle, hiscoresToggle) -- ☰ full in-game menu
+	Pause.init(gui, settingsToggle, Menu.openInGame, hiscoresToggle) -- ☰ in-game menu (Menu opens the play card)
 	Hiscores.init(gui) -- pops in right of the card
 	Shop.init(gui) -- pops in left of the card
 	Spectate.init(gui) -- top-center Prev/Next/Play bar while spectating
