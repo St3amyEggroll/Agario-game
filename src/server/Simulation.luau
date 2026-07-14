@@ -57,8 +57,10 @@ local function splitPass(info, now: number)
 			-- makes multi-split pieces stack into a straight line toward the cursor
 			-- instead of clumping into a blob.
 			local piece = World.spawnCell(cell.player, cell.x + dx * cell.r * 0.4, cell.y + dy * cell.r * 0.4, half)
-			-- launch faster the bigger the cell, so big halves clear each other quickly
-			local impulse = math.max(Config.SplitImpulse, cell.r * Config.SplitImpulsePerRadius)
+			-- launch faster the bigger the cell so big halves clear each other, but
+			-- CAP it (SplitImpulseMax) so a huge cell doesn't fire pieces across the
+			-- map - the collision push finishes the spread past the cap
+			local impulse = math.min(math.max(Config.SplitImpulse, cell.r * Config.SplitImpulsePerRadius), Config.SplitImpulseMax)
 			piece.ix = dx * impulse
 			piece.iy = dy * impulse
 		end
@@ -433,7 +435,8 @@ local function popCell(cell, virus, now: number)
 		local piece = World.spawnCell(cell.player, cell.x + dx * cell.r * 0.15, cell.y + dy * cell.r * 0.15, chunk)
 		-- scale the pop kick by cell radius too, so big cells scatter their pieces
 		-- fast enough to clear their (larger) radius instead of sitting in a blob
-		local kick = math.max(Config.SplitImpulse, cell.r * Config.SplitImpulsePerRadius) * (0.6 + math.random() * 0.4)
+		-- (same cap as splitPass so a big pop doesn't fling pieces across the map)
+		local kick = math.min(math.max(Config.SplitImpulse, cell.r * Config.SplitImpulsePerRadius), Config.SplitImpulseMax) * (0.6 + math.random() * 0.4)
 		piece.ix = dx * kick
 		piece.iy = dy * kick
 	end

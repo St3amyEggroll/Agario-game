@@ -52,13 +52,17 @@ local Config = {
 	MaxCells = 32, -- max simultaneous cells per player
 	MinCellMass = 100, -- a cell can never be smaller than this (split/pop keep every piece >= this)
 	SplitMinMass = 200, -- a cell needs at least this much mass to split (so both halves stay >= MinCellMass)
-	-- Split launch is tuned so a piece travels ~2-2.5 of its own radii and settles
-	-- just clear of the parent (distance ~= impulse / ImpulseDamping). It used to
-	-- fling pieces ~500 units (too far); now a base split spreads ~230, big cells
-	-- scale up proportionally so they still clear their larger radius.
+	-- Split launch: a piece leaves at max(SplitImpulse, r * SplitImpulsePerRadius)
+	-- but never faster than SplitImpulseMax. The per-radius term lets bigger cells
+	-- launch faster so their (larger) halves still clear each other, but the CAP
+	-- stops a huge cell from firing pieces at ~10k units/s - that was both the
+	-- "big cells split way too fast" feel AND the phantom: the world renders
+	-- ~InterpolationDelay behind, so a piece moving that fast is drawn hundreds of
+	-- units from its true spot (a detached after-image). Above the cap, the solid
+	-- collision (resolveOwnCells) finishes spreading the halves at a sane speed.
 	SplitImpulse = 850, -- base launch speed of the new half...
-	SplitImpulsePerRadius = 11, -- ...scaled up by cell radius so BIG cells launch pieces fast enough to
-	-- clear their (larger) radius quickly - otherwise big split halves overlap in a blob for too long
+	SplitImpulsePerRadius = 7, -- ...scaled up by cell radius (capped by SplitImpulseMax)
+	SplitImpulseMax = 2000, -- hard ceiling on launch speed so big splits stay controlled (no fling / no phantom)
 	ImpulseDamping = 4.2, -- exponential damping rate for split/pop impulses (higher = pieces settle sooner/closer)
 	-- merge timer scales with cell mass: little cells ~MergeTimeBase, growing
 	-- with mass, capped at MergeTimeMax. (base 4s, +0.006/mass, cap 10s => a
