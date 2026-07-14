@@ -64,12 +64,12 @@ local Config = {
 	SplitImpulsePerRadius = 7, -- ...scaled up by cell radius (capped by SplitImpulseMax)
 	SplitImpulseMax = 2000, -- hard ceiling on launch speed so big splits stay controlled (no fling / no phantom)
 	ImpulseDamping = 4.2, -- exponential damping rate for split/pop impulses (higher = pieces settle sooner/closer)
-	-- merge timer scales with cell mass: little cells ~MergeTimeBase, growing
-	-- with mass, capped at MergeTimeMax. (base 4s, +0.006/mass, cap 10s => a
-	-- ~60-mass sliver ~4s, a ~1000-mass cell 10s.)
-	MergeTimeBase = 4,
-	MergeTimePerMass = 0.006,
-	MergeTimeMax = 10,
+	-- merge timer scales with cell mass: small cells ~MergeTimeBase, growing with
+	-- mass up to MergeTimeMax. Tuned so small guys merge back ~3.5s and big guys
+	-- (~1000+ mass) ~7s (base 3.5 + 0.0035/mass, cap 7).
+	MergeTimeBase = 3.5,
+	MergeTimePerMass = 0.0035,
+	MergeTimeMax = 7,
 	-- Merge once the SMALLER cell's center crosses INTO the bigger cell
 	-- (d < big.r * this). 1.0 = the moment the small cell's center is inside the
 	-- big one's edge, so it merges as soon as it's overlapping - it does NOT have
