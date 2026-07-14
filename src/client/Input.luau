@@ -20,6 +20,7 @@ local Util = require(Shared.Util)
 local Remotes = require(Shared.Remotes)
 local WorldState = require(script.Parent.WorldState)
 local Camera = require(script.Parent.Camera)
+local Sounds = require(script.Parent.Sounds)
 
 local FEED_REPEAT = 0.09
 
@@ -80,13 +81,22 @@ local function fireAction(action: string, arg)
 	Remotes.Action:FireServer(action, arg)
 end
 
+local function splitSfx()
+	if WorldState.status == "alive" then
+		Sounds.play("split")
+	end
+end
+
 local function dispatch(action: string)
 	if action == "Split" then
 		fireAction("split")
+		splitSfx()
 	elseif action == "MultiSplit" then
 		fireAction("multisplit")
+		splitSfx()
 	elseif action == "TripleSplit" then
 		fireAction("triplesplit")
+		splitSfx()
 	elseif action == "Feed" then
 		feeding = true
 		lastFeed = 0 -- fire immediately on next tick

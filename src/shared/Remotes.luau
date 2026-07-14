@@ -29,6 +29,7 @@ local DEFS: { [string]: string } = {
 	Level = "RemoteEvent", -- server -> client: your lifetime XP total (client derives level + bar via Shared.Levels)
 	Chat = "RemoteEvent", -- server -> client: (slot, message) for a chat bubble above that player's cell
 	PlayerState = "RemoteEvent", -- server -> client: "spawned" / "died"
+	Feedback = "RemoteEvent", -- server -> client: transient SFX/notification cues ("kill" <name>, "merge")
 }
 
 local FOLDER_NAME = "AgarRemotes"

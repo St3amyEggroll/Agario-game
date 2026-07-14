@@ -20,11 +20,13 @@ local overlay: Frame
 local nameBox: TextBox
 local skinPreview: Frame
 local skinImage: ImageLabel
+local previewName: TextLabel
 local deathLabel: TextLabel
 local onShopToggle: (() -> ())? = nil
 local onSettings: (() -> ())? = nil
 local onHiscores: (() -> ())? = nil
 local lastSkin = -1
+local lastColor: Color3? = nil
 
 local function commas(n: number): string
 	local out = tostring(n):reverse():gsub("(%d%d%d)", "%1,")
@@ -91,6 +93,21 @@ function Menu.init(parent: Instance, shopToggle: () -> (), settingsToggle: () ->
 	sc.Parent = skinImage
 	skinImage.Parent = skinPreview
 
+	-- your name shown ON the preview, live as you type (like your cell in-game)
+	previewName = Instance.new("TextLabel")
+	previewName.AnchorPoint = Vector2.new(0.5, 0.5)
+	previewName.Position = UDim2.fromScale(0.5, 0.5)
+	previewName.Size = UDim2.fromScale(1.5, 0.32)
+	previewName.BackgroundTransparency = 1
+	previewName.Font = Theme.Font
+	previewName.Text = ""
+	previewName.TextColor3 = Color3.new(1, 1, 1)
+	previewName.TextScaled = true
+	previewName.TextStrokeTransparency = 0.35
+	previewName.ZIndex = 5
+	Theme.capText(previewName, 22)
+	previewName.Parent = skinPreview
+
 	-- nickname
 	nameBox = Instance.new("TextBox")
 	nameBox.AnchorPoint = Vector2.new(0.5, 0)
@@ -120,6 +137,10 @@ function Menu.init(parent: Instance, shopToggle: () -> (), settingsToggle: () ->
 		if typeof(name) == "string" and not nameBox:IsFocused() then
 			nameBox.Text = name
 		end
+	end)
+	-- mirror the nickname onto the preview circle in real time as you type
+	nameBox:GetPropertyChangedSignal("Text"):Connect(function()
+		previewName.Text = nameBox.Text
 	end)
 
 	-- PLAY + spectate (eye)
@@ -183,15 +204,21 @@ function Menu.update(_dt: number)
 	if not overlay.Visible then
 		return
 	end
-	local skinId = WorldState.skinForSlot(WorldState.mySlot or -1)
+	local mySlot = WorldState.mySlot or -1
+	local skinId = WorldState.skinForSlot(mySlot)
 	if skinId ~= lastSkin then
 		lastSkin = skinId
-		if skinId ~= 0 then -- 0 = no skin; negative = the player Roblox avatar
+		skinImage.Visible = skinId ~= 0 -- 0 = no skin; negative = the player Roblox avatar
+		if skinId ~= 0 then
 			skinImage.Image = Skins.thumb(skinId)
-			skinImage.Visible = true
-		else
-			skinImage.Visible = false
-			skinPreview.BackgroundColor3 = WorldState.colorForSlot(WorldState.mySlot or -1)
+		end
+	end
+	-- keep the plain-cell colour live: the Color tab changes it with no skin change
+	if skinId == 0 then
+		local color = WorldState.colorForSlot(mySlot)
+		if color ~= lastColor then
+			lastColor = color
+			skinPreview.BackgroundColor3 = color
 		end
 	end
 end

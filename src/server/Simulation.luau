@@ -401,13 +401,18 @@ local function resolveOwnCells(now: number, dt: number)
 		end
 
 		if merged then
+			local didMerge = false
 			for _, pair in merged do
 				if not pair.big.dead and not pair.small.dead then
 					-- the bigger cell absorbs the smaller IN PLACE (it never moved
 					-- for the merge), so there's no snap/jump
 					World.setMass(pair.big, pair.big.m + pair.small.m)
 					World.removeCell(pair.small)
+					didMerge = true
 				end
+			end
+			if didMerge then
+				Remotes.Feedback:FireClient(info.player, "merge") -- one cue per tick of merging
 			end
 		end
 	end
@@ -530,7 +535,12 @@ local function eatPass(now: number)
 				cell.m += e.m
 				xpGain += e.m -- eating another player is the big XP source
 				grew = true
+				local victim = World.players[e.player] -- eaten cell owner (nil for ghosts)
 				World.removeCell(e)
+				if victim and #victim.cells == 0 then
+					-- that was their LAST cell: you eliminated them
+					Remotes.Feedback:FireClient(cell.player, "kill", victim.name)
+				end
 			elseif e.kind == "pellet" then
 				-- your OWN pellets give less mass back (self-feed is inefficient)
 				if e.slot == cell.slot then

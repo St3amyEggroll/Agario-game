@@ -8,6 +8,10 @@
 	World rendering lives in a separate, lower ScreenGui (Renderer).
 ]]
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Remotes = require(ReplicatedStorage:WaitForChild("Shared").Remotes)
+local LevelCurve = require(ReplicatedStorage.Shared.Levels)
+
 local HUD = require(script.HUD)
 local Menu = require(script.Menu)
 local Settings = require(script.Settings)
@@ -17,9 +21,13 @@ local Pause = require(script.Pause)
 local Minimap = require(script.Minimap)
 local Hiscores = require(script.Hiscores)
 local Spectate = require(script.Spectate)
+local Radio = require(script.Radio)
+local Notifications = require(script.Notifications)
 local Input = require(script.Parent.Input)
 local WorldState = require(script.Parent.WorldState)
 local Sounds = require(script.Parent.Sounds)
+local Music = require(script.Parent.Music)
+local Theme = require(script.Theme)
 
 local UI = {}
 UI.HUD = HUD
@@ -29,6 +37,7 @@ UI.Shop = Shop
 
 function UI.init(playerGui: PlayerGui)
 	Sounds.init() -- build the reusable SFX (click, equip, ...) before any button exists
+	Music.init() -- start the radio
 
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "AgarUI"
@@ -65,6 +74,8 @@ function UI.init(playerGui: PlayerGui)
 	Shop.init(gui) -- pops in left of the card
 	Spectate.init(gui) -- top-center Prev/Next/Play bar while spectating
 	Settings.init(gui) -- also right side; exclusivity keeps it from overlapping Hiscores
+	Notifications.init(gui) -- top-center toasts (level-ups, kills)
+	Radio.init(gui) -- top-right music control
 
 	Input.onMenuToggle = settingsToggle -- the M keybind mirrors the settings panel
 
@@ -76,6 +87,37 @@ function UI.init(playerGui: PlayerGui)
 			Hiscores.close()
 		end
 	end
+
+	-- server SFX/notification cues: a kill (with the victim's name) or a merge
+	local lastMergeSound = 0
+	Remotes.Feedback.OnClientEvent:Connect(function(kind, arg)
+		if kind == "kill" then
+			Sounds.play("kill")
+			Notifications.show("You killed " .. tostring(arg), Theme.Danger)
+		elseif kind == "merge" then
+			-- a big stack recombines over several ticks; throttle so it's one cue
+			local t = os.clock()
+			if t - lastMergeSound > 0.15 then
+				lastMergeSound = t
+				Sounds.play("merge")
+			end
+		end
+	end)
+
+	-- level-up: the FIRST XP sync (your saved total on join) just sets the
+	-- baseline; any later sync that raises your level plays the SFX + a toast.
+	local lastLevel = nil
+	Remotes.Level.OnClientEvent:Connect(function(xp)
+		if typeof(xp) ~= "number" then
+			return
+		end
+		local level = LevelCurve.levelForXp(xp)
+		if lastLevel and level > lastLevel then
+			Sounds.play("levelup")
+			Notifications.show("Level Up!   Lv " .. level, Theme.AccentColor)
+		end
+		lastLevel = level
+	end)
 
 	gui.Parent = playerGui
 end
