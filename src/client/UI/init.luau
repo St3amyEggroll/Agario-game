@@ -75,7 +75,7 @@ function UI.init(playerGui: PlayerGui)
 	Notifications.init(gui) -- top-center toasts (level-ups, kills)
 	ColorPicker.init(gui) -- shared HSV picker modal (skin colour + map background); init LAST so it draws above every panel
 
-	Input.onMenuToggle = settingsToggle -- the M keybind mirrors the settings panel
+	Input.onMenuToggle = Menu.toggleInGame -- the M key opens the in-game menu (customize); never kills
 
 	WorldState.onPlayerState = function(event)
 		Menu.refresh()

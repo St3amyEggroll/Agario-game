@@ -719,8 +719,13 @@ end
 local function deathCheck()
 	for player, info in World.players do
 		if info.alive and #info.cells == 0 then
-			info.alive = false
-			Remotes.PlayerState:FireClient(player, "died")
+			if info.autoRespawn then
+				-- instant respawn: drop straight back into the game, no death menu
+				spawnPlayer(info)
+			else
+				info.alive = false
+				Remotes.PlayerState:FireClient(player, "died")
+			end
 		end
 	end
 end

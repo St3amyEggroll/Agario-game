@@ -8,6 +8,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
+local Remotes = require(Shared.Remotes)
 local Theme = require(script.Parent.Theme)
 local Input = require(script.Parent.Parent.Input)
 local Sounds = require(script.Parent.Parent.Sounds)
@@ -37,7 +38,7 @@ local ROWS = {
 	{ "Respawn", "Respawn (instant)" },
 	{ "ToMenu", "Back to Menu" },
 	{ "FixedMouse", "Fixed Mouse (toggle)" },
-	{ "Menu", "Settings panel" },
+	{ "Menu", "Open menu" },
 }
 
 local Settings = {}
@@ -87,6 +88,23 @@ function Settings.init(parent: Instance)
 	Theme.closeButton(panel, UDim2.fromScale(0.9, 0.02), UDim2.fromScale(0.08, 0.06), function()
 		Settings.setVisible(false)
 	end)
+
+	-- Auto Respawn on/off (default ON): on death, instantly respawn instead of
+	-- returning to the menu. The server does the instant respawn (see deathCheck);
+	-- this just syncs the preference.
+	local arLabel = Theme.label(panel, "Auto Respawn", UDim2.fromScale(0.05, 0.735), UDim2.fromScale(0.5, 0.05))
+	arLabel.TextXAlignment = Enum.TextXAlignment.Left
+	Theme.capText(arLabel, 16)
+	local autoRespawn = true
+	local arBtn
+	arBtn = Theme.button(panel, "On", UDim2.fromScale(0.64, 0.735), UDim2.fromScale(0.31, 0.052), function()
+		autoRespawn = not autoRespawn
+		arBtn.Text = autoRespawn and "On" or "Off"
+		arBtn.TextColor3 = autoRespawn and Theme.Green or Theme.MutedText
+		Remotes.Action:FireServer("setautorespawn", autoRespawn)
+	end)
+	arBtn.TextColor3 = Theme.Green
+	Theme.capText(arBtn, 16)
 
 	-- Sound Effects on/off toggle (below the keybind rows)
 	local sfxLabel = Theme.label(panel, "Sound Effects", UDim2.fromScale(0.05, 0.8), UDim2.fromScale(0.5, 0.05))

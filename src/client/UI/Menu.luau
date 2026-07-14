@@ -222,6 +222,17 @@ function Menu.openInGame()
 	Menu.refresh()
 end
 
+-- Toggle the play card over the running game (the M key). Non-destructive: it
+-- only shows/hides the overlay while you're alive - it never respawns or leaves
+-- the game, so tapping M can't kill you.
+function Menu.toggleInGame()
+	if WorldState.status ~= "alive" then
+		return -- menu/dead already show the card; spectate uses the pause menu
+	end
+	forceOpen = not forceOpen
+	Menu.refresh()
+end
+
 function Menu.refresh()
 	local status = WorldState.status
 	if status ~= "alive" then

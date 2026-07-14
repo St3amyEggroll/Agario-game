@@ -297,6 +297,7 @@ function World.addPlayer(player)
 		frozen = false,
 		alive = false,
 		spectating = false,
+		autoRespawn = true, -- die -> instantly respawn instead of the death menu (Settings toggle, default on)
 		lastAction = {}, -- [actionName] = os.clock() of last accepted use
 	}
 	World.players[player] = info

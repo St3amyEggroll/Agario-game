@@ -3,9 +3,9 @@
 
 	Aiming: every 1/Config.AimSendRate seconds the mouse position is unprojected
 	to world space and fired to the server over the unreliable Aim channel
-	(losing one is harmless; the next overwrites it). "Fixed Mouse" (C) locks
-	the current aim DIRECTION relative to your centroid, so your cells keep
-	heading the same way while you move the mouse freely (e.g. to hover UI).
+	(losing one is harmless; the next overwrites it). "Fixed Mouse" (C) PINS the
+	aim to the world point you are pointing at: your cells travel to that exact
+	spot and park there while you move the mouse freely (e.g. to reach the UI).
 
 	Feed (W) auto-repeats while held. Freeze (F) is a server-side toggle.
 	Binds are remappable at runtime (Settings UI calls captureNext / setBind)
@@ -16,7 +16,6 @@ local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
-local Util = require(Shared.Util)
 local Remotes = require(Shared.Remotes)
 local WorldState = require(script.Parent.WorldState)
 local Camera = require(script.Parent.Camera)
@@ -35,7 +34,7 @@ local keyToAction: { [Enum.KeyCode]: string } = {}
 local feeding = false
 local lastFeed = 0
 local aimAccumulator = 0
-local fixedDirX, fixedDirY = 1, 0
+local fixedTargetX, fixedTargetY = Config.MapWidth / 2, Config.MapHeight / 2
 local captureCallback: ((keyName: string) -> ())? = nil
 
 local function rebuildKeyMap()
@@ -109,10 +108,10 @@ local function dispatch(action: string)
 	elseif action == "FixedMouse" then
 		Input.fixedMouse = not Input.fixedMouse
 		if Input.fixedMouse then
-			-- lock the direction the cursor currently points at
+			-- pin the WORLD POINT under the cursor: your cells head to that exact
+			-- spot and stay there (the aim no longer follows the mouse)
 			local mouse = UserInputService:GetMouseLocation()
-			local wx, wy = Camera.screenToWorld(mouse.X, mouse.Y)
-			fixedDirX, fixedDirY = Util.unit(wx - WorldState.own.x, wy - WorldState.own.y)
+			fixedTargetX, fixedTargetY = Camera.screenToWorld(mouse.X, mouse.Y)
 		end
 	elseif action == "Menu" then
 		if Input.onMenuToggle then
@@ -206,9 +205,8 @@ function Input.tick(dt: number, now: number)
 
 	local wx, wy
 	if Input.fixedMouse then
-		-- aim stays a fixed offset ahead of the centroid: constant direction
-		wx = WorldState.own.x + fixedDirX * 600
-		wy = WorldState.own.y + fixedDirY * 600
+		-- aim is pinned to the captured world point: cells converge there and hold
+		wx, wy = fixedTargetX, fixedTargetY
 	else
 		local mouse = UserInputService:GetMouseLocation()
 		wx, wy = Camera.screenToWorld(mouse.X, mouse.Y)

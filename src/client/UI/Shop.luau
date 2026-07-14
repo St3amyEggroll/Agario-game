@@ -1,7 +1,7 @@
 --[[
 	Shop - the customize panel, split into four tabs:
 	  AVATAR - your Roblox avatar (headshot) as a cell skin.
-	  COLOR  - pick your plain-cell colour from the palette (clears any skin).
+	  COLOR  - one big HSV picker: drag to set your plain-cell colour (clears any skin).
 	  CUSTOM - the whole meme/skin catalog + a "paste any image id" box.
 	  LEVEL  - the level-locked progression skins (locked until you hit the level).
 
@@ -16,7 +16,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
-local Config = require(Shared.Config)
 local Util = require(Shared.Util)
 local Remotes = require(Shared.Remotes)
 local Skins = require(Shared.Skins)
@@ -36,10 +35,12 @@ local idBox: TextBox
 local tabButtons: { [string]: TextButton } = {}
 local currentTab = "custom"
 local cards: {
-	{ frame: Frame, lname: string, category: string, level: number, equipButton: TextButton, img: ImageLabel, matchKind: string, matchId: number }
+	{ frame: Frame, lname: string, category: string, level: number, equipButton: TextButton, matchKind: string, matchId: number }
 } = {}
 local built = false
-local colorPickCard -- the COLOR tab's custom-picker card (its swatch tracks your live colour)
+local colorPanel: Frame -- the COLOR tab's inline picker (shown instead of the card grid)
+local colorWidget -- ColorPicker widget inside colorPanel
+local updateColorPreview: (Color3) -> () -- refresh the picker's preview swatch + hex
 
 local function currentLevel(): number
 	return LevelCurve.levelForXp(WorldState.xp)
@@ -61,11 +62,7 @@ end
 -- Is this card the look currently equipped? Colour counts only when no skin is on;
 -- overlays (accessories/avatar) count if the id is in the worn set (None never does).
 local function isActive(card): boolean
-	if card.matchKind == "colorpick" then
-		return false
-	elseif card.matchKind == "color" then
-		return currentSkin() == 0 and currentColor() == card.matchId
-	elseif card.matchKind == "overlay" then
+	if card.matchKind == "overlay" then
 		if card.matchId == 0 then
 			return false
 		end
@@ -86,11 +83,6 @@ end
 
 local function equipAvatar()
 	Remotes.Action:FireServer("setavatar")
-	Sounds.play("equip")
-end
-
-local function equipColor(packed: number)
-	Remotes.Action:FireServer("setcolor", packed)
 	Sounds.play("equip")
 end
 
@@ -161,7 +153,6 @@ local function makeCard(opts)
 		category = opts.category,
 		level = reqLevel,
 		equipButton = equipButton,
-		img = img,
 		matchKind = opts.matchKind,
 		matchId = opts.matchId,
 	})
@@ -194,39 +185,6 @@ local function build()
 		matchId = -Players.LocalPlayer.UserId,
 		onEquip = equipAvatar,
 	})
-
-	-- COLOR: a custom HSV picker card + one swatch per palette preset. Equipping
-	-- any colour clears the skin so the plain coloured cell shows. Colours ride
-	-- as a packed 0xRRGGBB int now (arbitrary colours, not a palette index).
-	makeCard({
-		category = "color",
-		name = "Custom",
-		swatchColor = Color3.new(1, 1, 1),
-		matchKind = "colorpick",
-		matchId = 0,
-		onEquip = function()
-			local packed = currentColor()
-			local seed = (currentSkin() == 0 and typeof(packed) == "number") and Util.unpackColor(packed)
-				or Color3.new(1, 1, 1)
-			ColorPicker.open("Skin color", seed, function(c)
-				equipColor(Util.packColor(c))
-			end)
-		end,
-	})
-	colorPickCard = cards[#cards]
-	for i, col in Config.Palette do
-		local packed = Util.packColor(col)
-		makeCard({
-			category = "color",
-			name = "Color " .. i,
-			swatchColor = col,
-			matchKind = "color",
-			matchId = packed,
-			onEquip = function()
-				equipColor(packed)
-			end,
-		})
-	end
 
 	-- CUSTOM (free catalog) + LEVEL (level-locked). Skins.List holds both.
 	for _, skin in Skins.List do
@@ -282,9 +240,7 @@ function Shop.refreshButtons()
 	for _, card in cards do
 		local btn = card.equipButton
 		local txt, col
-		if card.matchKind == "colorpick" then
-			txt, col = "\u{1F3A8} Pick", Theme.AccentColor
-		elseif card.level > 0 and lvl < card.level then
+		if card.level > 0 and lvl < card.level then
 			txt, col = "\u{1F512} Lv " .. card.level, Theme.MutedText
 		elseif isActive(card) then
 			-- overlays toggle, so an active one shows "Unequip"; base looks show "Equipped"
@@ -301,13 +257,6 @@ function Shop.refreshButtons()
 		end
 		if btn.TextColor3 ~= col then
 			btn.TextColor3 = col
-		end
-	end
-	-- keep the custom-picker swatch showing your current cell colour
-	if colorPickCard and colorPickCard.img then
-		local packed = currentColor()
-		if typeof(packed) == "number" then
-			colorPickCard.img.BackgroundColor3 = Util.unpackColor(packed)
 		end
 	end
 end
@@ -330,6 +279,17 @@ local function selectTab(tab: string)
 		local active = name == tab
 		btn.TextColor3 = active and Theme.AccentColor or Theme.MutedText
 		btn.BackgroundTransparency = active and 0.15 or 0.55
+	end
+	-- the Colour tab swaps the card grid for the inline picker
+	if colorPanel then
+		colorPanel.Visible = tab == "color"
+		scroll.Visible = tab ~= "color"
+	end
+	if tab == "color" and colorWidget then
+		local packed = currentColor()
+		local c = (typeof(packed) == "number" and packed > 0) and Util.unpackColor(packed) or Color3.new(1, 1, 1)
+		colorWidget.setColor(c)
+		updateColorPreview(c)
 	end
 	-- search applies to Custom + Level; the paste-id box is Custom-only
 	search.Visible = tab == "custom" or tab == "level"
@@ -436,6 +396,73 @@ function Shop.init(parent: Instance)
 	end
 	scroll:GetPropertyChangedSignal("AbsoluteSize"):Connect(resizeCells)
 	Shop._resizeCells = resizeCells
+
+	-- COLOR tab: one big inline HSV picker (fills the grid area). No palette
+	-- options - drag to pick any colour and it applies to your cell live.
+	colorPanel = Instance.new("Frame")
+	colorPanel.Position = scroll.Position
+	colorPanel.Size = scroll.Size
+	colorPanel.BackgroundTransparency = 1
+	colorPanel.Visible = false
+	colorPanel.Parent = panel
+
+	local pickerRegion = Instance.new("Frame")
+	pickerRegion.Position = UDim2.fromScale(0.02, 0)
+	pickerRegion.Size = UDim2.fromScale(0.96, 0.8)
+	pickerRegion.BackgroundTransparency = 1
+	pickerRegion.Parent = colorPanel
+
+	local preview = Instance.new("Frame")
+	preview.Position = UDim2.fromScale(0.02, 0.85)
+	preview.Size = UDim2.fromScale(0.14, 0.14)
+	preview.BackgroundColor3 = Color3.new(1, 1, 1)
+	preview.BorderSizePixel = 0
+	local par = Instance.new("UIAspectRatioConstraint")
+	par.AspectRatio = 1
+	par.Parent = preview
+	Theme.round(preview, 999)
+	Theme.stroke(preview, Color3.new(1, 1, 1), 0.5)
+	preview.Parent = colorPanel
+
+	local hexLabel = Theme.label(colorPanel, "#FFFFFF", UDim2.fromScale(0.2, 0.86), UDim2.fromScale(0.5, 0.12))
+	hexLabel.TextXAlignment = Enum.TextXAlignment.Left
+	Theme.capText(hexLabel, 22)
+
+	updateColorPreview = function(c: Color3)
+		preview.BackgroundColor3 = c
+		hexLabel.Text = string.format("#%02X%02X%02X", math.floor(c.R * 255 + 0.5), math.floor(c.G * 255 + 0.5), math.floor(c.B * 255 + 0.5))
+	end
+
+	local lastColorSend = 0
+	local colorCommitSeq = 0
+	local function sendColor(c: Color3)
+		Remotes.Action:FireServer("setcolor", Util.packColor(c))
+	end
+	colorWidget = ColorPicker.newWidget(pickerRegion, {
+		onChange = function(c)
+			updateColorPreview(c)
+			local now = os.clock()
+			if now - lastColorSend >= 0.15 then -- throttle live sends (server cools at 0.2s)
+				lastColorSend = now
+				sendColor(c)
+			end
+		end,
+		onCommit = function(c)
+			updateColorPreview(c)
+			Sounds.play("equip")
+			sendColor(c)
+			lastColorSend = os.clock()
+			-- guarantee the FINAL colour lands even if this commit fell inside the
+			-- server's setcolor cooldown (which silently drops the extra)
+			colorCommitSeq += 1
+			local seq = colorCommitSeq
+			task.delay(0.25, function()
+				if seq == colorCommitSeq then
+					sendColor(c)
+				end
+			end)
+		end,
+	})
 end
 
 function Shop.close()

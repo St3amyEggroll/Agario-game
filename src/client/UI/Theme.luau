@@ -143,7 +143,7 @@ function Theme.closeButton(parent: Instance, pos: UDim2, size: UDim2, onClick: (
 	b.BackgroundTransparency = 0.1
 	b.BorderSizePixel = 0
 	b.Font = Theme.Font
-	b.Text = "\u{2715}"
+	b.Text = "X" -- plain ASCII: the ✕ glyph (U+2715) tofus (renders as a box) in Gotham
 	b.TextColor3 = Color3.new(1, 1, 1)
 	b.TextScaled = true
 	b.AutoButtonColor = false

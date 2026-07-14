@@ -241,7 +241,7 @@ local Config = {
 		Respawn = "B", -- instant respawn (drop everything, start fresh)
 		ToMenu = "N", -- leave the game, back to the play menu
 		FixedMouse = "C",
-		Menu = "M", -- opens the settings panel
+		Menu = "M", -- opens the in-game menu (customize), non-destructive
 	},
 }
 
