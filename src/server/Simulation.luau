@@ -401,18 +401,13 @@ local function resolveOwnCells(now: number, dt: number)
 		end
 
 		if merged then
-			local didMerge = false
 			for _, pair in merged do
 				if not pair.big.dead and not pair.small.dead then
 					-- the bigger cell absorbs the smaller IN PLACE (it never moved
 					-- for the merge), so there's no snap/jump
 					World.setMass(pair.big, pair.big.m + pair.small.m)
 					World.removeCell(pair.small)
-					didMerge = true
 				end
-			end
-			if didMerge then
-				Remotes.Feedback:FireClient(info.player, "merge") -- one cue per tick of merging
 			end
 		end
 	end

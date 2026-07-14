@@ -84,19 +84,11 @@ function UI.init(playerGui: PlayerGui)
 		end
 	end
 
-	-- server SFX/notification cues: a kill (with the victim's name) or a merge
-	local lastMergeSound = 0
+	-- server SFX/notification cue: a kill (with the victim's name)
 	Remotes.Feedback.OnClientEvent:Connect(function(kind, arg)
 		if kind == "kill" then
 			Sounds.play("kill")
 			Notifications.show("You killed " .. tostring(arg), Theme.Danger)
-		elseif kind == "merge" then
-			-- a big stack recombines over several ticks; throttle so it's one cue
-			local t = os.clock()
-			if t - lastMergeSound > 0.15 then
-				lastMergeSound = t
-				Sounds.play("merge")
-			end
 		end
 	end)
 
