@@ -206,6 +206,17 @@ local function drainActions(now: number)
 				end
 				Remotes.Feedback:FireClient(info.player, "ability", id)
 			end
+		elseif action == "abilityplace" then
+			-- a "place"-kind ability dropped at world coords (validated in Network)
+			if info.alive then
+				local a = cmd.arg
+				if a.id == "spike" then
+					World.spawnVirus("virus", a.x, a.y)
+				elseif a.id == "spawner" then
+					World.spawnVirus("exp", a.x, a.y)
+				end
+				Remotes.Feedback:FireClient(info.player, "ability", a.id)
+			end
 		elseif action == "setskin" then
 			info.skinId = cmd.arg -- image/decal asset id (0 = none), validated in Network
 			World.broadcastRosterUpdate(info)

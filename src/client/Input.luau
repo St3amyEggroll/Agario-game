@@ -28,6 +28,7 @@ local Input = {
 	fixedMouse = false,
 	onMenuToggle = nil, -- assigned by UI
 	onBindsChanged = nil, -- assigned by UI (settings refresh)
+	onPlaceStateChanged = nil, -- assigned by UI: fn(pendingAbilityId?) for the "click to place" hint
 }
 
 local keyToAction: { [Enum.KeyCode]: string } = {}
@@ -36,6 +37,7 @@ local lastFeed = 0
 local aimAccumulator = 0
 local fixedTargetX, fixedTargetY = Config.MapWidth / 2, Config.MapHeight / 2
 local captureCallback: ((keyName: string) -> ())? = nil
+local pendingPlaceId: string? = nil -- a "place" ability armed from the dock; next map click drops it
 
 local function rebuildKeyMap()
 	table.clear(keyToAction)
@@ -131,10 +133,39 @@ function Input.useAbility(id: string)
 	Remotes.Action:FireServer("useability", id)
 end
 
+-- Drop a "place" ability at world coords (from the placement click below).
+function Input.usePlaceAbility(id: string, x: number, y: number)
+	Remotes.Action:FireServer("useplace", { id = id, x = x, y = y })
+end
+
+-- Arm / disarm placement for a "place" ability (toggled from the dock). While
+-- armed, the next left-click on the field drops it.
+function Input.armPlace(id: string)
+	pendingPlaceId = (pendingPlaceId == id) and nil or id
+	if Input.onPlaceStateChanged then
+		Input.onPlaceStateChanged(pendingPlaceId)
+	end
+end
+
 --------------------------------------------------------------------- wiring
 
 function Input.init()
 	UserInputService.InputBegan:Connect(function(input, gameProcessed)
+		-- placement click for an armed "place" ability (left-click / touch on the
+		-- field, not over UI). Left-click has no other gameplay use, so this is safe.
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			if pendingPlaceId and not gameProcessed then
+				local id = pendingPlaceId
+				pendingPlaceId = nil
+				if Input.onPlaceStateChanged then
+					Input.onPlaceStateChanged(nil)
+				end
+				local mouse = UserInputService:GetMouseLocation()
+				local wx, wy = Camera.screenToWorld(mouse.X, mouse.Y)
+				Input.usePlaceAbility(id, wx, wy)
+			end
+			return
+		end
 		if input.UserInputType ~= Enum.UserInputType.Keyboard then
 			return
 		end
@@ -191,6 +222,13 @@ end
 
 -- Called every frame from the client bootstrap.
 function Input.tick(dt: number, now: number)
+	-- drop any armed placement if you're no longer alive
+	if pendingPlaceId and WorldState.status ~= "alive" then
+		pendingPlaceId = nil
+		if Input.onPlaceStateChanged then
+			Input.onPlaceStateChanged(nil)
+		end
+	end
 	-- held-feed auto repeat; smaller you are, the faster it repeats (matches the
 	-- server's size-scaled feed cooldown, so small cells shoot viruses quicker)
 	if feeding and WorldState.status == "alive" then

@@ -44,8 +44,12 @@ local ACTION_COOLDOWN: { [string]: number } = {
 	setautorespawn = 0.2,
 	buyability = 0.3,
 	useability = 0.1, -- the REAL gate is the per-ability cooldown in Abilities
+	useplace = 0.1,
 	debugmass = 0.05,
 }
+
+-- "place"-kind abilities that are actually implemented (others reply "coming soon")
+local PLACE_IMPL = { spike = true, spawner = true }
 
 local function isFiniteNumber(v): boolean
 	return typeof(v) == "number" and v == v and v ~= math.huge and v ~= -math.huge
@@ -181,6 +185,31 @@ local function onAction(player, action, arg)
 		if def.kind == "self" then
 			Abilities.startCooldown(player, info, arg)
 			Simulation.enqueue(player, "ability", arg)
+		else
+			Remotes.Feedback:FireClient(player, "soon", def.name)
+		end
+		return
+	elseif action == "useplace" then
+		-- place a "place"-kind ability at world coords. arg = { id, x, y }.
+		if typeof(arg) ~= "table" or not info.alive then
+			return
+		end
+		local id = arg.id
+		if typeof(id) ~= "string" or not Abilities.canUse(info, id) then
+			return
+		end
+		local def = Abilities.byId[id]
+		if not def or def.kind ~= "place" then
+			return
+		end
+		if not isFiniteNumber(arg.x) or not isFiniteNumber(arg.y) then
+			return
+		end
+		local x = math.clamp(arg.x, 0, Config.MapWidth)
+		local y = math.clamp(arg.y, 0, Config.MapHeight)
+		if PLACE_IMPL[id] then
+			Abilities.startCooldown(player, info, id)
+			Simulation.enqueue(player, "abilityplace", { id = id, x = x, y = y })
 		else
 			Remotes.Feedback:FireClient(player, "soon", def.name)
 		end

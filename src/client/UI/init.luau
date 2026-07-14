@@ -84,6 +84,13 @@ function UI.init(playerGui: PlayerGui)
 
 	Input.onMenuToggle = Menu.toggleInGame -- the M key opens the in-game menu (customize); never kills
 
+	-- "place" ability armed: prompt the player to click the field to drop it
+	Input.onPlaceStateChanged = function(id)
+		if id then
+			Notifications.show("Click the map to place " .. (ABILITY_NAME[id] or "it"), Theme.AccentColor)
+		end
+	end
+
 	WorldState.onPlayerState = function(event)
 		Menu.refresh()
 		if event == "spawned" then
