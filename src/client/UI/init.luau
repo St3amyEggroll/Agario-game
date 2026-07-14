@@ -20,9 +20,7 @@ local Settings = require(script.Settings)
 local Shop = require(script.Shop)
 local AbilityDock = require(script.AbilityDock)
 local Pause = require(script.Pause)
-local Leaderboard = require(script.Leaderboard)
 local Minimap = require(script.Minimap)
-local Chat = require(script.Chat)
 local Input = require(script.Parent.Input)
 local WorldState = require(script.Parent.WorldState)
 
@@ -42,9 +40,7 @@ function UI.init(playerGui: PlayerGui)
 
 	Menu.init(gui, Shop.toggle, Settings.toggle) -- overlay + card (drawn under the HUD)
 	HUD.init(gui)
-	Leaderboard.init(gui)
 	Minimap.init(gui)
-	Chat.init(gui)
 	AbilityDock.init(gui)
 	Pause.init(gui, Settings.toggle) -- ☰ top-left -> Resume / Respawn / Settings / Leave
 	Settings.init(gui)
@@ -52,14 +48,14 @@ function UI.init(playerGui: PlayerGui)
 
 	Input.onMenuToggle = Settings.toggle -- the M keybind mirrors the settings panel
 
-	-- debug testing buttons (mid-left); gated by Config.Debug
+	-- debug testing buttons (bottom-left); gated by Config.Debug
 	if Config.Debug then
 		local pctLabel = ("%d%%"):format(Config.DebugMassPercent)
-		local addMass = Theme.outlineButton(gui, "+" .. pctLabel, UDim2.fromScale(0.012, 0.4), UDim2.fromScale(0.055, 0.04), Theme.Green, function()
+		local addMass = Theme.outlineButton(gui, "+" .. pctLabel, UDim2.fromScale(0.012, 0.9), UDim2.fromScale(0.055, 0.04), Theme.Green, function()
 			Remotes.Action:FireServer("debugmass", 1)
 		end)
 		Theme.capText(addMass, 14)
-		local subMass = Theme.outlineButton(gui, "-" .. pctLabel, UDim2.fromScale(0.072, 0.4), UDim2.fromScale(0.055, 0.04), Theme.Danger, function()
+		local subMass = Theme.outlineButton(gui, "-" .. pctLabel, UDim2.fromScale(0.072, 0.9), UDim2.fromScale(0.055, 0.04), Theme.Danger, function()
 			Remotes.Action:FireServer("debugmass", -1)
 		end)
 		Theme.capText(subMass, 14)
@@ -77,7 +73,6 @@ function UI.update(dt: number)
 	AbilityDock.update(dt)
 	Pause.update(dt)
 	Menu.update(dt)
-	Leaderboard.update(dt)
 	Minimap.update(dt)
 end
 

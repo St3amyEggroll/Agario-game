@@ -198,7 +198,6 @@ function Network.init()
 		-- pure echo; the client computes RTT from its own clock
 		Remotes.Ping:FireClient(player, t)
 	end)
-	Remotes.Chat.OnServerEvent:Connect(sendChat) -- in-game chat box -> filtered broadcast
 	Players.PlayerAdded:Connect(onPlayerAdded)
 	Players.PlayerRemoving:Connect(onPlayerRemoving)
 	-- players who joined before this script ran (fast Studio starts)

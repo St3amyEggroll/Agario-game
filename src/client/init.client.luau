@@ -30,29 +30,15 @@ local ChatBubbles = require(script.ChatBubbles)
 local localPlayer = Players.LocalPlayer
 local playerGui = localPlayer:WaitForChild("PlayerGui")
 
--- the game is 100% ScreenGui: park the 3D camera and hide the Roblox core UI.
--- We now draw our OWN leaderboard (top-right) and chat (bottom-left), so the
--- native PlayerList and Chat are disabled too.
+-- the game is 100% ScreenGui: park the 3D camera and hide the core UI that
+-- assumes a character. The Roblox PlayerList (our leaderboard, via leaderstats)
+-- and Chat are kept ON.
 Workspace.CurrentCamera.CameraType = Enum.CameraType.Scriptable
-for _, coreGui in
-	{
-		Enum.CoreGuiType.Backpack,
-		Enum.CoreGuiType.Health,
-		Enum.CoreGuiType.EmotesMenu,
-		Enum.CoreGuiType.PlayerList,
-		Enum.CoreGuiType.Chat,
-	}
-do
+for _, coreGui in { Enum.CoreGuiType.Backpack, Enum.CoreGuiType.Health, Enum.CoreGuiType.EmotesMenu } do
 	pcall(function()
 		StarterGui:SetCoreGuiEnabled(coreGui, false)
 	end)
 end
--- new TextChatService: also turn off its default window + input bar
-pcall(function()
-	local TextChatService = game:GetService("TextChatService")
-	TextChatService.ChatWindowConfiguration.Enabled = false
-	TextChatService.ChatInputBarConfiguration.Enabled = false
-end)
 
 Renderer.init(playerGui)
 Input.init()

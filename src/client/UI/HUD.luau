@@ -38,7 +38,8 @@ local function divider(parent: Instance, x: number)
 end
 
 function HUD.init(parent: Instance)
-	local bar = Theme.panel(parent, UDim2.fromScale(0.064, 0.014), UDim2.fromScale(0.33, 0.06))
+	-- sits just below the Roblox top bar (their logo / menu / mic own the corner)
+	local bar = Theme.panel(parent, UDim2.fromScale(0.055, 0.058), UDim2.fromScale(0.33, 0.06))
 
 	-- Level + XP
 	lvLabel = Theme.mono(bar, "Lv 1", UDim2.fromScale(0.015, 0.14), UDim2.fromScale(0.11, 0.42))

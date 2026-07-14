@@ -21,13 +21,13 @@ local function close()
 end
 
 function Pause.init(parent: Instance, settingsToggle: () -> ())
-	hamb = Theme.button(parent, "\u{2630}", UDim2.fromScale(0.012, 0.014), UDim2.fromScale(0.045, 0.045), function()
+	hamb = Theme.button(parent, "\u{2630}", UDim2.fromScale(0.008, 0.058), UDim2.fromScale(0.04, 0.045), function()
 		popup.Visible = not popup.Visible
 	end)
 	hamb.Visible = false
 	Theme.capText(hamb, 20)
 
-	popup = Theme.panel(parent, UDim2.fromScale(0.012, 0.066), UDim2.fromScale(0.16, 0.26))
+	popup = Theme.panel(parent, UDim2.fromScale(0.008, 0.11), UDim2.fromScale(0.16, 0.26))
 	popup.Visible = false
 	local pad = Instance.new("UIPadding")
 	pad.PaddingTop = UDim.new(0.06, 0)
