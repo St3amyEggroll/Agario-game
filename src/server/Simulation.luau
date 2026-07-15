@@ -146,6 +146,8 @@ local function spawnPlayer(info)
 	info.alive = true
 	info.spectating = false
 	info.frozen = false
+	info.frozenUntil = 0
+	info.speedBoostUntil = 0
 	Remotes.PlayerState:FireClient(info.player, "spawned")
 end
 
@@ -231,9 +233,13 @@ local function drainActions(now: number)
 			if info.alive then
 				local a = cmd.arg
 				if a.id == "spike" then
-					World.spawnVirus("virus", a.x, a.y)
+					if #World.viruses < Config.MaxViruses then
+						World.spawnVirus("virus", a.x, a.y).placed = true
+					end
 				elseif a.id == "spawner" then
-					World.spawnVirus("exp", a.x, a.y)
+					if #World.viruses < Config.MaxViruses then
+						World.spawnVirus("exp", a.x, a.y).placed = true
+					end
 				elseif a.id == "goldblock" then
 					World.spawnGoldBlock(a.x, a.y)
 				elseif a.id == "portal" then
@@ -538,7 +544,7 @@ local scratchHits = {} -- reused: never mutate the hash while iterating it
 -- the classic "16 pieces makes viruses food" rule).
 local function popCell(cell, virus, now: number)
 	World.setMass(cell, cell.m + virus.m)
-	World.removeVirus(virus, true)
+	World.removeVirus(virus, not virus.placed) -- placed (ability) viruses don't respawn
 	local info = World.players[cell.player]
 	local avail = Config.MaxCells - #info.cells
 	if avail <= 0 then
