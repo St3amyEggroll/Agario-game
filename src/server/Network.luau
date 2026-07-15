@@ -171,9 +171,9 @@ local function onAction(player, action, arg)
 		Abilities.buy(player, arg)
 		return
 	elseif action == "useability" then
-		-- fire an owned ability. arg = id. Cooldown + ownership are enforced here;
-		-- the EFFECT of a "self" ability runs in the simulation. "place"/"target"
-		-- abilities aren't wired yet, so we just tell the client (no cooldown spent).
+		-- fire a "self" ability. arg = id. Cooldown + ownership enforced here; the
+		-- EFFECT runs in the simulation. (place/target abilities come in via useplace
+		-- instead; the else here is just a safety net.)
 		if typeof(arg) ~= "string" or not info.alive then
 			return
 		end
