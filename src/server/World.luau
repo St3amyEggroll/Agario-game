@@ -298,6 +298,7 @@ function World.addPlayer(player)
 		alive = false,
 		spectating = false,
 		autoRespawn = true, -- die -> instantly respawn instead of the death menu (Settings toggle, default on)
+		randomColor = false, -- when enabled, every fresh spawn receives a new palette color
 		lastAction = {}, -- [actionName] = os.clock() of last accepted use
 	}
 	World.players[player] = info

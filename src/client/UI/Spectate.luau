@@ -17,7 +17,8 @@ local nameLabel: TextLabel
 local lastName = ""
 
 function Spectate.init(parent: Instance)
-	bar = Theme.panel(parent, UDim2.fromScale(0.5, 0.065), UDim2.fromScale(0.36, 0.055), Vector2.new(0.5, 0))
+	bar = Theme.panel(parent, UDim2.fromScale(0.5, 0.065), UDim2.fromOffset(540, 48), Vector2.new(0.5, 0))
+	Theme.responsiveSize(bar, Vector2.new(540, 48), Vector2.new(12, 12))
 	bar.Visible = false
 
 	local prev = Theme.button(bar, "\u{25C0}", UDim2.fromScale(0.02, 0.15), UDim2.fromScale(0.1, 0.7), function()

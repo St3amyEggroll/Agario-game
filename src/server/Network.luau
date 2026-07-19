@@ -41,6 +41,7 @@ local ACTION_COOLDOWN: { [string]: number } = {
 	setaccessory = 0.2,
 	setname = 0.5,
 	setautorespawn = 0.2,
+	setrandomcolor = 0.2,
 	debugmass = 0.05,
 }
 
@@ -153,6 +154,9 @@ local function onAction(player, action, arg)
 		-- Settings toggle: on death, instantly respawn instead of the death menu.
 		-- Boolean only; the instant respawn itself happens in Simulation.deathCheck.
 		info.autoRespawn = arg == true
+		return
+	elseif action == "setrandomcolor" then
+		info.randomColor = arg == true
 		return
 	elseif action == "debugmass" then
 		-- testing helper: only a direction is accepted (the server owns the

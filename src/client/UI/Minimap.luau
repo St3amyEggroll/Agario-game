@@ -40,7 +40,8 @@ local function getDot(i: number): Frame
 end
 
 function Minimap.init(parent: Instance)
-	root = Theme.panel(parent, UDim2.fromScale(0.988, 0.965), UDim2.fromScale(0.13, 0.13), Vector2.new(1, 1))
+	root = Theme.panel(parent, UDim2.fromScale(0.988, 0.965), UDim2.fromOffset(120, 120), Vector2.new(1, 1))
+	Theme.responsiveSize(root, Vector2.new(120, 120), Vector2.new(12, 12))
 	local ar = Instance.new("UIAspectRatioConstraint")
 	ar.AspectRatio = 1
 	ar.Parent = root
@@ -78,6 +79,12 @@ function Minimap.init(parent: Instance)
 end
 
 -- Match the minimap surface to the chosen map background.
+function Minimap.setVisible(visible: boolean)
+	if root then
+		root.Visible = visible
+	end
+end
+
 function Minimap.setBackground(base: Color3)
 	if field then
 		field.BackgroundColor3 = base

@@ -69,7 +69,7 @@ end
 
 function Levels.onPlayerAdded(player)
 	task.spawn(function()
-		local savedXp, savedCoins = nil, nil
+		local savedXp, savedCoins, tutorialSeen = nil, nil, false
 		if store then
 			local ok, result = pcall(function()
 				return store:GetAsync("xp_" .. player.UserId)
@@ -82,6 +82,12 @@ function Levels.onPlayerAdded(player)
 			end)
 			if ok2 and typeof(result2) == "number" then
 				savedCoins = result2
+			end
+			local ok3, result3 = pcall(function()
+				return store:GetAsync("tutorial_" .. player.UserId)
+			end)
+			if ok3 then
+				tutorialSeen = result3 == true
 			end
 		end
 		local info = World.players[player]
@@ -98,6 +104,14 @@ function Levels.onPlayerAdded(player)
 		info.xpSent = info.xp
 		Remotes.Level:FireClient(player, info.xp)
 		Remotes.PlayerState:FireClient(player, "coins", info.coins)
+		Remotes.PlayerState:FireClient(player, "abilityTutorial", not tutorialSeen)
+		if store and not tutorialSeen then
+			task.spawn(function()
+				pcall(function()
+					store:SetAsync("tutorial_" .. player.UserId, true)
+				end)
+			end)
+		end
 	end)
 end
 

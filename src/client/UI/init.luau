@@ -44,9 +44,8 @@ function UI.init(playerGui: PlayerGui)
 	gui.DisplayOrder = 10
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-	-- The three side panels (Shop left, Hiscores + Settings right) are mutually
-	-- exclusive: opening one closes the others so they never overlap or cover the
-	-- play card. Each wrapper closes the OTHER two, then toggles itself.
+	-- Shop, Scores and Settings are mutually exclusive centered modals.
+	-- Menu.setPanelOpen hides the play card while any modal is visible.
 	local function shopToggle()
 		Settings.setVisible(false)
 		Hiscores.close()
@@ -64,7 +63,7 @@ function UI.init(playerGui: PlayerGui)
 	end
 
 	Menu.init(gui, shopToggle, settingsToggle, hiscoresToggle) -- overlay + card
-	HUD.init(gui)
+	HUD.init(gui, shopToggle)
 	Minimap.init(gui)
 	AbilityDock.init(gui)
 	Pause.init(gui, settingsToggle, Menu.openInGame, hiscoresToggle) -- ☰ in-game menu (Menu opens the play card)
@@ -116,6 +115,10 @@ function UI.update(dt: number)
 	HUD.update(dt)
 	AbilityDock.update(dt)
 	Pause.update(dt)
+	Menu.setPanelOpen(Shop.isVisible() or Settings.isVisible() or Hiscores.isVisible())
+	local menuVisible = Menu.isVisible()
+	HUD.setGameplayVisible(not menuVisible)
+	Minimap.setVisible(not menuVisible)
 	Menu.update(dt)
 	Minimap.update(dt)
 	Hiscores.update(dt)
