@@ -34,6 +34,8 @@ local abilityButtons = {} -- [id] = { btn, overlay, cdText }
 local frozenActive = false
 local pollAccumulator = 0
 local lastOwnedCount = -1
+local tutorialRemaining = 0
+local tutorialConsumed = false
 
 -- long bind names would overflow a small button; keep the common ones short
 local function shortKey(k: string): string
@@ -163,7 +165,8 @@ function AbilityDock.init(parent: Instance)
 	container = Instance.new("Frame")
 	container.AnchorPoint = Vector2.new(0.5, 1)
 	container.Position = UDim2.fromScale(0.5, 0.985)
-	container.Size = UDim2.fromScale(0.26, 0.08)
+	container.Size = UDim2.fromOffset(360, 62)
+	Theme.responsiveSize(container, Vector2.new(360, 62), Vector2.new(16, 16))
 	container.BackgroundTransparency = 1
 	container.Visible = false
 	container.Parent = parent
@@ -206,8 +209,16 @@ end
 
 function AbilityDock.update(dt: number)
 	local alive = WorldState.status == "alive"
-	if container.Visible ~= alive then
-		container.Visible = alive
+	if alive and WorldState.showAbilityTutorial and not tutorialConsumed then
+		tutorialRemaining = Config.AbilityTutorialDuration
+		tutorialConsumed = true
+	end
+	if alive and tutorialRemaining > 0 then
+		tutorialRemaining = math.max(0, tutorialRemaining - dt)
+	end
+	local show = alive and tutorialRemaining > 0
+	if container.Visible ~= show then
+		container.Visible = show
 	end
 	if abilityRow.Visible ~= alive then
 		abilityRow.Visible = alive

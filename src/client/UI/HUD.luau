@@ -14,10 +14,12 @@ local WorldState = require(script.Parent.Parent.WorldState)
 
 local HUD = {}
 
+local statsBar: Frame
 local lvLabel: TextLabel
 local xpFill: Frame
 local massLabel: TextLabel
 local coinLabel: TextLabel
+local goldTopLabel: TextLabel
 local fpsLabel: TextLabel
 local pingLabel: TextLabel
 local cellsLabel: TextLabel
@@ -26,6 +28,11 @@ local smoothedDt = 1 / 60
 local pingMs = -1
 local last = {}
 local uiAccumulator = 0
+
+local function commas(n: number): string
+	local out = tostring(math.floor(n + 0.5)):reverse():gsub("(%d%d%d)", "%1,")
+	return (out:reverse():gsub("^,", ""))
+end
 
 local function divider(parent: Instance, x: number)
 	local d = Instance.new("Frame")
@@ -38,9 +45,11 @@ local function divider(parent: Instance, x: number)
 	d.Parent = parent
 end
 
-function HUD.init(parent: Instance)
+function HUD.init(parent: Instance, onGoldClick: (() -> ())?)
 	-- bottom-left stats bar (Level/XP, Mass, Coins, FPS/Ping/Cells)
-	local bar = Theme.panel(parent, UDim2.fromScale(0.008, 0.99), UDim2.fromScale(0.33, 0.06), Vector2.new(0, 1))
+	local bar = Theme.panel(parent, UDim2.fromScale(0.008, 0.985), UDim2.fromOffset(520, 50), Vector2.new(0, 1))
+	statsBar = bar
+	Theme.responsiveSize(bar, Vector2.new(520, 50), Vector2.new(12, 12))
 
 	-- Level + XP
 	lvLabel = Theme.mono(bar, "Lv 1", UDim2.fromScale(0.015, 0.14), UDim2.fromScale(0.11, 0.42))
@@ -91,6 +100,42 @@ function HUD.init(parent: Instance)
 		l.TextXAlignment = Enum.TextXAlignment.Left
 		Theme.capText(l, 12)
 	end
+
+	-- Compact top-right currency pill (reference #4 sizing).
+	local goldPill = Theme.panel(parent, UDim2.fromScale(0.99, 0.018), UDim2.fromOffset(160, 48), Vector2.new(1, 0))
+	Theme.responsiveSize(goldPill, Vector2.new(160, 48), Vector2.new(12, 12))
+	goldPill.BackgroundColor3 = Color3.fromRGB(3, 7, 13)
+	goldPill.BackgroundTransparency = 0.01
+
+	local coin = Instance.new("ImageLabel")
+	coin.Position = UDim2.fromOffset(7, 7)
+	coin.Size = UDim2.fromOffset(34, 34)
+	coin.BackgroundTransparency = 1
+	coin.Image = "rbxassetid://90476441150192"
+	coin.ScaleType = Enum.ScaleType.Fit
+	coin.Parent = goldPill
+
+	goldTopLabel = Theme.label(goldPill, "0", UDim2.fromOffset(47, 5), UDim2.fromOffset(70, 38))
+	goldTopLabel.Font = Enum.Font.GothamBold
+	goldTopLabel.TextXAlignment = Enum.TextXAlignment.Left
+	goldTopLabel.TextColor3 = Color3.fromRGB(244, 247, 252)
+	Theme.capText(goldTopLabel, 21)
+
+	local plus = Theme.button(goldPill, "+", UDim2.fromOffset(123, 9), UDim2.fromOffset(30, 30), function()
+		if onGoldClick then
+			onGoldClick()
+		end
+	end)
+	plus.BackgroundColor3 = Color3.fromRGB(54, 211, 151)
+	plus.BackgroundTransparency = 0
+	plus.TextColor3 = Color3.fromRGB(5, 45, 35)
+	Theme.capText(plus, 20)
+end
+
+function HUD.setGameplayVisible(visible: boolean)
+	if statsBar then
+		statsBar.Visible = visible
+	end
 end
 
 function HUD.setPing(ms: number)
@@ -115,6 +160,7 @@ function HUD.update(dt: number)
 
 	setText(massLabel, "mass", Util.abbrevMass(WorldState.own.mass))
 	setText(coinLabel, "coins", tostring(WorldState.coins or 0))
+	setText(goldTopLabel, "goldTop", commas(WorldState.coins or 0))
 	setText(fpsLabel, "fps", "FPS " .. math.floor(1 / smoothedDt + 0.5))
 	setText(pingLabel, "ping", pingMs >= 0 and ("PING " .. math.floor(pingMs + 0.5)) or "PING --")
 	setText(cellsLabel, "cells", "CELLS " .. (WorldState.own.count or 0) .. " / " .. Config.MaxCells)

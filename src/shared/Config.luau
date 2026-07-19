@@ -125,7 +125,7 @@ local Config = {
 	PelletSpeed = 640,
 	PelletFriction = 3.2, -- exponential slowdown rate; pellets come to rest
 	PelletSelfEatDelay = 0.2, -- seconds before you can re-eat your own pellet (self-feed to grow, any size)
-	FeedCooldown = 0.06, -- server-side rate limit on feed actions
+	FeedCooldown = 0.045, -- small cells can feed rapidly; server scales this by cell size
 	-- Hard cap on live pellets. Was 110 - way too low: heavy feeding hit it in
 	-- ~1s and the OLDEST pellets (the ones behind you as you move) got recycled
 	-- and vanished. Raised so pellets normally live out their lifetime instead
@@ -139,17 +139,16 @@ local Config = {
 	VirusMass = 110,
 	VirusEatRatio = 1.15, -- a cell this many times the virus mass pops when overlapping it
 	VirusPopPieces = 8, -- max extra pieces a popped cell shatters into (limited by MaxCells)
-	VirusFeedsToSplit = 7, -- pellets required to make a virus shoot a child virus
-	VirusSplitImpulse = 820,
-	VirusPushSpeed = 110, -- how fast a fed virus drifts in the feed direction
-	VirusFriction = 2.5,
-	MaxViruses = 50, -- global cap so fed viruses can't overrun the map
+	VirusMaxMass = 220, -- fed viruses grow only to this cap and never create child viruses
+	VirusPushSpeed = 280, -- fed viruses shoot away quickly in the feed direction
+	VirusFriction = 1.6, -- lower drag lets a shot virus travel farther
+	MaxViruses = 36, -- population stays stable: consumed viruses respawn one-for-one
 	ExperimentalOrbsPerFeed = 2, -- bonus orbs an Experimental spits out per pellet fed
 	-- Experimental (mothercell): a big spiky cell that autonomously spews food
 	-- around itself and pops big cells. Bigger than a virus, so you must be large
 	-- to pop one - but it rewards you with its (large) mass when you do.
-	ExperimentalMass = 1200, -- base mass (radius ~138 vs a virus's ~42)
-	ExperimentalMaxMass = 4200, -- feeding grows it up to here (a bigger, riskier pop target)
+	ExperimentalMass = 650, -- smaller experimental virus (radius ~102 instead of ~138)
+	ExperimentalMaxMass = 2200, -- feeding can still grow it into a larger threat
 	ExperimentalEjectInterval = 0.9, -- seconds between autonomous food ejections
 	ExperimentalEjectCount = 2, -- bonus orbs spat out per autonomous ejection
 
@@ -255,6 +254,9 @@ local Config = {
 	MaxChatLength = 60, -- chat messages are clamped to this many characters
 	ChatCooldown = 0.6, -- min seconds between accepted chat messages per player (anti-spam)
 	ChatBubbleTime = 5, -- seconds a chat bubble stays above a cell
+
+	------------------------------------------------------------------ First-time onboarding
+	AbilityTutorialDuration = 18, -- first-time players see the ability dock briefly after spawning
 
 	------------------------------------------------------------------ Default keybinds (remappable in Settings)
 	DefaultKeybinds = {

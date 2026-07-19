@@ -66,8 +66,11 @@ local function selectMetric(key: string)
 end
 
 function Hiscores.init(parent: Instance)
-	-- sits just RIGHT of the center play card (its left edge ~0.64), pops in
-	panel = Theme.panel(parent, UDim2.fromScale(0.64, 0.54), UDim2.fromScale(0.3, 0.56), Vector2.new(0, 0.5))
+	-- Compact centered modal; fixed design dimensions prevent wide-screen stretch.
+	panel = Theme.panel(parent, UDim2.fromScale(0.5, 0.52), UDim2.fromOffset(500, 520), Vector2.new(0.5, 0.5))
+	Theme.responsiveSize(panel, Vector2.new(500, 520), Vector2.new(20, 20))
+	Theme.sidePopout(panel, "right", 0.56)
+	Theme.decoratePanel(panel)
 	panel.Visible = false
 
 	local title = Theme.label(panel, "Hiscores", UDim2.fromScale(0.06, 0.02), UDim2.fromScale(0.7, 0.06))
@@ -104,11 +107,11 @@ function Hiscores.init(parent: Instance)
 		rank.TextColor3 = Theme.MutedText
 		rank.TextXAlignment = Enum.TextXAlignment.Left
 		Theme.capText(rank, 13)
-		local name = Theme.label(panel, "-", UDim2.fromScale(0.2, y), UDim2.fromScale(0.48, 0.06))
+		local name = Theme.label(panel, "-", UDim2.fromScale(0.2, y), UDim2.fromScale(0.44, 0.065))
 		name.TextXAlignment = Enum.TextXAlignment.Left
 		name.TextTruncate = Enum.TextTruncate.AtEnd
 		Theme.capText(name, 13)
-		local value = Theme.mono(panel, "", UDim2.fromScale(0.58, y), UDim2.fromScale(0.36, 0.06))
+		local value = Theme.mono(panel, "", UDim2.fromScale(0.62, y), UDim2.fromScale(0.32, 0.065))
 		value.TextColor3 = Theme.MutedText
 		value.TextXAlignment = Enum.TextXAlignment.Right
 		Theme.capText(value, 12)
@@ -116,6 +119,10 @@ function Hiscores.init(parent: Instance)
 	end
 
 	selectMetric("m")
+end
+
+function Hiscores.isVisible(): boolean
+	return panel ~= nil and panel.Visible
 end
 
 function Hiscores.close()

@@ -29,6 +29,7 @@ local WorldState = {
 	mySlot = nil,
 	coins = 0, -- currency collected (from gold coins)
 	xp = 0, -- lifetime XP (server-authoritative); HUD derives level + bar via Shared.Levels
+	showAbilityTutorial = false, -- server marks true only for a player's first-ever join
 	status = "menu", -- "menu" | "alive" | "dead" | "spectate"
 	spectateSlot = nil, -- while spectating: which player's slot to follow (nil = leader)
 	leaderboard = {}, -- array of {s, n, m} (LIVE top players by current mass)
@@ -138,6 +139,9 @@ Remotes.PlayerState.OnClientEvent:Connect(function(event, arg)
 	elseif event == "coins" then
 		WorldState.coins = arg
 		return -- coins is a lightweight update; no menu/status refresh needed
+	elseif event == "abilityTutorial" then
+		WorldState.showAbilityTutorial = arg == true
+		return
 	end
 	if WorldState.onPlayerState then
 		WorldState.onPlayerState(event)

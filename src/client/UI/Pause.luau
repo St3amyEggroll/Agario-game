@@ -21,13 +21,15 @@ local function close()
 end
 
 function Pause.init(parent: Instance, settingsToggle: () -> (), menuOpen: () -> (), hiscoresToggle: () -> ())
-	hamb = Theme.button(parent, "\u{2630}", UDim2.fromScale(0.008, 0.058), UDim2.fromScale(0.04, 0.045), function()
+	hamb = Theme.button(parent, "MENU", UDim2.fromScale(0.008, 0.058), UDim2.fromOffset(110, 40), function()
 		popup.Visible = not popup.Visible
 	end)
+	Theme.responsiveSize(hamb, Vector2.new(110, 40), Vector2.new(12, 12))
 	hamb.Visible = false
-	Theme.capText(hamb, 20)
+	Theme.capText(hamb, 14)
 
-	popup = Theme.panel(parent, UDim2.fromScale(0.008, 0.11), UDim2.fromScale(0.16, 0.36))
+	popup = Theme.panel(parent, UDim2.fromScale(0.008, 0.09), UDim2.fromOffset(300, 360))
+	Theme.responsiveSize(popup, Vector2.new(300, 360), Vector2.new(12, 12))
 	popup.Visible = false
 	local pad = Instance.new("UIPadding")
 	pad.PaddingTop = UDim.new(0.04, 0)

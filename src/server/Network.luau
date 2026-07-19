@@ -45,6 +45,7 @@ local ACTION_COOLDOWN: { [string]: number } = {
 	buyability = 0.3,
 	useability = 0.1, -- the REAL gate is the per-ability cooldown in Abilities
 	useplace = 0.1,
+	setrandomcolor = 0.2,
 	debugmass = 0.05,
 }
 
@@ -218,6 +219,9 @@ local function onAction(player, action, arg)
 		else
 			Remotes.Feedback:FireClient(player, "soon", def.name)
 		end
+		return
+	elseif action == "setrandomcolor" then
+		info.randomColor = arg == true
 		return
 	elseif action == "debugmass" then
 		-- testing helper: only a direction is accepted (the server owns the

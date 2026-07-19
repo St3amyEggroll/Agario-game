@@ -195,7 +195,9 @@ local modalWidget
 local modalApplyCb: ((Color3) -> ())? = nil
 
 function ColorPicker.init(parent: Instance)
-	modalPanel = Theme.panel(parent, UDim2.fromScale(0.5, 0.5), UDim2.fromScale(0.34, 0.52), Vector2.new(0.5, 0.5))
+	modalPanel = Theme.panel(parent, UDim2.fromScale(0.5, 0.5), UDim2.fromOffset(640, 440), Vector2.new(0.5, 0.5))
+	Theme.responsiveSize(modalPanel, Vector2.new(640, 440), Vector2.new(20, 20))
+	Theme.decoratePanel(modalPanel)
 	modalPanel.Visible = false
 	modalPanel.ZIndex = 60 -- above the side panels / settings
 

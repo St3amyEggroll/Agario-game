@@ -141,6 +141,11 @@ local function recombineCells(info)
 end
 
 local function spawnPlayer(info)
+	if info.randomColor then
+		info.color = Util.packColor(Config.Palette[math.random(#Config.Palette)])
+		info.skinId = 0
+		World.broadcastRosterUpdate(info)
+	end
 	local x, y = World.safeSpawnPos()
 	World.spawnCell(info.player, x, y, Config.StartMass)
 	info.alive = true
@@ -731,6 +736,8 @@ local function feedViruses(now: number)
 			local newMass = virus.m + pellet.m
 			if virus.kind == "exp" then
 				newMass = math.min(newMass, Config.ExperimentalMaxMass)
+			else
+				newMass = math.min(newMass, Config.VirusMaxMass)
 			end
 			World.setMass(virus, newMass)
 			virus.feeds += 1
@@ -757,18 +764,8 @@ local function feedViruses(now: number)
 				end
 			end
 
-			-- only regular viruses shoot a child virus once fed enough; an
-			-- Experimental keeps its grown mass and just spews food instead
-			if virus.kind == "virus" and virus.feeds >= Config.VirusFeedsToSplit then
-				virus.feeds = 0
-				World.setMass(virus, Config.VirusMass)
-				if #World.viruses < Config.MaxViruses then
-					-- shoot a child virus in the feed direction
-					local child = World.spawnVirus(virus.kind, virus.x + dx * (virus.r * 2 + 10), virus.y + dy * (virus.r * 2 + 10))
-					child.vx = dx * Config.VirusSplitImpulse
-					child.vy = dy * Config.VirusSplitImpulse
-				end
-			end
+			-- Feeding only grows and launches the existing virus. It never creates
+			-- another virus, so the global population stays stable.
 		end
 	end
 	local _ = now

@@ -16,12 +16,13 @@ local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
+local Util = require(Shared.Util)
 local Remotes = require(Shared.Remotes)
 local WorldState = require(script.Parent.WorldState)
 local Camera = require(script.Parent.Camera)
 local Sounds = require(script.Parent.Sounds)
 
-local FEED_REPEAT = 0.09
+local FEED_REPEAT = 0.06
 
 local Input = {
 	binds = table.clone(Config.DefaultKeybinds), -- [action] = KeyCode.Name
@@ -72,6 +73,15 @@ function Input.captureNext(action: string)
 	end
 end
 
+function Input.resetBinds()
+	Input.binds = table.clone(Config.DefaultKeybinds)
+	rebuildKeyMap()
+	Remotes.Keybinds:FireServer(Input.binds)
+	if Input.onBindsChanged then
+		Input.onBindsChanged()
+	end
+end
+
 function Input.isCapturing(): boolean
 	return captureCallback ~= nil
 end
@@ -83,7 +93,13 @@ local function fireAction(action: string, arg)
 end
 
 local function splitSfx()
-	if WorldState.status == "alive" then
+	-- Only acknowledge a split the current client can actually perform. This
+	-- prevents the sound at MaxCells (and when every cell is too small).
+	local largestMass = Util.massFromRadius(WorldState.own.maxR or 0)
+	if WorldState.status == "alive"
+		and (WorldState.own.count or 0) < Config.MaxCells
+		and largestMass >= Config.SplitMinMass
+	then
 		Sounds.play("split")
 	end
 end

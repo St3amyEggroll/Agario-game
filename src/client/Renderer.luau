@@ -126,9 +126,8 @@ local function buildPools()
 		local stroke = Instance.new("UIStroke")
 		stroke.Thickness = 2
 		stroke.Parent = f
-		-- skin image fills the circle, clipped round by its own UICorner.
-		-- ScaleType.Crop so non-square art fills without distortion. Hidden
-		-- until the player actually has a skin.
+		-- Skin image fills the true circular cell. Avatar thumbnail margins are
+		-- handled by the cell's neutral backing color instead of over-sizing.
 		local skin = Instance.new("ImageLabel")
 		skin.AnchorPoint = Vector2.new(0.5, 0.5)
 		skin.Position = UDim2.fromScale(0.5, 0.5)
@@ -487,40 +486,53 @@ function Renderer.render(cam)
 				w.lastName = ""
 				w.lastSkin = -1 -- force a skin refresh for the new occupant
 			end
-			-- skin image (rbxthumb renders decals reliably); cached so the
-			-- Image string is only written when the skin actually changes
 			local skinId = WorldState.skinForSlot(c.slot)
-			if w.lastSkin ~= skinId then
-				w.lastSkin = skinId
-				if skinId ~= 0 then -- 0 = no skin; negative = the player's Roblox avatar
-					w.skin.Image = Skins.thumb(skinId)
+			local overlayIds = WorldState.overlaysForSlot(c.slot)
+			local avatarId: number? = nil
+			for _, id in overlayIds do
+				if id < 0 then
+					avatarId = id
+					break
+				end
+			end
+
+			-- Avatar mode replaces the base image and fills the complete circular
+			-- cell. It no longer appears as a small square over an old skin.
+			local visualSkinId = avatarId or skinId
+			if w.lastSkin ~= visualSkinId then
+				w.lastSkin = visualSkinId
+				if visualSkinId ~= 0 then
+					w.skin.Image = Skins.thumb(visualSkinId)
+					w.skin.ScaleType = Enum.ScaleType.Crop
 					w.skin.Visible = true
+					local backing = avatarId and Color3.fromRGB(224, 231, 239) or WorldState.colorForSlot(c.slot)
+					w.frame.BackgroundColor3 = backing
+					w.stroke.Color = darker(backing)
 				else
 					w.skin.Visible = false
 				end
 			end
-			-- overlay layers (accessories + avatar) over the skin
-			local overlayIds = WorldState.overlaysForSlot(c.slot)
+
+			-- Accessories remain full-cell-relative overlays on top of the avatar
+			-- or selected skin. Exclude the avatar id because it is the base above.
 			local okey = table.concat(overlayIds, ",")
 			if w.lastOverlayKey ~= okey then
 				w.lastOverlayKey = okey
-				local sorted = table.clone(overlayIds)
-				table.sort(sorted) -- avatar (negative) first so accessories draw over it
+				local sorted = {}
+				for _, id in overlayIds do
+					if id > 0 then
+						table.insert(sorted, id)
+					end
+				end
+				table.sort(sorted)
 				for i, ov in w.overlays do
 					local id = sorted[i]
 					if id then
-						if id < 0 then
-							ov.Image = Skins.thumb(id) -- avatar headshot, fills the cell, round-clipped
-							ov.ScaleType = Enum.ScaleType.Crop
-							ov.Position = UDim2.fromScale(0.5, 0.5)
-							ov.Size = UDim2.fromScale(1, 1)
-						else
-							ov.Image = Accessories.thumb(id)
-							ov.ScaleType = Enum.ScaleType.Fit
-							local ay, ascale = Accessories.placement(id)
-							ov.Position = UDim2.fromScale(0.5, ay)
-							ov.Size = UDim2.fromScale(ascale, ascale)
-						end
+						ov.Image = Accessories.thumb(id)
+						ov.ScaleType = Enum.ScaleType.Fit
+						local ax, ay, ascale = Accessories.placement(id)
+						ov.Position = UDim2.fromScale(ax, ay)
+						ov.Size = UDim2.fromScale(ascale, ascale)
 						ov.Visible = true
 					else
 						ov.Visible = false

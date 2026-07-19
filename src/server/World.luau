@@ -348,6 +348,7 @@ function World.addPlayer(player)
 		speedBoostUntil = 0, -- World.now until which the Speed ability is active
 		kills = 0, -- players eliminated this session (Hiscores: Kills)
 		playSeconds = 0, -- seconds spent alive this session (Hiscores: Playtime)
+		randomColor = false, -- when enabled, every fresh spawn receives a new palette color
 		lastAction = {}, -- [actionName] = os.clock() of last accepted use
 	}
 	World.players[player] = info
